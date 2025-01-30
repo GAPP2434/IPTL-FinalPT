@@ -211,10 +211,14 @@ body {
 
 #prevButton {
     left: 10px;
+    background-color: purple;
+    color: white;
 }
 
 #nextButton {
     right: 10px;
+    background-color: purple;
+    color: white;
 }
 
 .nav-button:disabled {
