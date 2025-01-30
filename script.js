@@ -59,12 +59,15 @@
     }
 
     function showStory(index) {
+        const footer = document.querySelector('.footer');
         if (index < 0 || index >= storyQueue.length) {
             storyViewer.classList.remove('active');
+            footer.classList.remove('hidden');
             clearTimeout(progressTimeout);
             return;
         }
     
+        currentStoryIndex = index;
         const story = storyQueue[index];
         storyViewerContent.innerHTML = '';
         storyViewerTitle.textContent = story.title; // Update the title here
@@ -82,6 +85,7 @@
             }
             // Remove the active class and clear the timeout
             storyViewer.classList.remove('active');
+            footer.classList.remove('hidden');
             clearTimeout(progressTimeout);
         });
     
@@ -94,6 +98,7 @@
             storyViewerContent.appendChild(img);
     
             img.onload = () => {
+                clearTimeout(progressTimeout); // Clear any existing timeout
                 updateProgressBar(5000, () => {
                     showStory(index + 1);
                 });
@@ -105,6 +110,7 @@
             storyViewerContent.appendChild(video);
     
             video.onloadedmetadata = () => {
+                clearTimeout(progressTimeout); // Clear any existing timeout
                 const duration = Math.min(video.duration, 15) * 1000; // Limit to 15 seconds
                 updateProgressBar(duration, () => {
                     showStory(index + 1);
@@ -121,8 +127,10 @@
         }
     
         storyViewer.classList.add('active');
+        footer.classList.add('hidden');
+        updateNavButtons();
     }
-    
+
     function updateProgressBar(duration, callback) {
         const progressBar = document.getElementById('progressBar');
         progressBar.style.transition = 'none';
@@ -138,4 +146,36 @@
             progressBar.style.width = '0%';
             callback();
         }, duration);
+    }
+    
+    function updateNavButtons() {
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+    
+        prevButton.disabled = currentStoryIndex === 0;
+        nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
+    }
+    
+    function prevStory() {
+        if (currentStoryIndex > 0) {
+            clearTimeout(progressTimeout); // Clear any existing timeout
+            const video = storyViewerContent.querySelector('video');
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+            showStory(currentStoryIndex - 1);
+        }
+    }
+    
+    function nextStory() {
+        if (currentStoryIndex < storyQueue.length - 1) {
+            clearTimeout(progressTimeout); // Clear any existing timeout
+            const video = storyViewerContent.querySelector('video');
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+            showStory(currentStoryIndex + 1);
+        }
     }
