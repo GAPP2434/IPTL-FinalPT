@@ -92,21 +92,27 @@
             const img = document.createElement('img');
             img.src = story.src;
             storyViewerContent.appendChild(img);
-            updateProgressBar(5000, () => {
-                showStory(index + 1);
-            });
+    
+            img.onload = () => {
+                updateProgressBar(5000, () => {
+                    showStory(index + 1);
+                });
+            };
         } else if (story.type === 'video') {
             const video = document.createElement('video');
             video.src = story.src;
             video.autoplay = true;
             storyViewerContent.appendChild(video);
+    
             video.onloadedmetadata = () => {
-                updateProgressBar(15000, () => {
+                const duration = Math.min(video.duration, 15) * 1000; // Limit to 15 seconds
+                updateProgressBar(duration, () => {
                     showStory(index + 1);
                 });
             };
+    
             video.ontimeupdate = () => {
-                if (video.currentTime > 15) {
+                if (video.currentTime >= 15) {
                     video.pause();
                     storyViewerContent.removeChild(video);
                     showStory(index + 1);
@@ -116,23 +122,20 @@
     
         storyViewer.classList.add('active');
     }
-
-
-function updateProgressBar(duration, callback){
-    //ensure you have a progressbar element in your html
-    const progressBar = document.getElementById('progressBar');
-    progressBar.style.width = '0%';
-    progressBar.style.transition = 'none';
     
-    requestAnimationFrame(() => {
+    function updateProgressBar(duration, callback) {
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '0%';
+    
+        // Force reflow to reset the transition
+        progressBar.offsetHeight;
+    
         progressBar.style.transition = `width ${duration}ms linear`;
         progressBar.style.width = '100%';
     
-        //trigger the callback after the animation duration
-        setTimeout(() => {
-            if(typeof callback === 'function'){
-                callback();
-            }
+        progressTimeout = setTimeout(() => {
+            progressBar.style.width = '0%';
+            callback();
         }, duration);
-    })
-}
+    }
