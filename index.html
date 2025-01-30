@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src = "script.js" defer></script>
+</head>
+<body>
+    <!-- Header -->
+     <header class = "header">
+        <div class = "logo">
+            <h1>My Social</h1>
+        </div>
+        <nav class = "nav">
+            <a href ="#">Home</a>
+            <a href ="#">Messages</a>
+            <a href ="#">Profile</a>
+        </nav>
+     </header>
+
+     <!-- Main Content -->
+      <div class = "upload-container">
+        <h2>Create a Story</h2>
+        <input type = "file" id = "mediaInput" accept ="image/*,video/*" multiple>
+        <input type = "text" id ="storyTitle" placeholder = "Enter story title">
+        <button onclick = "addStories()">Post Stories</button>
+      </div>
+
+      <div class = "stories-container" id = "storiesContainer">
+        <div class = "story add-story" onclick = "document.getElementById('mediaInput').click()">
+            +
+        </div>
+      </div>
+      <div class = "story-viewer" id ="storyViewer">
+        <div class = "story-viewer-title" id = "storyViewerTitle"></div>
+        <div class = "story-viewer-content" id = "storyViewerContent"></div>
+        <div class = "progress-bar">
+            <div class="progress" id="progressBar"></div>  
+        </div>
+      </div>
+
+      <!-- Footer -->
+       <footer class = "footer">
+        <p>&copy; 2025 My Social Platform</p>
+        </footer>
+</body>
+</html>
