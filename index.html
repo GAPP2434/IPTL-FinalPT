@@ -23,9 +23,18 @@
        <!-- Main Content -->
         <div class = "upload-container">
           <h2>Create a Story</h2>
-          <input type = "file" id = "mediaInput" accept ="image/*,video/*" multiple>
-          <input type = "text" id ="storyTitle" placeholder = "Enter story title">
-        <button onclick = "addStories()">Post Stories</button>
+          <button id="uploadButton">Upload</button>
+      </div>
+
+      <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeUploadModal">&times;</span>
+            <h2>Upload Media</h2>
+            <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
+            <input type = "text" id ="storyTitle" placeholder = "Enter story title">
+            <div id="previewContainer"></div>
+            <button id="postButton">Post</button>
+        </div>
       </div>
 
       <div class = "stories-container" id = "storiesContainer">

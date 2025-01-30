@@ -29,6 +29,7 @@
                 const img = document.createElement('img');
                 img.src = url;
                 img.alt = title; // Set the alt attribute to the title
+                img.loading = 'lazy'; // Enable lazy loading
                 storyElement.appendChild(img);
             } else if (file.type.startsWith('video/')) {
                 const video = document.createElement('video');
@@ -79,8 +80,6 @@
         const story = storyQueue[index];
         storyViewerContent.innerHTML = '';
     
-        // Debugging: Log the title to verify it's being set correctly
-        console.log('Updating title to:', story.title);
         storyViewerTitle.textContent = story.title; // Update the title here
     
         // Create and add the close button
@@ -218,4 +217,60 @@
             preloadElement.onload = () => document.body.removeChild(preloadElement);
             preloadElement.onloadedmetadata = () => document.body.removeChild(preloadElement);
         }
+    }
+
+    /*Modal For Uploading*/
+    document.getElementById('uploadButton').addEventListener('click', () => {
+        document.getElementById('uploadModal').style.display = 'block';
+        clearPreview();
+    });
+    
+    document.getElementById('closeUploadModal').addEventListener('click', () => {
+        document.getElementById('uploadModal').style.display = 'none';
+        clearPreview();
+    });
+    
+    window.addEventListener('click', (event) => {
+        if (event.target === document.getElementById('uploadModal')) {
+            document.getElementById('uploadModal').style.display = 'none';
+            clearPreview();
+        }
+    });
+    
+    document.getElementById('postButton').addEventListener('click', () => {
+        if (confirm('Are you sure you want to post this story?')) {
+            addStories();
+            document.getElementById('uploadModal').style.display = 'none';
+            clearPreview();
+        }
+    });
+
+    document.getElementById('mediaInput').addEventListener('change', () => {
+        const files = document.getElementById('mediaInput').files;
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.innerHTML = ''; // Clear previous previews
+    
+        Array.from(files).forEach(file => {
+            const url = URL.createObjectURL(file);
+            let previewElement;
+    
+            if (file.type.startsWith('image/')) {
+                previewElement = document.createElement('img');
+                previewElement.src = url;
+            } else if (file.type.startsWith('video/')) {
+                previewElement = document.createElement('video');
+                previewElement.src = url;
+                previewElement.controls = true;
+            } else {
+                alert('Unsupported file type.');
+                return;
+            }
+    
+            previewContainer.appendChild(previewElement);
+        });
+    });
+
+    function clearPreview() {
+        const previewContainer = document.getElementById('previewContainer');
+        previewContainer.innerHTML = '';
     }
