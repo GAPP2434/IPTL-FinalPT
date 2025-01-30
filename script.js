@@ -35,6 +35,7 @@
                 video.src = url;
                 video.controls = false;
                 video.alt = title; // Set a custom attribute to store the title
+                video.loading = 'lazy'; // Enable lazy loading
                 storyElement.appendChild(video);
             } else {
                 alert('Unsupported file type.');
@@ -140,6 +141,7 @@
         footer.classList.add('hidden');
         updateNavButtons();
         updateStoryIndicators();
+        preloadNextStory();
     }
 
     function updateProgressBar(duration, callback) {
@@ -167,6 +169,7 @@
         nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
     }
    
+    //Story Indicators
     function updateStoryIndicators() {
         const storyIndicators = document.getElementById('storyIndicators');
         storyIndicators.innerHTML = '';
@@ -202,5 +205,17 @@
                 video.currentTime = 0;
             }
             showStory(currentStoryIndex + 1);
+        }
+    }
+
+    function preloadNextStory() {
+        if (currentStoryIndex < storyQueue.length - 1) {
+            const nextStory = storyQueue[currentStoryIndex + 1];
+            const preloadElement = document.createElement(nextStory.type === 'image' ? 'img' : 'video');
+            preloadElement.src = nextStory.src;
+            preloadElement.style.display = 'none';
+            document.body.appendChild(preloadElement);
+            preloadElement.onload = () => document.body.removeChild(preloadElement);
+            preloadElement.onloadedmetadata = () => document.body.removeChild(preloadElement);
         }
     }
