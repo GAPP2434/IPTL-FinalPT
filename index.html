@@ -6,6 +6,8 @@
     <title>Social Media Platform</title>
     <link rel="stylesheet" href="styles.css">
     <script src = "script.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
   </head>
   <body>
       <!-- Header -->
@@ -33,7 +35,20 @@
             <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
             <input type = "text" id ="storyTitle" placeholder = "Enter story title">
             <div id="previewContainer"></div>
+            <button id="editButton">Edit</button>
             <button id="postButton">Post</button>
+        </div>
+      </div>
+
+          <!-- Edit Modal -->
+      <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeEditModal">&times;</span>
+            <h2>Edit Image</h2>
+            <div id="editContainer"></div>
+            <button id="rotateLeftButton" onclick="rotateLeft()">Rotate Left</button>
+            <button id="rotateRightButton" onclick="rotateRight()">Rotate Right</button>
+            <button id="applyEditButton">Apply Edit</button>
         </div>
       </div>
 

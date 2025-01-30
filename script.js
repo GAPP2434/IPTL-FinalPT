@@ -22,7 +22,7 @@
         files.forEach((file) => {
             const storyElement = document.createElement('div');
             storyElement.classList.add('story');
-            const url = URL.createObjectURL(file);
+            const url = editedImageDataUrl || URL.createObjectURL(file);
             const title = storyTitle || "Untitled Story";
     
             if (file.type.startsWith('image/')) {
@@ -61,7 +61,7 @@
     
         storyTitleInput.value = '';
         mediaInput.value = '';
-        updateStoryIndicators();
+        updateStoryIndicators(); // Update indicators when new stories are added
     }
     
 
@@ -80,6 +80,8 @@
         const story = storyQueue[index];
         storyViewerContent.innerHTML = '';
     
+        // Debugging: Log the title to verify it's being set correctly
+        console.log('Updating title to:', story.title);
         storyViewerTitle.textContent = story.title; // Update the title here
     
         // Create and add the close button
@@ -139,8 +141,8 @@
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
         updateNavButtons();
-        updateStoryIndicators();
-        preloadNextStory();
+        updateStoryIndicators(); // Update indicators when showing a story
+        preloadNextStory(); // Preload the next story
     }
 
     function updateProgressBar(duration, callback) {
@@ -167,8 +169,7 @@
         prevButton.disabled = currentStoryIndex === 0;
         nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
     }
-   
-    //Story Indicators
+    
     function updateStoryIndicators() {
         const storyIndicators = document.getElementById('storyIndicators');
         storyIndicators.innerHTML = '';
@@ -241,10 +242,10 @@
         if (confirm('Are you sure you want to post this story?')) {
             addStories();
             document.getElementById('uploadModal').style.display = 'none';
-            clearPreview();
+            clearPreview(); // Clear preview after posting
         }
     });
-
+    
     document.getElementById('mediaInput').addEventListener('change', () => {
         const files = document.getElementById('mediaInput').files;
         const previewContainer = document.getElementById('previewContainer');
@@ -257,6 +258,7 @@
             if (file.type.startsWith('image/')) {
                 previewElement = document.createElement('img');
                 previewElement.src = url;
+                previewElement.id = 'previewImage';
             } else if (file.type.startsWith('video/')) {
                 previewElement = document.createElement('video');
                 previewElement.src = url;
@@ -269,8 +271,59 @@
             previewContainer.appendChild(previewElement);
         });
     });
-
+    
     function clearPreview() {
         const previewContainer = document.getElementById('previewContainer');
         previewContainer.innerHTML = '';
+    }
+
+    // Edit functionality
+    let cropper;
+    document.getElementById('editButton').addEventListener('click', () => {
+        const previewImage = document.getElementById('previewImage');
+        if (previewImage) {
+            document.getElementById('editModal').style.display = 'block';
+            const editContainer = document.getElementById('editContainer');
+            editContainer.innerHTML = ''; // Clear previous cropper
+            const editImage = document.createElement('img');
+            editImage.src = previewImage.src;
+            editContainer.appendChild(editImage);
+            cropper = new Cropper(editImage, {
+                aspectRatio: 1,
+                viewMode: 1
+            });
+        }
+    });
+
+    document.getElementById('closeEditModal').addEventListener('click', () => {
+        document.getElementById('editModal').style.display = 'none';
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+    });
+
+    document.getElementById('applyEditButton').addEventListener('click', () => {
+        if (cropper) {
+            const canvas = cropper.getCroppedCanvas();
+            editedImageDataUrl = canvas.toDataURL();
+            const previewImage = document.getElementById('previewImage');
+            previewImage.src = editedImageDataUrl;
+            document.getElementById('editModal').style.display = 'none';
+            cropper.destroy();
+            cropper = null;
+        }
+    });
+
+    // Rotate functionality
+    function rotateLeft() {
+        if (cropper) {
+            cropper.rotate(-90);
+        }
+    }
+
+    function rotateRight() {
+        if (cropper) {
+            cropper.rotate(90);
+        }
     }
