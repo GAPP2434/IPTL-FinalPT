@@ -59,6 +59,7 @@
     
         storyTitleInput.value = '';
         mediaInput.value = '';
+        updateStoryIndicators();
     }
     
 
@@ -138,6 +139,7 @@
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
         updateNavButtons();
+        updateStoryIndicators();
     }
 
     function updateProgressBar(duration, callback) {
@@ -164,7 +166,21 @@
         prevButton.disabled = currentStoryIndex === 0;
         nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
     }
+   
+    function updateStoryIndicators() {
+        const storyIndicators = document.getElementById('storyIndicators');
+        storyIndicators.innerHTML = '';
     
+        storyQueue.forEach((_, index) => {
+            const indicator = document.createElement('div');
+            indicator.classList.add('story-indicator');
+            if (index === currentStoryIndex) {
+                indicator.classList.add('active');
+            }
+            storyIndicators.appendChild(indicator);
+        });
+    }
+
     function prevStory() {
         if (currentStoryIndex > 0) {
             clearTimeout(progressTimeout); // Clear any existing timeout
