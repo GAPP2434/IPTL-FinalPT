@@ -311,7 +311,8 @@ body {
     flex-direction: column;
 }
 
-#editContainer img {
+#editContainer img,
+#editContainer video {
     max-width: 100%;
     max-height: 400px;
     margin-bottom: 10px;
