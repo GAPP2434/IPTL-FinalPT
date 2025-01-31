@@ -352,7 +352,9 @@ body {
     padding: 20px;
     border: 1px solid #888;
     width: 50%; /* Could be more or less, depending on screen size */
-    height: 50%;
+    height: auto; /* Automatically adjust height */
+    max-height: calc(100vh - 20%); /* Ensure it doesn't exceed the viewport height */
+    overflow-y: auto; /* Enable scrolling if content overflows */
 }
 
 .close {
