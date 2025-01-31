@@ -235,6 +235,7 @@
     
     document.getElementById('closeUploadModal').addEventListener('click', () => {
         document.getElementById('uploadModal').style.display = 'none';
+        editedImageDataUrl = null;
         clearPreview(); // Clear preview when closing the modal
         document.getElementById('mediaInput').value = ''; // Clear the file input
     });
@@ -310,56 +311,7 @@
                 aspectRatio: 1,
                 viewMode: 1
             });
-        } else if (previewVideo) {
-            document.getElementById('editModal').style.display = 'block';
-            editModalTitle.textContent = 'Edit Video';
-            rotateButtons.style.display = 'none';
-            const editVideo = document.createElement('video');
-            editVideo.src = previewVideo.src;
-            editVideo.controls = true;
-            editContainer.appendChild(editVideo);
-
-            const trimStartLabel = document.createElement('label');
-            trimStartLabel.textContent = 'Trim Start:';
-            const trimStartInput = document.createElement('input');
-            trimStartInput.type = 'range';
-            trimStartInput.min = 0;
-            trimStartInput.max = previewVideo.duration;
-            trimStartInput.value = 0;
-            trimStartInput.id = 'trimStart';
-
-            const trimEndLabel = document.createElement('label');
-            trimEndLabel.textContent = 'Trim End:';
-            const trimEndInput = document.createElement('input');
-            trimEndInput.type = 'range';
-            trimEndInput.min = 0;
-            trimEndInput.max = previewVideo.duration;
-            trimEndInput.value = previewVideo.duration;
-            trimEndInput.id = 'trimEnd';
-
-            const trimStartTime = document.createElement('span');
-            trimStartTime.id = 'trimStartTime';
-            trimStartTime.textContent = '0s';
-
-            const trimEndTime = document.createElement('span');
-            trimEndTime.id = 'trimEndTime';
-            trimEndTime.textContent = `${previewVideo.duration}s`;
-
-            trimStartInput.addEventListener('input', () => {
-                trimStartTime.textContent = `${trimStartInput.value}s`;
-            });
-
-            trimEndInput.addEventListener('input', () => {
-                trimEndTime.textContent = `${trimEndInput.value}s`;
-            });
-
-            editContainer.appendChild(trimStartLabel);
-            editContainer.appendChild(trimStartInput);
-            editContainer.appendChild(trimStartTime);
-            editContainer.appendChild(trimEndLabel);
-            editContainer.appendChild(trimEndInput);
-            editContainer.appendChild(trimEndTime);
-        }
+        } 
     });
 
     document.getElementById('closeEditModal').addEventListener('click', () => {
@@ -390,66 +342,6 @@
             document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
             cropper.destroy();
             cropper = null;
-        } else if (previewVideo) {
-            console.log('Applying video trim');
-            const trimStart = parseFloat(document.getElementById('trimStart').value);
-            const trimEnd = parseFloat(document.getElementById('trimEnd').value);
-    
-            console.log('Trim start:', trimStart);
-            console.log('Trim end:', trimEnd);
-    
-            const videoUrl = previewVideo.src;
-            const videoElement = document.createElement('video');
-            videoElement.src = videoUrl;
-            videoElement.currentTime = trimStart;
-    
-            videoElement.addEventListener('loadedmetadata', () => {
-                const duration = videoElement.duration;
-                const start = Math.min(trimStart, trimEnd);
-                const end = Math.max(trimStart, trimEnd);
-    
-                console.log('Video duration:', duration);
-                console.log('Trimmed start:', start);
-                console.log('Trimmed end:', end);
-    
-                const mediaStream = videoElement.captureStream();
-                const mediaRecorder = new MediaRecorder(mediaStream);
-                const recordedChunks = [];
-    
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-    
-                mediaRecorder.onstop = () => {
-                    const trimmedBlob = new Blob(recordedChunks, { type: 'video/mp4' });
-                    const trimmedVideoUrl = URL.createObjectURL(trimmedBlob);
-                    console.log('Trimmed video URL:', trimmedVideoUrl);
-                    previewVideo.src = trimmedVideoUrl;
-                    editedVideoBlob = trimmedBlob; // Store the trimmed video blob
-                    document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-                    loadingIndicator.style.display = 'none'; // Hide loading indicator
-                };
-    
-                mediaRecorder.start();
-                setTimeout(() => {
-                    mediaRecorder.stop();
-                }, (end - start) * 1000);
-            });
-    
-            videoElement.addEventListener('error', (e) => {
-                console.error('Error loading video:', e);
-                loadingIndicator.style.display = 'none'; // Hide loading indicator on error
-            });
-    
-            // Show loading indicator
-            loadingIndicator.style.display = 'block';
-    
-            // Close the edit modal immediately
-            document.getElementById('editModal').style.display = 'none';
-        } else {
-            console.log('No preview video found');
         }
     });
 
