@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+
 //Variables
     const storiesContainer = document.getElementById('storiesContainer');
     const storyViewer = document.getElementById('storyViewer');
@@ -228,10 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /*Modal For Uploading*/
-    document.getElementById('uploadButton').addEventListener('click', () => {
+    function openUploadModal(){
         document.getElementById('uploadModal').style.display = 'block';
         clearPreview();
-    });
+    }
     
     document.getElementById('closeUploadModal').addEventListener('click', () => {
         document.getElementById('uploadModal').style.display = 'none';
@@ -465,4 +465,3 @@ document.addEventListener('DOMContentLoaded', () => {
             cropper.rotate(90);
         }
     }
-});

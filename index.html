@@ -25,7 +25,7 @@
       <!-- Main Content -->
       <div class="upload-container">
         <h2>Create a Story</h2>
-        <button id="uploadButton">Upload</button>
+        <button id="uploadButton" onclick="openUploadModal()">Upload</button>
       </div>
 
       <div id="uploadModal" class="modal">
@@ -56,19 +56,37 @@
       </div>
 
       <div class="stories-container" id="storiesContainer">
-        <div class="story add-story" onclick="document.getElementById('mediaInput').click()">
-            +
+        <div class="story add-story" id = "addButton" onclick="openUploadModal()">
+            <h1>+</h1>
         </div>
       </div>
       <div class="story-viewer" id="storyViewer">
         <div class="story-viewer-title" id="storyViewerTitle"></div>
-        <div class="story-viewer-content" id="storyViewerContent"></div>
+        <div class="story-viewer-content-main">
+          <div class="story-viewer-content" id="storyViewerContent"></div>
+          <div class="prev-button-container">
+            <li class="icon-next-prev black" id="prevButton" onclick="prevStory()">
+                <span class="tooltip">Previous</span>
+                <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-left" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.354 1.646a.5.5 0 0 1 0 .708L2.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
+                    <path d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
+                </svg></span>
+            </li>
+          </div>
+          <div class="next-button-container">
+            <li class="icon-next-prev black" id="nextButton" onclick="nextStory()">
+                <span class="tooltip">Next</span>
+                <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-right" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
+                    <path d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
+                </svg></span>
+            </li>
+          </div>
+        </div>
         <div class="progress-bar">
             <div class="progress" id="progressBar"></div>
         </div>
         <div class="story-indicators" id="storyIndicators"></div>
-        <button id="prevButton" class="nav-button" onclick="prevStory()">Previous</button>
-        <button id="nextButton" class="nav-button" onclick="nextStory()">Next</button>
       </div>
 
       <!-- Footer -->
