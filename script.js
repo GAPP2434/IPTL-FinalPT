@@ -282,6 +282,8 @@
         });
     });
     
+
+    
     function clearPreview() {
         const previewContainer = document.getElementById('previewContainer');
         previewContainer.innerHTML = '';
@@ -310,6 +312,44 @@
             cropper = new Cropper(editImage, {
                 aspectRatio: 1,
                 viewMode: 1
+            });
+        } else if (previewVideo) {
+            document.getElementById('editModal').style.display = 'block';
+            editModalTitle.textContent = 'Edit Video';
+            rotateButtons.style.display = 'none'; // Hide rotate buttons for video
+            const editVideo = document.createElement('video');
+            editVideo.src = previewVideo.src;
+            editVideo.controls = true;
+            editContainer.appendChild(editVideo);
+    
+            // Add video clipping controls
+            const startInput = document.createElement('input');
+            startInput.type = 'number';
+            startInput.id = 'startInput';
+            startInput.placeholder = 'Start time (seconds)';
+            startInput.min = 0;
+            editContainer.appendChild(startInput);
+
+            const endInput = document.createElement('input');
+            endInput.type = 'number';
+            endInput.id = 'endInput';
+            endInput.placeholder = 'End time (seconds)';
+            endInput.min = 0;
+            editContainer.appendChild(endInput);
+
+            startInput.addEventListener('input', () => {
+                const maxEndTime = parseFloat(startInput.value) + 15;
+                endInput.max = maxEndTime;
+                if (parseFloat(endInput.value) > maxEndTime) {
+                    endInput.value = maxEndTime;
+                }
+            });
+
+            endInput.addEventListener('input', () => {
+                const maxEndTime = parseFloat(startInput.value) + 15;
+                if (parseFloat(endInput.value) > maxEndTime) {
+                    endInput.value = maxEndTime;
+                }
             });
         } 
     });
@@ -342,18 +382,56 @@
             document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
             cropper.destroy();
             cropper = null;
+        } else if (previewVideo) {
+            const startInput = document.getElementById('startInput');
+            const endInput = document.getElementById('endInput');
+            const startTime = parseFloat(startInput.value) || 0;
+            const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
+        
+            if (startTime >= endTime) {
+                alert('End time must be greater than start time.');
+                return;
+            }
+        
+            const video = document.createElement('video');
+            video.src = previewVideo.src;
+            video.currentTime = startTime;
+        
+            video.onloadedmetadata = () => {
+                const duration = endTime - startTime;
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+        
+                const chunks = [];
+                const stream = canvas.captureStream();
+                const recorder = new MediaRecorder(stream);
+        
+                recorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        chunks.push(event.data);
+                    }
+                };
+        
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    editedVideoBlob = blob;
+                    previewVideo.src = URL.createObjectURL(blob);
+                    document.getElementById('editModal').style.display = 'none';
+                    document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+                };
+        
+                recorder.start();
+        
+                video.play();
+                video.ontimeupdate = () => {
+                    if (video.currentTime >= endTime) {
+                        video.pause();
+                        recorder.stop();
+                    }
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                };
+            };
         }
     });
-
-    // Rotate functionality
-    function rotateLeft() {
-        if (cropper) {
-            cropper.rotate(-90);
-        }
-    }
-
-    function rotateRight() {
-        if (cropper) {
-            cropper.rotate(90);
-        }
-    }
