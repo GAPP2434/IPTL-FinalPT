@@ -1,0 +1,137 @@
+/* Main Style */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color:#f4f4f4;
+}
+
+header, footer {
+    background-color: #333;
+    color: white;
+    padding: 15px 0; 
+    text-align: center;
+}
+
+header .logo h1 {
+    margin: 0;
+}
+
+.logo{
+    margin: 20px;
+}
+
+@font-face {
+    font-family: 'MonsterHunter';
+    src: url('fonts/monsterhunter.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+.GatheringHub{
+    font-family: 'MonsterHunter', sans-serif;
+    font-size: 70px;
+}
+header .nav a {
+    color: white;
+    margin: 0 15px;
+    text-decoration: none;
+}
+
+header .nav a:hover {
+    text-decoration: underline;    
+}
+
+/*List of Stories Section*/
+.stories-container{
+    display: flex;
+    margin: auto;
+    overflow-x: auto;
+    padding: 10px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    width: 60%;
+    overflow-y: hidden;
+}
+
+.story{
+    width: 120px;
+    height: 213px;
+    margin-right: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+}
+
+.story .add-story{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1877f2;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+#addButton{
+    width: 120px;
+    height: 213px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    background-color: lightblue;
+}
+
+/*Create a story section*/
+.upload-container{
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 15%;
+    border-radius: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-container input, .upload-container input[type="text"] { 
+    display: block;
+    margin-bottom: 10px;
+    background-color: red;
+}
+
+.upload-container button {
+    padding: 10px 20px;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.upload-container button:hover {
+    background-color:#1558b0;
+}
+
+/*Footer Styling*/
+.footer{
+    background-color: #333;
+    color: white;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+}
+.footer.hidden {
+    display: none;
+}
+
+
