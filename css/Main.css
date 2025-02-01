@@ -23,7 +23,7 @@ header .logo h1 {
 
 @font-face {
     font-family: 'MonsterHunter';
-    src: url('fonts/monsterhunter.ttf') format('truetype');
+    src: url('../fonts/monsterhunter.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }

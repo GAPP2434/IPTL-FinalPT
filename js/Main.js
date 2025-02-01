@@ -1,4 +1,3 @@
-
 import {initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
 import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
 //Variables
@@ -118,7 +117,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     
             img.onload = () => {
                 clearTimeout(progressTimeout); // Clear any existing timeout
-                updateProgressBar(50000000, () => {
+                updateProgressBar(5000, () => {
                     showStory(index + 1);
                 });
             };
@@ -210,6 +209,9 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             showStory(currentStoryIndex + 1);
         }
     }
+
+    document.getElementById('prevButton').addEventListener('click', prevStory);
+    document.getElementById('nextButton').addEventListener('click', nextStory);
 
     //Story Indicators
     export function updateStoryIndicators() {
