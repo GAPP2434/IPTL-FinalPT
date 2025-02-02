@@ -38,9 +38,61 @@
     cursor: pointer;
 }
 
+/* Container for the upload modal content */
+.upload-modal-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+/* Styles for the left side of the upload modal */
+.upload-left {
+    flex: 1;
+    margin-right: 20px;
+}
+
+/* Styles for the upload choose file section */
+.upload-choose-file {
+    margin-bottom: 10px;
+}
+
+.upload-choose-file input[type="file"] {
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* Styles for the upload details section */
+.upload-details {
+    margin-bottom: 10px;
+}
+
+.upload-details input,
+.upload-details textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.upload-details textarea {
+    height: 100px;
+    resize: none;
+}
+
+/* Styles for the character counters */
+#titleCounter,
+#descriptionCounter, #userCounter {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: right;
+    margin-bottom: 10px;
+}
+
 /* Preview container styles */
 #previewContainer {
-    width: 100%; /* Full width of the modal content */
+    flex: 1;
     max-width: 300px; /* Maximum width for the preview container */
     aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
     position: relative;
@@ -59,7 +111,7 @@
     width: 100%;
     height: 100%;
     transform: translate(-50%, -50%);
-    object-fit: cover;
+    object-fit: fill;
 }
 
 /* Edit container styles */

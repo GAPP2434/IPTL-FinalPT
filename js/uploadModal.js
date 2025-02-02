@@ -1,5 +1,4 @@
-
-import {addStories} from './Main.js'
+import { addStories} from './Main.js';
 /*variables*/
 export let cropper;
 export let editedImageDataUrl = null;
@@ -17,6 +16,9 @@ document.getElementById('closeUploadModal').addEventListener('click', () => {
     editedImageDataUrl = null;
     clearPreview(); // Clear preview when closing the modal
     document.getElementById('mediaInput').value = ''; // Clear the file input
+    document.getElementById('storyTitle').value = ''; // Clear the title input
+    document.getElementById('storyDescription').value = ''; // Clear the description input
+    document.getElementById('storyUsername').value = ''; // Clear the username input
 });
 
 window.addEventListener('click', (event) => {
@@ -209,4 +211,25 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
             };
         };
     }
+});
+
+
+// Character counting logic
+const storyTitleInput = document.getElementById('storyTitle');
+const storyDescriptionInput = document.getElementById('storyDescription');
+const storyUsernameInput = document.getElementById('storyUsername');
+const titleCounter = document.getElementById('titleCounter');
+const descriptionCounter = document.getElementById('descriptionCounter');
+const userCounter = document.getElementById('userCounter');
+
+storyTitleInput.addEventListener('input', () => {
+    titleCounter.textContent = `${storyTitleInput.value.length}/25`;
+});
+
+storyDescriptionInput.addEventListener('input', () => {
+    descriptionCounter.textContent = `${storyDescriptionInput.value.length}/250`;
+});
+
+storyUsernameInput.addEventListener('input', () => {
+    userCounter.textContent = `${storyUsernameInput.value.length}/15`;
 });
