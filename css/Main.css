@@ -44,6 +44,8 @@ header .nav a:hover {
 /*List of Stories Section*/
 .stories-container{
     display: flex;
+    flex-wrap: wrap;
+    align-content: space-around;
     margin: auto;
     overflow-x: auto;
     padding: 10px;
@@ -57,7 +59,10 @@ header .nav a:hover {
 .story{
     width: 120px;
     height: 213px;
-    margin-right: 10px;
+    margin: 15px;
+    border-style: solid;
+    border-color: #5e5e5e;
+    border-width: 1px;
     border-radius: 10px;
     overflow: hidden;
     position: relative;
@@ -124,7 +129,8 @@ header .nav a:hover {
 .footer{
     background-color: #333;
     color: white;
-    position: fixed;
+    position: relative;
+    margin-top: 2%;
     left: 0;
     bottom: 0;
     width: 100%;
