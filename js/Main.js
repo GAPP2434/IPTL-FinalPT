@@ -11,6 +11,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     export let progressTimeout;
     export let reactionCounts = {};
     export let comments = {};
+    export let isPaused = false;
+    export let remainingTime = 0;
+    export let startTime = 0;
+    export let elapsedTime = 0;
 
     //Add Story Function
     export function addStories() {
@@ -84,9 +88,9 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     
     export function showStory(index) {
         const footer = document.querySelector('.footer');
-        const storyViewerTitle = document.getElementById('storyViewerTitle'); // Ensure correct reference
-        const storyViewerDescription = document.getElementById('storyViewerDescription'); // Ensure correct reference
-        const storyViewerUsername = document.getElementById('storyViewerUsername'); // Ensure correct reference
+        const storyViewerTitle = document.getElementById('storyViewerTitle');
+        const storyViewerDescription = document.getElementById('storyViewerDescription');
+        const storyViewerUsername = document.getElementById('storyViewerUsername');
     
         if (index < 0 || index >= storyQueue.length) {
             storyViewer.classList.remove('active');
@@ -99,34 +103,32 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         const story = storyQueue[index];
         storyViewerContent.innerHTML = '';
     
-        // Debugging: Log the title, description, username, and upload date to verify they're being set correctly
-        console.log('Updating title to:', story.title);
-        console.log('Updating description to:', story.description);
-        console.log('Updating username to:', story.username);
-        console.log('Updating upload date to:', story.uploadDate);
-        storyViewerTitle.textContent = story.title; // Update the title here
-        storyViewerDescription.textContent = story.description; // Update the description here
-        storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`; // Update the username and upload date here
+        storyViewerTitle.textContent = story.title;
+        storyViewerDescription.textContent = story.description;
+        storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
     
-        // Create and add the close button
         const closeButton = document.createElement('button');
         closeButton.textContent = 'Close';
         closeButton.classList.add('close-button');
         closeButton.addEventListener('click', () => {
-            // Stop the video if it exists
             const video = storyViewerContent.querySelector('video');
             if (video) {
-                video.pause(); // Pause the video
-                video.currentTime = 0; // Reset video to the beginning
+                video.pause();
+                video.currentTime = 0;
             }
-            // Remove the active class and clear the timeout
             storyViewer.classList.remove('active');
             footer.classList.remove('hidden');
             clearTimeout(progressTimeout);
         });
     
-        // Append close button to the content
         storyViewerContent.appendChild(closeButton);
+    
+        isPaused = false;
+        remainingTime = 0;
+        startTime = 0;
+        elapsedTime = 0;
+    
+        storyViewerContent.addEventListener('click', togglePauseStory);
     
         if (story.type === 'image') {
             const img = document.createElement('img');
@@ -134,8 +136,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             storyViewerContent.appendChild(img);
     
             img.onload = () => {
-                clearTimeout(progressTimeout); // Clear any existing timeout
-                updateProgressBar(5000, () => {
+                clearTimeout(progressTimeout);
+                remainingTime = 5000;
+                startTime = Date.now();
+                updateProgressBar(remainingTime, () => {
                     showStory(index + 1);
                 });
             };
@@ -146,9 +150,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             storyViewerContent.appendChild(video);
     
             video.onloadedmetadata = () => {
-                clearTimeout(progressTimeout); // Clear any existing timeout
-                const duration = Math.min(video.duration, 15) * 1000; // Limit to 15 seconds
-                updateProgressBar(duration, () => {
+                clearTimeout(progressTimeout);
+                remainingTime = Math.min(video.duration, 15) * 1000;
+                startTime = Date.now();
+                updateProgressBar(remainingTime, () => {
                     showStory(index + 1);
                 });
             };
@@ -162,22 +167,41 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             };
         }
     
-        // Initialize and update reaction counts
         initializeReactionCounts(currentStoryIndex);
         updateReactionCounts(currentStoryIndex);
-    
-        // Initialize and update comments
         initializeComments(currentStoryIndex);
         updateComments(currentStoryIndex);
     
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
         updateNavButtons();
-        updateStoryIndicators(); // Update indicators when showing a story
-        preloadNextStory(); // Preload the next story
+        updateStoryIndicators();
+        preloadNextStory();
+    }
+
+    export function togglePauseStory() {
+        const story = storyQueue[currentStoryIndex];
+        const video = storyViewerContent.querySelector('video');
+    
+        if (isPaused) {
+            startTime = Date.now();
+            resumeProgressBar(remainingTime);
+            if (video) {
+                video.play();
+            }
+        } else {
+            clearTimeout(progressTimeout);
+            elapsedTime = Date.now() - startTime;
+            remainingTime -= elapsedTime;
+            if (video) {
+                video.pause();
+            }
+            pauseProgressBar();
+        }
+        isPaused = !isPaused;
     }
     
-    //Updating the Progress Bar
+    // Updating the Progress Bar
     export function updateProgressBar(duration, callback) {
         const progressBar = document.getElementById('progressBar');
         progressBar.style.transition = 'none';
@@ -195,11 +219,30 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         }, duration);
     }
     
-    //Changing Next and Previous Buttons
+    // Pausing and Resuming the Progress Bar
+    export function pauseProgressBar() {
+        const progressBar = document.getElementById('progressBar');
+        const computedStyle = window.getComputedStyle(progressBar);
+        const width = computedStyle.getPropertyValue('width');
+        progressBar.style.transition = 'none';
+        progressBar.style.width = width;
+    }
+    
+    export function resumeProgressBar(remainingDuration) {
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.transition = `width ${remainingDuration}ms linear`;
+        progressBar.style.width = '100%';
+    
+        progressTimeout = setTimeout(() => {
+            progressBar.style.width = '0%';
+            showStory(currentStoryIndex + 1);
+        }, remainingDuration);
+    }
+    // Changing Next and Previous Buttons
     export function updateNavButtons() {
         const prevButton = document.getElementById('prevButton');
         const nextButton = document.getElementById('nextButton');
-    
+
         prevButton.disabled = currentStoryIndex === 0;
         nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
     }
@@ -231,11 +274,11 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     document.getElementById('prevButton').addEventListener('click', prevStory);
     document.getElementById('nextButton').addEventListener('click', nextStory);
 
-    //Story Indicators
+    // Story Indicators
     export function updateStoryIndicators() {
         const storyIndicators = document.getElementById('storyIndicators');
         storyIndicators.innerHTML = '';
-    
+
         storyQueue.forEach((_, index) => {
             const indicator = document.createElement('div');
             indicator.classList.add('story-indicator');
@@ -246,7 +289,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         });
     }
 
-    //Lazy Loading (?) idk
+    // Lazy Loading (?) idk
     export function preloadNextStory() {
         if (currentStoryIndex < storyQueue.length - 1) {
             const nextStory = storyQueue[currentStoryIndex + 1];
