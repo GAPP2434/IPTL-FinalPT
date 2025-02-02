@@ -104,7 +104,7 @@ document.getElementById('editButton').addEventListener('click', () => {
         editImage.src = previewImage.src;
         editContainer.appendChild(editImage);
         cropper = new Cropper(editImage, {
-            aspectRatio: 1,
+            aspectRatio: 9/16,
             viewMode: 1
         });
     } else if (previewVideo) {
