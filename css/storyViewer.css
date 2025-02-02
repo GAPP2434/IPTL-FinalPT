@@ -72,7 +72,7 @@
 .story-viewer img, .story-viewer video {
     width: 100%;
     height: 100%;
-    object-fit: fill; 
+    object-fit: cover; 
 }
 
 .story-viewer-right {
@@ -284,4 +284,9 @@
 
 .comment:last-child {
     border-bottom: none;
+}
+
+/* Username styling */
+.username {
+    font-weight: bold;
 }

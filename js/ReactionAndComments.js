@@ -63,6 +63,7 @@ export function updateComments(storyId) {
         const commentElement = document.createElement('div');
         commentElement.classList.add('comment');
         commentElement.textContent = comment;
+        commentElement.innerHTML = `<span class="username">${comment.username}:</span> ${comment.comment}`;
         commentList.appendChild(commentElement);
     });
 }
@@ -71,10 +72,21 @@ document.getElementById('sendCommentButton').addEventListener('click', () => {
     const storyId = currentStoryIndex;
     const commentInput = document.getElementById('commentInput');
     const commentText = commentInput.value.trim();
+    const usernameInput = document.getElementById('usernameInput');
+    let username = usernameInput.value.trim();
+    
+    if (!username) {
+        // Generate a random username if the user didn't enter one
+        const randomNumbers = Array(4).fill(0).map(() => Math.floor(Math.random() * 10));
+        // Auto-generated username
+        username = `Anon #${randomNumbers.join('')}`;
+      }
+    
     if (commentText) {
         initializeComments(storyId);
-        comments[storyId].push(commentText);
+        comments[storyId].push({ username, comment: commentText });
         updateComments(storyId);
         commentInput.value = ''; // Clear the input
+        usernameInput.value = ''; // Clear the username input
     }
 });
