@@ -115,6 +115,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             if (video) {
                 video.pause();
                 video.currentTime = 0;
+                storyViewerContent.removeChild(video); // Remove the video element from the DOM
             }
             storyViewer.classList.remove('active');
             footer.classList.remove('hidden');

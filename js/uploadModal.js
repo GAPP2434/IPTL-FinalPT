@@ -30,6 +30,25 @@ window.addEventListener('click', (event) => {
 });
 
 document.getElementById('postButton').addEventListener('click', () => {
+    const mediaInput = document.getElementById('mediaInput');
+    const storyTitleInput = document.getElementById('storyTitle');
+    const storyUsernameInput = document.getElementById('storyUsername');
+
+    if (!mediaInput.files.length) {
+        alert('Please select at least one image or video.');
+        return;
+    }
+
+    if (!storyTitleInput.value.trim()) {
+        alert('Please enter a story title.');
+        return;
+    }
+
+    if (!storyUsernameInput.value.trim()) {
+        alert('Please enter your username.');
+        return;
+    }
+
     if (confirm('Are you sure you want to post this story?')) {
         addStories();
         document.getElementById('uploadModal').style.display = 'none';
