@@ -1,4 +1,5 @@
 import { addStories} from './Main.js';
+
 /*variables*/
 export let cropper;
 export let editedImageDataUrl = null;
@@ -69,6 +70,22 @@ export function clearPreview() {
     const previewContainer = document.getElementById('previewContainer');
     previewContainer.innerHTML = '';
 }
+
+// Rotate functions
+export function rotateLeft() {
+    if (cropper) {
+        cropper.rotate(-90);
+    }
+}
+
+export function rotateRight() {
+    if (cropper) {
+        cropper.rotate(90);
+    }
+}
+
+window.rotateLeft = rotateLeft;
+window.rotateRight = rotateRight;
 
 // Edit functionality
 document.getElementById('editButton').addEventListener('click', () => {
@@ -164,33 +181,33 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
         const endInput = document.getElementById('endInput');
         const startTime = parseFloat(startInput.value) || 0;
         const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
-    
+
         if (startTime >= endTime) {
             alert('End time must be greater than start time.');
             return;
         }
-    
+
         const video = document.createElement('video');
         video.src = previewVideo.src;
         video.currentTime = startTime;
-    
+
         video.onloadedmetadata = () => {
             const duration = endTime - startTime;
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-    
+
             const chunks = [];
             const stream = canvas.captureStream();
             const recorder = new MediaRecorder(stream);
-    
+
             recorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     chunks.push(event.data);
                 }
             };
-    
+
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
                 editedVideoBlob = blob;
@@ -198,9 +215,9 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
                 document.getElementById('editModal').style.display = 'none';
                 document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
             };
-    
+
             recorder.start();
-    
+
             video.play();
             video.ontimeupdate = () => {
                 if (video.currentTime >= endTime) {
