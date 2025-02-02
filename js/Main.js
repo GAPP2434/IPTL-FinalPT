@@ -16,9 +16,14 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     export function addStories() {
         const mediaInput = document.getElementById('mediaInput');
         const storyTitleInput = document.getElementById('storyTitle');
+        const storyDescriptionInput = document.getElementById('storyDescription');
+        const storyUsernameInput = document.getElementById('storyUsername');
         const storiesContainer = document.getElementById('storiesContainer');
         const files = Array.from(mediaInput.files);
         const storyTitle = storyTitleInput.value.trim();
+        const storyDescription = storyDescriptionInput.value.trim();
+        const storyUsername = storyUsernameInput.value.trim();
+        const uploadDate = new Date().toLocaleString();
     
         if (files.length === 0) {
             alert('Please select at least one image or video.');
@@ -30,6 +35,8 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             storyElement.classList.add('story');
             const url = editedImageDataUrl || (editedVideoBlob ? URL.createObjectURL(editedVideoBlob) : URL.createObjectURL(file));
             const title = storyTitle || "Untitled Story";
+            const description = storyDescription || "No description";
+            const username = storyUsername || "Anonymous";
     
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
@@ -55,7 +62,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
                     .map(child => ({
                         src: child.querySelector('img, video').src,
                         type: child.querySelector('img') ? 'image' : 'video',
-                        title: child.querySelector('img, video').alt || title // Ensure title is set correctly
+                        title: child.querySelector('img, video').alt || title, // Ensure title is set correctly
+                        description: description, // Ensure description is set correctly
+                        username: username, // Ensure username is set correctly
+                        uploadDate: uploadDate // Ensure upload date is set correctly
                     }));
     
                 currentStoryIndex = storyQueue.findIndex(item => item.src === url);
@@ -66,14 +76,17 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         });
     
         storyTitleInput.value = '';
+        storyDescriptionInput.value = '';
+        storyUsernameInput.value = '';
         mediaInput.value = '';
         updateStoryIndicators(); // Update indicators when new stories are added
     }
     
-    //Show Story Function
     export function showStory(index) {
         const footer = document.querySelector('.footer');
         const storyViewerTitle = document.getElementById('storyViewerTitle'); // Ensure correct reference
+        const storyViewerDescription = document.getElementById('storyViewerDescription'); // Ensure correct reference
+        const storyViewerUsername = document.getElementById('storyViewerUsername'); // Ensure correct reference
     
         if (index < 0 || index >= storyQueue.length) {
             storyViewer.classList.remove('active');
@@ -86,9 +99,14 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         const story = storyQueue[index];
         storyViewerContent.innerHTML = '';
     
-        // Debugging: Log the title to verify it's being set correctly
+        // Debugging: Log the title, description, username, and upload date to verify they're being set correctly
         console.log('Updating title to:', story.title);
+        console.log('Updating description to:', story.description);
+        console.log('Updating username to:', story.username);
+        console.log('Updating upload date to:', story.uploadDate);
         storyViewerTitle.textContent = story.title; // Update the title here
+        storyViewerDescription.textContent = story.description; // Update the description here
+        storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`; // Update the username and upload date here
     
         // Create and add the close button
         const closeButton = document.createElement('button');
