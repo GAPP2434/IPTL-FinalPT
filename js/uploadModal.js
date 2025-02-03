@@ -329,6 +329,20 @@ const processVideoTrim = async (startTime, endTime) => {
     loadingIndicator.style.display = 'none';
 };
 
+// Close edit modal
+document.getElementById('closeEditModal').addEventListener('click', () => {
+    document.getElementById('editModal').style.display = 'none';
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+    const editVideo = document.querySelector('#editContainer video');
+    if (editVideo) {
+        editVideo.pause();
+        editVideo.currentTime = 0;
+    }
+});
+
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');
 const storyDescriptionInput = document.getElementById('storyDescription');
