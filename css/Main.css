@@ -6,6 +6,7 @@ html, body {
     display: flex;
     flex-direction: column;
     background-color:#f4f4f4;
+    background-image: url('../images/Wallpaper.jpg');
 }
 
 /* Main content container */
@@ -20,6 +21,7 @@ header, footer {
     color: white;
     padding: 15px 0; 
     text-align: center;
+    opacity: 0.9;
 }
 
 header .logo h1 {
@@ -54,7 +56,7 @@ header .nav a:hover {
 
 /*List of Stories Section*/
 .stories-container{
-    display: flex;
+   display: flex;
     flex-wrap: wrap;
     align-content: space-around;
     margin: 10px auto;
@@ -65,7 +67,6 @@ header .nav a:hover {
     border-radius: 20px;
     width: 60%;
     overflow-y: hidden;
-    
 }
 
 .story{
@@ -150,7 +151,6 @@ header .nav a:hover {
 .upload-container button:hover {
     background-color:#1558b0;
 }
-
 
 /* Footer Styling */
 .footer {
