@@ -36,10 +36,12 @@ header .logo h1 {
     font-weight: normal;
     font-style: normal;
 }
+
 .GatheringHub{
     font-family: 'MonsterHunter', sans-serif;
     font-size: 70px;
 }
+
 header .nav a {
     color: white;
     margin: 0 15px;
@@ -116,10 +118,24 @@ header .nav a:hover {
     justify-content: center;
 }
 
-.upload-container input, .upload-container input[type="text"] { 
-    display: block;
-    margin-bottom: 10px;
-    background-color: red;
+/*Create a story section*/
+.upload-container{
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 10%;
+    border-radius: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center; /* Center text horizontally */
+}
+
+.upload-container h2 {
+    margin: 0 0 10px 0; /* Add some margin below the heading */
 }
 
 .upload-container button {
@@ -135,6 +151,7 @@ header .nav a:hover {
     background-color:#1558b0;
 }
 
+
 /* Footer Styling */
 .footer {
     background-color: #333;
@@ -149,4 +166,17 @@ header .nav a:hover {
 
 .footer.hidden {
     display: none;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .upload-container {
+        width: 80%; /* Adjust width for smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .upload-container {
+        width: 40%; /* Adjust width for even smaller screens */
+    }
 }
