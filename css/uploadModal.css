@@ -130,6 +130,43 @@
     margin-bottom: 10px;
 }
 
+/* Style the audio input */
+.upload-audio {
+    margin-top: 15px;
+}
+
+.upload-audio input {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+}
+
+.upload-audio label {
+    font-size: 14px;
+    color: #333;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Audio Preview Container */
+#audioPreviewContainer {
+    flex: 1;
+    max-width: 500px; /* Adjust width as needed */
+    height: 55px;
+    margin: 10px auto;
+    padding: 10px;
+    background-color: #f1f1f1;
+    border-radius: 20px;
+    text-align: center;
+}
+
+/* Style the audio element */
+#audioPreviewContainer audio {
+    width: 100%; /* Make the audio player take full width of the container */
+    border-radius: 5px;
+    background-color: #f1f1f1; /* Optional: style the audio bar */
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
     .modal-content {

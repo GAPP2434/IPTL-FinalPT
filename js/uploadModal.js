@@ -20,6 +20,7 @@ document.getElementById('closeUploadModal').addEventListener('click', () => {
     document.getElementById('storyTitle').value = ''; // Clear the title input
     document.getElementById('storyDescription').value = ''; // Clear the description input
     document.getElementById('storyUsername').value = ''; // Clear the username input
+    document.getElementById('audioInput').value = ''; // Clear the audio input
 });
 
 window.addEventListener('click', (event) => {
@@ -49,8 +50,10 @@ document.getElementById('postButton').addEventListener('click', () => {
         return;
     }
 
+    console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
         addStories();
+        console.log('Story added');
         document.getElementById('uploadModal').style.display = 'none';
         clearPreview(); // Clear preview after posting
     }
@@ -83,7 +86,25 @@ document.getElementById('mediaInput').addEventListener('change', () => {
     });
 });
 
+document.getElementById('audioInput').addEventListener('change', () => {
+    const audioInput = document.getElementById('audioInput');
+    const previewContainer = document.getElementById('audioPreviewContainer');
 
+    previewContainer.innerHTML = ''; // Clear previous previews
+    
+    const files = audioInput.files;
+    if (files.length > 0) {
+        const file = files[0];
+        const url = URL.createObjectURL(file);
+        
+        const audioPreview = document.createElement('audio');
+        audioPreview.src = url;
+        audioPreview.controls = true;
+        audioPreview.id = 'previewAudio';
+        
+        previewContainer.appendChild(audioPreview);
+    }
+});
 
 export function clearPreview() {
     const previewContainer = document.getElementById('previewContainer');
@@ -184,6 +205,7 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
     console.log('Apply Edit button clicked');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
+    const previewAudio = document.getElementById('previewAudio');  // Get audio preview
     const loadingIndicator = document.getElementById('loadingIndicator');
         
         // Close the edit modal
@@ -255,6 +277,10 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
             };
         };
+    }
+
+    if (previewAudio) {
+        previewAudio.play();
     }
 });
 

@@ -18,6 +18,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
 
     //Add Story Function
     export function addStories() {
+        console.log('addStories function triggered');
         const mediaInput = document.getElementById('mediaInput');
         const storyTitleInput = document.getElementById('storyTitle');
         const storyDescriptionInput = document.getElementById('storyDescription');
