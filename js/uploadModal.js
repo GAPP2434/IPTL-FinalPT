@@ -136,7 +136,18 @@ export function rotateRight() {
 window.rotateLeft = rotateLeft;
 window.rotateRight = rotateRight;
 
+// Debounce function to prevent multiple executions
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
 // Edit functionality
+let editButtonClicked = false; // Add this line
+
 document.getElementById('editButton').addEventListener('click', () => {
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
@@ -188,7 +199,7 @@ document.getElementById('editButton').addEventListener('click', () => {
         `;
         editContainer.appendChild(endInputContainer);
 
-        const validateTrimTimes = () => {
+        const validateTrimTimes = (videoDuration) => {
             const startHours = parseInt(document.getElementById('startHours').value) || 0;
             const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
             const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
@@ -199,6 +210,11 @@ document.getElementById('editButton').addEventListener('click', () => {
             const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
             const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
 
+            if (startTime >= endTime) {
+                alert('End time must be greater than start time.');
+                return false;
+            }
+
             if (endTime - startTime > 15) {
                 alert('Trim duration cannot exceed 15 seconds.');
                 return false;
@@ -207,52 +223,43 @@ document.getElementById('editButton').addEventListener('click', () => {
             return { startTime, endTime };
         };
 
-        document.getElementById('applyEditButton').addEventListener('click', async () => {
-            const trimTimes = validateTrimTimes();
-            if (!trimTimes) return;
+        const validateInput = (input, max) => {
+            if (parseInt(input.value) > max) {
+                input.value = max;
+            }
+        };
 
-            const { startTime, endTime } = trimTimes;
+        const addInputValidation = (videoDuration) => {
+            const maxMinutes = Math.floor(videoDuration / 60);
+            const maxSeconds = Math.floor(videoDuration % 60);
 
-            const ffmpeg = FFmpeg.createFFmpeg({ log: true });
-            await ffmpeg.load();
+            document.getElementById('startHours').addEventListener('input', (e) => validateInput(e.target, 0));
+            document.getElementById('startMinutes').addEventListener('input', (e) => validateInput(e.target, maxMinutes));
+            document.getElementById('startSeconds').addEventListener('input', (e) => validateInput(e.target, maxSeconds));
+            document.getElementById('endHours').addEventListener('input', (e) => validateInput(e.target, 0));
+            document.getElementById('endMinutes').addEventListener('input', (e) => validateInput(e.target, maxMinutes));
+            document.getElementById('endSeconds').addEventListener('input', (e) => validateInput(e.target, maxSeconds));
+        };
 
-            const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
-            ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
+        editVideo.onloadedmetadata = () => {
+            const videoDuration = editVideo.duration;
+            addInputValidation(videoDuration);
+        };
 
-            await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
-
-            const data = ffmpeg.FS('readFile', 'output.mp4');
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
-            editedVideoBlob = blob;
-            previewVideo.src = URL.createObjectURL(blob);
-            document.getElementById('editModal').style.display = 'none';
-            document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-        });
+        if (!editButtonClicked) { // Add this block
+            document.getElementById('applyEditButton').removeEventListener('click', applyEditHandler); // Remove existing listener
+            document.getElementById('applyEditButton').addEventListener('click', debounce(applyEditHandler, 300)); // Add debounced listener
+            editButtonClicked = true; // Add this line
+        }
     } 
 });
 
-document.getElementById('closeEditModal').addEventListener('click', () => {
-    document.getElementById('editModal').style.display = 'none';
-    if (cropper) {
-        cropper.destroy();
-        cropper = null;
-    }
-    const editVideo = document.querySelector('#editContainer video');
-    if (editVideo) {
-        editVideo.pause();
-        editVideo.currentTime = 0;
-    }
-});
-
-document.getElementById('applyEditButton').addEventListener('click', async () => {
+const applyEditHandler = async () => {
     console.log('Apply Edit button clicked');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
     const loadingIndicator = document.getElementById('loadingIndicator');
-        
-    // Close the edit modal
-    document.getElementById('editModal').style.display = 'none';
         
     if (cropper) {
         console.log('Applying cropper edit');
@@ -276,6 +283,7 @@ document.getElementById('applyEditButton').addEventListener('click', async () =>
 
         if (startTime >= endTime) {
             alert('End time must be greater than start time.');
+            console.log("Test");
             return;
         }
 
@@ -284,26 +292,42 @@ document.getElementById('applyEditButton').addEventListener('click', async () =>
             return;
         }
 
-        const ffmpeg = FFmpeg.createFFmpeg({ log: true });
-        await ffmpeg.load();
+        if (confirm('Are you sure you want to apply the edit?')) {
+            processVideoTrim(startTime, endTime);
 
-        const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
-        ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
-
-        await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
-
-        const data = ffmpeg.FS('readFile', 'output.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
-        editedVideoBlob = blob;
-        previewVideo.src = URL.createObjectURL(blob);
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+            // Close the edit modal only if the trim times are valid
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+        }
     }
 
     if (previewAudio) {
         previewAudio.play();
     }
-});
+};
+
+const processVideoTrim = async (startTime, endTime) => {
+    const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+    await ffmpeg.load();
+
+    const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
+    ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
+
+    // Show the loading indicator
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    loadingIndicator.style.display = 'block';
+
+    await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
+
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    editedVideoBlob = blob;
+    const previewVideo = document.getElementById('previewVideo');
+    previewVideo.src = URL.createObjectURL(blob);
+
+    // Hide the loading indicator
+    loadingIndicator.style.display = 'none';
+};
 
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');

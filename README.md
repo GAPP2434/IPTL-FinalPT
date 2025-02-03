@@ -14,6 +14,8 @@ IPTL PT 1
      ```
    - If it doesn't work, try checking the environment variables of your pc and see in the System PATH if nodejs is there. If not
     include it there and restart PC.
+   - Then run
+        npm install express
 ## Usage
 
 1. **Start the Server**:
