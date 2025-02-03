@@ -55,21 +55,33 @@ header .nav a:hover {
 }
 
 /*List of Stories Section*/
-.stories-container{
-   display: flex;
-    flex-wrap: wrap;
-    align-content: space-around;
+.stories-container {
+    display: flex;
+    flex-wrap: nowrap; /* Don't wrap stories to the next line */
+    overflow-x: scroll; /* Show horizontal scrollbar if necessary */
+    overflow-y: hidden; /* Hide vertical scrollbar */
     margin: 10px auto;
-    overflow-x: auto;
     padding: 10px;
     background-color: white;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     border-radius: 20px;
     width: 60%;
-    overflow-y: hidden;
+    max-width: 60%; /* Set a maximum width */
 }
 
-.story{
+/*NOTE: THESE DONT WORK FOR ME ON FIREFOX, SOMEONE ELSE PLZ CUSTOMIZE THIS*/
+.stories-container::-webkit-scrollbar {
+    height: 10px; /* Make scrollbar bigger */
+}
+
+.stories-container::-webkit-scrollbar-thumb {
+    background-color: #ccc; /* Change scrollbar color */
+    border-radius: 5px; /* Round scrollbar corners */
+}
+/*END NOTE*/
+
+.story {
+    flex-shrink: 0; /* Prevent stories from shrinking */
     width: 120px;
     height: 213px;
     margin: 15px;
@@ -104,13 +116,14 @@ header .nav a:hover {
     background-color: lightblue;
 }
 
-/*Create a story section*/
+/*Duplicate Section?*/
+/*
 .upload-container{
     margin: 20px auto;
     padding: 20px;
     background-color: #fff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 15%;
+    width: 25%;
     border-radius: 30px;
     position: relative;
     display: flex;
@@ -118,6 +131,7 @@ header .nav a:hover {
     align-items: center;
     justify-content: center;
 }
+*/
 
 /*Create a story section*/
 .upload-container{
@@ -125,7 +139,7 @@ header .nav a:hover {
     padding: 20px;
     background-color: #fff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 10%;
+    width: 25%;
     border-radius: 30px;
     position: relative;
     display: flex;

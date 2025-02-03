@@ -11,6 +11,7 @@
     <script type = "module" src = "js\Main.js" defer></script>
     <script type = "module" src = "js\ReactionAndComments.js" defer></script>
     <script type = "module" src = "js\uploadModal.js" defer></script>
+    <script type = "module" src = "js\blogEntries.js" defer></script>
     <!--External css and js-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -28,12 +29,10 @@
               <a href ="#">Profile</a>
           </nav>
         </header>
-  
       <!-- Main Content -->
-       
     <main>
         <div class="upload-container">
-            <h2>Create a Story</h2>
+            <h2>What did you hunt today?</h2>
             <button id="uploadButton" onclick="openUploadModal()">Upload</button>
         </div>
       <!-- Upload Modal -->
@@ -153,6 +152,17 @@
         </div>
     </div>
 </div>
+
+<!--Blog Submit-->
+<div class="blog-post-form">
+    <input type="text" id="blog-post-input" placeholder="Write a blog post...">
+    <input type="text" id="blog-post-username-input" placeholder="Username (optional)">
+    <button id="send-blog-post-button">Post</button>
+</div>
+
+<!--Blog Container-->
+<div id="blog-posts"></div>
+
     </main>
       <!-- Footer -->
        <footer class = "footer">

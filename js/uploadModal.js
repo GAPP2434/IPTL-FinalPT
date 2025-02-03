@@ -252,6 +252,41 @@ document.getElementById('applyEditButton').addEventListener('click', async () =>
     }
 });
 
+// Blog Posts
+document.getElementById('send-blog-post-button').addEventListener('click', () => {
+    const blogPostInput = document.getElementById('blog-post-input');
+    const blogPostText = blogPostInput.value.trim();
+    const blogPostUsernameInput = document.getElementById('blog-post-username-input');
+    let blogPostUsername = blogPostUsernameInput.value.trim();
+  
+    if (!blogPostUsername) {
+      // Generate a random username if the user didn't enter one
+      const randomNumbers = Array(4).fill(0).map(() => Math.floor(Math.random() * 10));
+      blogPostUsername = `Anon #${randomNumbers.join('')}`;
+    }
+  
+    if (blogPostText) {
+      // Get the current date and time
+      const currentTime = new Date();
+      const blogPostTimestamp = `${currentTime.toLocaleDateString()} ${currentTime.toLocaleTimeString()}`;
+  
+      // Add the blog post to the list of blog posts
+      const blogPosts = document.getElementById('blog-posts');
+      const newBlogPost = document.createElement('div');
+      newBlogPost.classList.add('blog-post');
+      newBlogPost.innerHTML = `
+        <h3>${blogPostUsername}</h3>
+        <p>${blogPostText}</p>
+        <small>Posted on ${blogPostTimestamp}</small>
+      `;
+      blogPosts.appendChild(newBlogPost);
+  
+      // Clear the input fields
+      blogPostInput.value = '';
+      blogPostUsernameInput.value = '';
+    }
+  });
+
 
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');
