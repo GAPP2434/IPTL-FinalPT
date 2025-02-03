@@ -1,5 +1,5 @@
 import {initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
-import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
+import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal.js';
 //Variables
     export const storiesContainer = document.getElementById('storiesContainer');
     export const storyViewer = document.getElementById('storyViewer');
@@ -15,6 +15,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     export let remainingTime = 0;
     export let startTime = 0;
     export let elapsedTime = 0;
+    export let audioElement = null;
 
     //Add Story Function
     export function addStories() {
@@ -23,6 +24,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         const storyTitleInput = document.getElementById('storyTitle');
         const storyDescriptionInput = document.getElementById('storyDescription');
         const storyUsernameInput = document.getElementById('storyUsername');
+        const audioInput = document.getElementById('audioInput');
         const storiesContainer = document.getElementById('storiesContainer');
         const files = Array.from(mediaInput.files);
         const storyTitle = storyTitleInput.value.trim();
@@ -42,19 +44,20 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             const title = storyTitle || "Untitled Story";
             const description = storyDescription || "No description";
             const username = storyUsername || "Anonymous";
+            const audioUrl = editedAudioBlob ? URL.createObjectURL(editedAudioBlob) : null;
     
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = url;
-                img.alt = title; // Set the alt attribute to the title
-                img.loading = 'lazy'; // Enable lazy loading
+                img.alt = title;
+                img.loading = 'lazy';
                 storyElement.appendChild(img);
             } else if (file.type.startsWith('video/')) {
                 const video = document.createElement('video');
                 video.src = url;
                 video.controls = false;
-                video.alt = title; // Set a custom attribute to store the title
-                video.loading = 'lazy'; // Enable lazy loading
+                video.alt = title;
+                video.loading = 'lazy';
                 storyElement.appendChild(video);
             } else {
                 alert('Unsupported file type.');
@@ -67,10 +70,11 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
                     .map(child => ({
                         src: child.querySelector('img, video').src,
                         type: child.querySelector('img') ? 'image' : 'video',
-                        title: child.querySelector('img, video').alt || title, // Ensure title is set correctly
-                        description: description, // Ensure description is set correctly
-                        username: username, // Ensure username is set correctly
-                        uploadDate: uploadDate // Ensure upload date is set correctly
+                        title: child.querySelector('img, video').alt || title,
+                        description: description,
+                        username: username,
+                        uploadDate: uploadDate,
+                        audioUrl: audioUrl
                     }));
     
                 currentStoryIndex = storyQueue.findIndex(item => item.src === url);
@@ -84,7 +88,8 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         storyDescriptionInput.value = '';
         storyUsernameInput.value = '';
         mediaInput.value = '';
-        updateStoryIndicators(); // Update indicators when new stories are added
+        audioInput.value = '';
+        updateStoryIndicators();
     }
     
     export function showStory(index) {
@@ -97,6 +102,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             storyViewer.classList.remove('active');
             footer.classList.remove('hidden');
             clearTimeout(progressTimeout);
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+            }
             return;
         }
     
@@ -154,6 +163,31 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             };
         }
     
+        if (audioElement) {
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            audioElement = null; // Ensure the audio element is reset
+        }
+    
+        if (story.audioUrl) {
+            audioElement = new Audio(story.audioUrl);
+            audioElement.volume = 0.5;
+            audioElement.play();
+            const volumeControl = document.createElement('input');
+            volumeControl.type = 'range';
+            volumeControl.min = '0';
+            volumeControl.max = '1';
+            volumeControl.step = '0.01';
+            volumeControl.value = audioElement.volume;
+            volumeControl.style.position = 'absolute';
+            volumeControl.style.top = '10px';
+            volumeControl.style.right = '10px';
+            volumeControl.addEventListener('input', (event) => {
+                audioElement.volume = event.target.value;
+            });
+            storyViewerContent.appendChild(volumeControl);
+        }
+
         initializeReactionCounts(currentStoryIndex);
         updateReactionCounts(currentStoryIndex);
         initializeComments(currentStoryIndex);
@@ -161,7 +195,7 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
-        updateNavButtons(); // Ensure nav buttons are updated
+        updateNavButtons();
         updateStoryIndicators();
         preloadNextStory();
     }
@@ -176,12 +210,18 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             if (video) {
                 video.play();
             }
+            if (audioElement) {
+                audioElement.play();
+            }
         } else {
             clearTimeout(progressTimeout);
             elapsedTime = Date.now() - startTime;
             remainingTime -= elapsedTime;
             if (video) {
                 video.pause();
+            }
+            if (audioElement) {
+                audioElement.pause();
             }
             pauseProgressBar();
         }
@@ -331,6 +371,10 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             video.pause();
             video.currentTime = 0;
             storyViewerContent.removeChild(video); // Remove the video element from the DOM
+        }
+        if (audioElement) {
+            audioElement.pause();
+            audioElement.currentTime = 0;
         }
         storyViewer.classList.remove('active');
         clearTimeout(progressTimeout);

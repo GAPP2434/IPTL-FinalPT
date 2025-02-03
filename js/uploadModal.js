@@ -25,6 +25,8 @@ document.getElementById('closeUploadModal').addEventListener('click', () => {
     document.getElementById('storyDescription').value = ''; // Clear the description input
     document.getElementById('storyUsername').value = ''; // Clear the username input
     document.getElementById('audioInput').value = ''; // Clear the audio input
+    document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
+    editedAudioBlob = null;
 });
 
 window.addEventListener('click', (event) => {
@@ -59,7 +61,15 @@ document.getElementById('postButton').addEventListener('click', () => {
         addStories();
         console.log('Story added');
         document.getElementById('uploadModal').style.display = 'none';
+        editedImageDataUrl = null;
         clearPreview(); // Clear preview after posting
+        document.getElementById('mediaInput').value = ''; // Clear the file input
+        document.getElementById('storyTitle').value = ''; // Clear the title input
+        document.getElementById('storyDescription').value = ''; // Clear the description input
+        document.getElementById('storyUsername').value = ''; // Clear the username input
+        document.getElementById('audioInput').value = ''; // Clear the audio input
+        document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
+        editedAudioBlob = null; // Reset the edited audio blob
     }
 });
 
