@@ -201,15 +201,15 @@ document.getElementById('closeEditModal').addEventListener('click', () => {
     }
 });
 
-document.getElementById('applyEditButton').addEventListener('click', () => {
+document.getElementById('applyEditButton').addEventListener('click', async () => {
     console.log('Apply Edit button clicked');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
     const loadingIndicator = document.getElementById('loadingIndicator');
         
-        // Close the edit modal
-        document.getElementById('editModal').style.display = 'none';
+    // Close the edit modal
+    document.getElementById('editModal').style.display = 'none';
         
     if (cropper) {
         console.log('Applying cropper edit');
@@ -231,52 +231,20 @@ document.getElementById('applyEditButton').addEventListener('click', () => {
             return;
         }
 
-        const video = document.createElement('video');
-        video.src = previewVideo.src;
-        video.currentTime = startTime;
+        const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+        await ffmpeg.load();
 
-        video.onloadedmetadata = () => {
-            const duration = endTime - startTime;
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+        const videoFile = await fetch(previewVideo.src).then(res => res.arrayBuffer());
+        ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
 
-            const chunks = [];
-            const stream = canvas.captureStream();
-            const audioContext = new AudioContext();
-            const source = audioContext.createMediaElementSource(video);
-            const destination = audioContext.createMediaStreamDestination();
-            source.connect(destination);
-            source.connect(audioContext.destination);
-            const combinedStream = new MediaStream([...stream.getVideoTracks(), ...destination.stream.getAudioTracks()]);
-            const recorder = new MediaRecorder(combinedStream);
+        await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
 
-            recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
-            };
-
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/mp4' });
-                    editedVideoBlob = blob;
-                    previewVideo.src = URL.createObjectURL(blob);
-                    document.getElementById('editModal').style.display = 'none';
-                    document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-                };
-
-            recorder.start();
-
-            video.play();
-            video.ontimeupdate = () => {
-                if (video.currentTime >= endTime) {
-                    video.pause();
-                    recorder.stop();
-                }
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            };
-        };
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        editedVideoBlob = blob;
+        previewVideo.src = URL.createObjectURL(blob);
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
     }
 
     if (previewAudio) {
