@@ -108,23 +108,6 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         storyViewerDescription.textContent = story.description;
         storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
     
-        const closeButton = document.createElement('button');
-        closeButton.textContent = 'Close';
-        closeButton.classList.add('close-button');
-        closeButton.addEventListener('click', () => {
-            const video = storyViewerContent.querySelector('video');
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-                storyViewerContent.removeChild(video); // Remove the video element from the DOM
-            }
-            storyViewer.classList.remove('active');
-            footer.classList.remove('hidden');
-            clearTimeout(progressTimeout);
-        });
-    
-        storyViewerContent.appendChild(closeButton);
-    
         isPaused = false;
         remainingTime = 0;
         startTime = 0;
@@ -163,7 +146,9 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             video.ontimeupdate = () => {
                 if (video.currentTime >= 15) {
                     video.pause();
-                    storyViewerContent.removeChild(video);
+                    if (storyViewerContent.contains(video)) {
+                        storyViewerContent.removeChild(video);
+                    }
                     showStory(index + 1);
                 }
             };
@@ -176,11 +161,11 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
-        updateNavButtons();
+        updateNavButtons(); // Ensure nav buttons are updated
         updateStoryIndicators();
         preloadNextStory();
     }
-
+    
     export function togglePauseStory() {
         const story = storyQueue[currentStoryIndex];
         const video = storyViewerContent.querySelector('video');
@@ -208,19 +193,19 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         const progressBar = document.getElementById('progressBar');
         progressBar.style.transition = 'none';
         progressBar.style.width = '0%';
-    
+
         // Force reflow to reset the transition
         progressBar.offsetHeight;
-    
+
         progressBar.style.transition = `width ${duration}ms linear`;
         progressBar.style.width = '100%';
-    
+
         progressTimeout = setTimeout(() => {
             progressBar.style.width = '0%';
             callback();
         }, duration);
     }
-    
+
     // Pausing and Resuming the Progress Bar
     export function pauseProgressBar() {
         const progressBar = document.getElementById('progressBar');
@@ -229,12 +214,12 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
         progressBar.style.transition = 'none';
         progressBar.style.width = width;
     }
-    
+
     export function resumeProgressBar(remainingDuration) {
         const progressBar = document.getElementById('progressBar');
         progressBar.style.transition = `width ${remainingDuration}ms linear`;
         progressBar.style.width = '100%';
-    
+
         progressTimeout = setTimeout(() => {
             progressBar.style.width = '0%';
             showStory(currentStoryIndex + 1);
@@ -244,11 +229,23 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
     export function updateNavButtons() {
         const prevButton = document.getElementById('prevButton');
         const nextButton = document.getElementById('nextButton');
-
+    
         prevButton.disabled = currentStoryIndex === 0;
         nextButton.disabled = currentStoryIndex === storyQueue.length - 1;
+    
+        if (prevButton.disabled) {
+            prevButton.classList.add('disabled');
+        } else {
+            prevButton.classList.remove('disabled');
+        }
+    
+        if (nextButton.disabled) {
+            nextButton.classList.add('disabled');
+        } else {
+            nextButton.classList.remove('disabled');
+        }
     }
-
+    
     export function prevStory() {
         if (currentStoryIndex > 0) {
             clearTimeout(progressTimeout); // Clear any existing timeout
@@ -327,3 +324,16 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
           closeViewer();
         }
       });
+
+      export function closeStoryViewer() {
+        const video = storyViewerContent.querySelector('video');
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
+            storyViewerContent.removeChild(video); // Remove the video element from the DOM
+        }
+        storyViewer.classList.remove('active');
+        clearTimeout(progressTimeout);
+    }
+    
+    window.closeStoryViewer = closeStoryViewer;

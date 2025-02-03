@@ -87,56 +87,66 @@
             <h1>+</h1>
         </div>
       </div>
-      <!-- Story Viewer -->
+   <!-- Story Viewer -->
 <div class="story-viewer" id="storyViewer">
+    <button class="button" id="closeButton" onclick="closeStoryViewer()">
+        <span class="X"></span>
+        <span class="Y"></span>
+    </button>
     <div class="story-viewer-left">
         <div class="story-viewer-content" id="storyViewerContent"></div>
-        <div class="progress-bar">
-            <div class="progress" id="progressBar"></div>
+        <div class="nav-button">
+            <div class="prev-button-container">
+                <li class="icon-next-prev black" id="prevButton">
+                    <span class="tooltip prev-tooltip">Previous</span>
+                    <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-left" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8.354 1.646a.5.5 0 0 1 0 .708L2.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
+                        <path d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
+                    </svg></span>
+                </li>
+            </div>
+            <div class="next-button-container">
+                <li class="icon-next-prev black" id="nextButton">
+                    <span class="tooltip next-tooltip">Next</span>
+                    <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-right" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
+                        <path d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
+                    </svg></span>
+                </li>
+            </div>
         </div>
-        <div class="story-indicators" id="storyIndicators"></div>
-        <div class="prev-button-container">
-            <li class="icon-next-prev black" id="prevButton">
-                <span class="tooltip">Previous</span>
-                <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-left" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8.354 1.646a.5.5 0 0 1 0 .708L2.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
-                    <path d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" fill-rule="evenodd"></path>
-                </svg></span>
-            </li>
-        </div>
-        <div class="next-button-container">
-            <li class="icon-next-prev black" id="nextButton">
-                <span class="tooltip">Next</span>
-                <span><svg viewBox="0 0 16 16" class="bi bi-chevron-double-right" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
-                    <path d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708z" fill-rule="evenodd"></path>
-                </svg></span>
-            </li>
+        <div class="progress-indicators-container">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="story-indicators" id="storyIndicators"></div>
         </div>
     </div>
-    <div class="story-viewer-right">
-        <div class="reaction-comment-modal">
-            <div class="story-viewer-title" id="storyViewerTitle"></div>
-            <div class="story-viewer-description" id="storyViewerDescription"></div>
-            <div class="story-viewer-username" id="storyViewerUsername"></div>
-            <hr class="separator">
-            <div class="reaction-buttons" id="reactionButtons">
-                <button class="reaction-button" id="happyButton">😊 <span id="happyCount">0</span></button>
-                <button class="reaction-button" id="heartButton">❤️ <span id="heartCount">0</span></button>
-                <button class="reaction-button" id="laughButton">😂 <span id="laughCount">0</span></button>
-                <button class="reaction-button" id="likeButton">👍 <span id="likeCount">0</span></button>
-            </div>
-            <hr class="separator">
-            <div class="comment-section">
-                <div class="comment-username">
-                    <h3>Comment As: </h5>
-                    <input type="text" id="usernameInput" placeholder="Username" maxlength="15" required>
+    <div class="story-viewer-right-main">
+        <div class="story-viewer-right">
+            <div class="reaction-comment-modal">
+                <div class="story-viewer-title" id="storyViewerTitle"></div>
+                <div class="story-viewer-description" id="storyViewerDescription"></div>
+                <div class="story-viewer-username" id="storyViewerUsername"></div>
+                <hr class="separator">
+                <div class="reaction-buttons" id="reactionButtons">
+                    <button class="reaction-button" id="happyButton">😊 <span id="happyCount">0</span></button>
+                    <button class="reaction-button" id="heartButton">❤️ <span id="heartCount">0</span></button>
+                    <button class="reaction-button" id="laughButton">😂 <span id="laughCount">0</span></button>
+                    <button class="reaction-button" id="likeButton">👍 <span id="likeCount">0</span></button>
                 </div>
-                <div class="comment-input">
-                    <input type="text" id="commentInput" placeholder="Add a comment...">
-                    <button id="sendCommentButton">Send</button>
+                <hr class="separator">
+                <div class="comment-section">
+                    <div class="comment-username">
+                        <h3>Comment As: </h3>
+                        <input type="text" id="usernameInput" placeholder="Username" maxlength="15" required>
+                    </div>
+                    <div class="comment-input">
+                        <input type="text" id="commentInput" placeholder="Add a comment...">
+                        <button id="sendCommentButton">Send</button>
+                    </div>
+                    <div class="comment-list" id="commentList"></div>
                 </div>
-                <div class="comment-list" id="commentList"></div>
             </div>
         </div>
     </div>

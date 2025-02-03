@@ -13,6 +13,7 @@
     padding: 20px;
     box-sizing: border-box;
     z-index: 1000;
+    overflow-y: auto; /* Allow vertical scrolling */
 }
 
 .story-viewer.active {
@@ -20,54 +21,58 @@
 }
 
 .story-viewer-left {
-    width: 60%;
+    width: 50%;
     padding: 20px;
     position: relative;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    height: 80%;
+    height: auto; /* Adjust height based on content */
 }
 
-.story img, .story video{
+.story img, .story video {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
 .story-viewer-content {
-    width: 9/16;
-    aspect-ratio: 9/16;
-    height: 100%;
+    width: 45%;
+    aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
     display: flex;
     margin: auto;
     justify-content: center;
     align-items: center;
-    position: relative;
     overflow: hidden; /* Ensure content does not overflow */
     border: white 1px solid;
     border-radius: 10px;
-    top: -30px;
+    margin-bottom: 20px; /* Add space below the story viewer content */
 }
+
 .story-viewer-content-main {
-    width: 9/16;
-    aspect-ratio: 9/16;
-    height: 80%;
+    width: 100%;
+    aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
     display: flex;
     justify-content: center;
     align-items: center;
-    position: relative;
     border-radius: 50px;
-    
+
 }
 
 .story-viewer img, .story-viewer video {
     width: 100%;
     height: 100%;
-    object-fit: cover; 
+    object-fit: cover;
+    z-index: 10;
 }
 
+.story-viewer-right-main{
+    width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .story-viewer-right {
-    width: 40%;
+    width: 80%;
     padding: 20px;
     background-color: #f9f9f9;
     border-left: 1px solid #ddd;
@@ -104,6 +109,7 @@
     border-top: 1px solid #ddd;
     margin: 20px 0;
 }
+
 /* Story indicators */
 .story-indicators {
     display: flex;
@@ -127,68 +133,96 @@
 }
 
 /* Close story display styling */
-.close-button{
-    position: fixed;
+.button {
+    position: absolute;
     top: 10px;
     right: 10px;
-    background-color: red;
-    color: white;
+    width: 4em;
+    height: 4em;
     border: none;
-    padding: 10px;
-    cursor: pointer;
+    background: rgba(180, 83, 107, 0.11);
+    border-radius: 5px;
+    transition: background 0.5s;
+    z-index: 1001; /* Ensure it is above other elements */
 }
 
-.close-button:hover{
-    background-color: darkred;
-}
-
-/*Progress bar styling*/
-.progress-bar{
+.X {
+    content: "";
     position: absolute;
-    bottom: 10px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
+    width: 2em;
+    height: 1.5px;
+    background-color: rgb(255, 255, 255);
+    transform: translateX(-50%) rotate(45deg);
+}
+
+.Y {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2em;
+    height: 1.5px;
+    background-color: #fff;
+    transform: translateX(-50%) rotate(-45deg);
+}
+
+.button:hover {
+    background-color: rgb(211, 21, 21);
+}
+
+.button:active {
+    background-color: rgb(130, 0, 0);
+}
+
+.button:hover > .close {
+    animation: close 0.2s forwards 0.25s;
+}
+
+@keyframes close {
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Progress bar styling */
+.progress-bar {
+    position: relative;
+    width: 50%;
     height: 5px;
     background-color: rgba(255, 255, 255, 0.3);
     border-radius: 3px;
     overflow: hidden;
 }
 
-.progress{
+.progress {
     height: 100%;
     background-color: #1877f2;
     width: 0%;
     transition: width linear;
 }
 
-/*nav buttons*/
+/* Progress and indicators container */
+.progress-indicators-container {
+    margin-top: 20px; /* Add space above the container */
+    margin-bottom: 20px; /* Adjust margin as needed */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* nav buttons */
 .nav-button {
     position: absolute;
     top: 50%;
-    transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    z-index: 10;
-}
-
-/*style for next and prev buttons*/
-.prev-button-container,
-.next-button-container {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.prev-button-container {
-    left: 300px; /* Adjust the 50px to the width of the button and 10px for spacing */
-}
-
-.next-button-container {
-    right: 300px; /* Adjust the 50px to the width of the button and 10px for spacing */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 65%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .icon-next-prev {
@@ -204,8 +238,8 @@
 
 .icon-next-prev .tooltip {
     position: absolute;
-    top: -30px;
-    left: 50%;
+    top: -70%;
+    margin-left: 40px;
     transform: translateX(-50%);
     background-color: #333;
     color: #fff;
@@ -215,6 +249,10 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
+}
+
+.prev-tooltip {
+    right: 83%;
 }
 
 .icon-next-prev:hover .tooltip {
@@ -231,11 +269,14 @@
     fill: #000;
 }
 
-.nav-button:disabled {
-    background-color: rgba(0, 0, 0, 0.2);
+.icon-next-prev:disabled {
     cursor: not-allowed;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
+.icon-next-prev:disabled:hover .tooltip {
+    opacity: 0; /* Hide tooltip when button is disabled */
+}
 /* Reaction buttons styling */
 .reaction-buttons {
     display: flex;
@@ -266,13 +307,14 @@
     margin-top: 20px;
 }
 
-.comment-username{
+.comment-username {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap; /* Allow wrapping for smaller screens */
 }
 
-.comment-username input{
+.comment-username input {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -325,4 +367,126 @@
 .username {
     font-weight: bold;
     color: #9f1111;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+    .story-viewer {
+        flex-direction: column; /* Stack elements vertically */
+    }
+
+    .story-viewer-left{
+        width: 100%;
+        height: auto;
+        margin-bottom: 35rem;
+        top: 35rem;
+    }
+
+    .story-viewer-content {
+        width: 40%;
+        height: auto;
+        top: 0px; /* Reset top position */
+    }
+
+    .story-viewer-right {
+        border-left: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .prev-button-container,
+    .next-button-container {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
+        margin: 10px 0;
+    }
+    .nav-button{
+        width:70%;
+    }
+}
+
+@media (max-width: 768px) {
+    .story-viewer {
+        flex-direction: column; /* Stack elements vertically */
+    }
+
+    .story-viewer-left{
+        width: 100%;
+        height: auto;
+        margin-bottom: 40rem;
+        top: 40rem;
+    }
+
+    .story-viewer-content {
+        width: 40%;
+        height: auto;
+        top: 0px; /* Reset top position */
+    }
+
+    .story-viewer-right {
+        border-left: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .prev-button-container,
+    .next-button-container {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
+        margin: 10px 0;
+    }
+
+}
+
+@media (max-width: 420px) {
+    .story-viewer {
+        flex-direction: column; /* Stack elements vertically */
+    }
+
+    .story-viewer-left{
+        width: 100%;
+        height: auto;
+        margin-bottom: 20rem;
+        top: 20rem;
+    }
+
+    .story-viewer-content {
+        width: 70%;
+        height: auto;
+        top: 0px; /* Reset top position */
+    }
+
+    .story-viewer-right-main{
+        width: 100%;
+    }
+    .story-viewer-right {
+        border-left: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .prev-button-container,
+    .next-button-container {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        transform: none;
+        margin: 10px 0;
+    }
+
+    .nav-button{
+        width: 110%;
+    }
+
+    .comment-username h3{
+        margin-bottom: 10px;
+    }
+
+    .comment-username input{
+        margin-bottom: 10px;
+    }
 }

@@ -173,10 +173,21 @@ header .nav a:hover {
     .upload-container {
         width: 80%; /* Adjust width for smaller screens */
     }
+    .stories-container{
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+    }
 }
 
 @media (max-width: 480px) {
     .upload-container {
         width: 40%; /* Adjust width for even smaller screens */
+    }
+
+    .stories-container{
+        display: flex;
+        align-items: center;
+        flex-direction: column;
     }
 }
