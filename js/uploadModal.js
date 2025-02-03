@@ -1,11 +1,15 @@
-import { addStories} from './Main.js';
+import { addStories } from './Main.js';
 
 /*variables*/
 export let cropper;
 export let editedImageDataUrl = null;
 export let editedVideoBlob = null;
+export let editedAudioBlob = null;
+export let originalImageFile = null; // Add this line
+export let originalVideoFile = null; // Add this line
+
 /*Modal For Uploading*/
-export function openUploadModal(){
+export function openUploadModal() {
     document.getElementById('uploadModal').style.display = 'block';
     clearPreview();
 }
@@ -72,11 +76,13 @@ document.getElementById('mediaInput').addEventListener('change', () => {
             previewElement = document.createElement('img');
             previewElement.src = url;
             previewElement.id = 'previewImage';
+            originalImageFile = file; // Store the original image file
         } else if (file.type.startsWith('video/')) {
             previewElement = document.createElement('video');
             previewElement.src = url;
             previewElement.controls = true;
             previewElement.id = 'previewVideo';
+            originalVideoFile = file; // Store the original video file
         } else {
             alert('Unsupported file type.');
             return;
@@ -103,6 +109,9 @@ document.getElementById('audioInput').addEventListener('change', () => {
         audioPreview.id = 'previewAudio';
         
         previewContainer.appendChild(audioPreview);
+
+        // Store the audio file
+        editedAudioBlob = file;
     }
 });
 
@@ -141,7 +150,7 @@ document.getElementById('editButton').addEventListener('click', () => {
         editModalTitle.textContent = 'Edit Image';
         rotateButtons.style.display = 'block';
         const editImage = document.createElement('img');
-        editImage.src = previewImage.src;
+        editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);
         cropper = new Cropper(editImage, {
             aspectRatio: 9/16,
@@ -152,38 +161,72 @@ document.getElementById('editButton').addEventListener('click', () => {
         editModalTitle.textContent = 'Edit Video';
         rotateButtons.style.display = 'none'; // Hide rotate buttons for video
         const editVideo = document.createElement('video');
-        editVideo.src = previewVideo.src;
+        editVideo.src = URL.createObjectURL(originalVideoFile); // Use the original video file
         editVideo.controls = true;
         editContainer.appendChild(editVideo);
 
         // Add video clipping controls
-        const startInput = document.createElement('input');
-        startInput.type = 'number';
-        startInput.id = 'startInput';
-        startInput.placeholder = 'Start time (seconds)';
-        startInput.min = 0;
-        editContainer.appendChild(startInput);
+        const startInputContainer = document.createElement('div');
+        startInputContainer.innerHTML = `
+            <label for="startHours">Start Time:</label>
+            <input type="number" id="startHours" placeholder="HH" min="0" value="0">
+            <label for="startMinutes">:</label>
+            <input type="number" id="startMinutes" placeholder="MM" min="0" max="59" value="0">
+            <label for="startSeconds">:</label>
+            <input type="number" id="startSeconds" placeholder="SS" min="0" max="59" value="0">
+        `;
+        editContainer.appendChild(startInputContainer);
 
-        const endInput = document.createElement('input');
-        endInput.type = 'number';
-        endInput.id = 'endInput';
-        endInput.placeholder = 'End time (seconds)';
-        endInput.min = 0;
-        editContainer.appendChild(endInput);
+        const endInputContainer = document.createElement('div');
+        endInputContainer.innerHTML = `
+            <label for="endHours">End Time:</label>
+            <input type="number" id="endHours" placeholder="HH" min="0" value="0">
+            <label for="endMinutes">:</label>
+            <input type="number" id="endMinutes" placeholder="MM" min="0" max="59" value="0">
+            <label for="endSeconds">:</label>
+            <input type="number" id="endSeconds" placeholder="SS" min="0" max="59" value="0">
+        `;
+        editContainer.appendChild(endInputContainer);
 
-        startInput.addEventListener('input', () => {
-            const maxEndTime = parseFloat(startInput.value) + 15;
-            endInput.max = maxEndTime;
-            if (parseFloat(endInput.value) > maxEndTime) {
-                endInput.value = maxEndTime;
+        const validateTrimTimes = () => {
+            const startHours = parseInt(document.getElementById('startHours').value) || 0;
+            const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
+            const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
+            const endHours = parseInt(document.getElementById('endHours').value) || 0;
+            const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
+            const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
+
+            const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
+            const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
+
+            if (endTime - startTime > 15) {
+                alert('Trim duration cannot exceed 15 seconds.');
+                return false;
             }
-        });
 
-        endInput.addEventListener('input', () => {
-            const maxEndTime = parseFloat(startInput.value) + 15;
-            if (parseFloat(endInput.value) > maxEndTime) {
-                endInput.value = maxEndTime;
-            }
+            return { startTime, endTime };
+        };
+
+        document.getElementById('applyEditButton').addEventListener('click', async () => {
+            const trimTimes = validateTrimTimes();
+            if (!trimTimes) return;
+
+            const { startTime, endTime } = trimTimes;
+
+            const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+            await ffmpeg.load();
+
+            const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
+            ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
+
+            await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
+
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            editedVideoBlob = blob;
+            previewVideo.src = URL.createObjectURL(blob);
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
         });
     } 
 });
@@ -221,20 +264,30 @@ document.getElementById('applyEditButton').addEventListener('click', async () =>
         cropper.destroy();
         cropper = null;
     } else if (previewVideo) {
-        const startInput = document.getElementById('startInput');
-        const endInput = document.getElementById('endInput');
-        const startTime = parseFloat(startInput.value) || 0;
-        const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
+        const startHours = parseInt(document.getElementById('startHours').value) || 0;
+        const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
+        const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
+        const endHours = parseInt(document.getElementById('endHours').value) || 0;
+        const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
+        const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
+
+        const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
+        const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
 
         if (startTime >= endTime) {
             alert('End time must be greater than start time.');
             return;
         }
 
+        if (endTime - startTime > 15) {
+            alert('Trim duration cannot exceed 15 seconds.');
+            return;
+        }
+
         const ffmpeg = FFmpeg.createFFmpeg({ log: true });
         await ffmpeg.load();
 
-        const videoFile = await fetch(previewVideo.src).then(res => res.arrayBuffer());
+        const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
         ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
 
         await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
@@ -251,7 +304,6 @@ document.getElementById('applyEditButton').addEventListener('click', async () =>
         previewAudio.play();
     }
 });
-
 
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');
