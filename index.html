@@ -121,13 +121,15 @@
                 <button class="reaction-button" id="laughButton">😂 <span id="laughCount">0</span></button>
                 <button class="reaction-button" id="likeButton">👍 <span id="likeCount">0</span></button>
             </div>
+            <hr class="separator">
             <div class="comment-section">
+                <div class="comment-username">
+                    <h3>Comment As: </h5>
+                    <input type="text" id="usernameInput" placeholder="Username" maxlength="15" required>
+                </div>
                 <div class="comment-input">
                     <input type="text" id="commentInput" placeholder="Add a comment...">
                     <button id="sendCommentButton">Send</button>
-                </div>
-                <div class="comment-username">
-                    <input type="text" id="usernameInput" placeholder="Username">
                 </div>
                 <div class="comment-list" id="commentList"></div>
             </div>

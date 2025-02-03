@@ -266,6 +266,19 @@
     margin-top: 20px;
 }
 
+.comment-username{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.comment-username input{
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
 .comment-input {
     display: flex;
     margin-bottom: 10px;
