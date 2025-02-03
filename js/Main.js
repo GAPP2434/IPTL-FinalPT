@@ -302,3 +302,27 @@ import {editedImageDataUrl, editedVideoBlob,} from './uploadModal.js';
             preloadElement.onloadedmetadata = () => document.body.removeChild(preloadElement);
         }
     }
+
+    // Keyboard Shortcuts
+
+    function closeViewer() {
+        const video = storyViewerContent.querySelector('video');
+        if (video) {
+          video.pause();
+          video.currentTime = 0;
+          storyViewerContent.removeChild(video); // Remove the video element from the DOM
+        }
+        storyViewer.classList.remove('active');
+        footer.classList.remove('hidden');
+        clearTimeout(progressTimeout);
+      }
+      
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          prevStory();
+        } else if (event.key === 'ArrowRight') {
+          nextStory();
+        } else if (event.key === 'Escape') {
+          closeViewer();
+        }
+      });
