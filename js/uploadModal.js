@@ -424,6 +424,57 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
     }
   });
 
+document.getElementById('applyEditButton').addEventListener('click', async () => {
+    console.log('Apply Edit button clicked');
+    const previewImage = document.getElementById('previewImage');
+    const previewVideo = document.getElementById('previewVideo');
+    const previewAudio = document.getElementById('previewAudio');  // Get audio preview
+    const loadingIndicator = document.getElementById('loadingIndicator');
+        
+    // Close the edit modal
+    document.getElementById('editModal').style.display = 'none';
+        
+    if (cropper) {
+        console.log('Applying cropper edit');
+        const canvas = cropper.getCroppedCanvas();
+        editedImageDataUrl = canvas.toDataURL();
+        previewImage.src = editedImageDataUrl;
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+        cropper.destroy();
+        cropper = null;
+    } else if (previewVideo) {
+        const startInput = document.getElementById('startInput');
+        const endInput = document.getElementById('endInput');
+        const startTime = parseFloat(startInput.value) || 0;
+        const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
+
+        if (startTime >= endTime) {
+            alert('End time must be greater than start time.');
+            return;
+        }
+
+        const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+        await ffmpeg.load();
+
+        const videoFile = await fetch(previewVideo.src).then(res => res.arrayBuffer());
+        ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
+
+        await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
+
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        editedVideoBlob = blob;
+        previewVideo.src = URL.createObjectURL(blob);
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+    }
+
+    if (previewAudio) {
+        previewAudio.play();
+    }
+});
+
 
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');

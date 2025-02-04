@@ -71,8 +71,8 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                         src: child.querySelector('img, video').src,
                         type: child.querySelector('img') ? 'image' : 'video',
                         title: child.querySelector('img, video').alt || title,
-                        description: description,
-                        username: username,
+                        description: child.querySelector('.story-description') ? child.querySelector('.story-description').textContent : description,
+                        username: child.querySelector('.story-username').textContent,
                         uploadDate: uploadDate,
                         audioUrl: audioUrl
                     }));
@@ -80,6 +80,16 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 currentStoryIndex = storyQueue.findIndex(item => item.src === url);
                 showStory(currentStoryIndex);
             });
+    
+            const usernameElement = document.createElement('div');
+            usernameElement.classList.add('story-username');
+            usernameElement.textContent = username;
+            storyElement.appendChild(usernameElement);
+    
+            const descriptionElement = document.createElement('div');
+            descriptionElement.classList.add('story-description');
+            descriptionElement.textContent = description;
+            storyElement.appendChild(descriptionElement);
     
             storiesContainer.appendChild(storyElement);
         });
@@ -187,7 +197,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             });
             storyViewerContent.appendChild(volumeControl);
         }
-
+    
         initializeReactionCounts(currentStoryIndex);
         updateReactionCounts(currentStoryIndex);
         initializeComments(currentStoryIndex);
@@ -294,6 +304,10 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 video.pause();
                 video.currentTime = 0;
             }
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+            }
             showStory(currentStoryIndex - 1);
         }
     }
@@ -305,6 +319,10 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             if (video) {
                 video.pause();
                 video.currentTime = 0;
+            }
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
             }
             showStory(currentStoryIndex + 1);
         }
@@ -343,7 +361,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
 
     // Keyboard Shortcuts
 
-    function closeViewer() {
+    export function closeViewer() {
         const video = storyViewerContent.querySelector('video');
         if (video) {
           video.pause();
