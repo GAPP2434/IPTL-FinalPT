@@ -125,12 +125,13 @@ header .nav a:hover {
     width: 60%;
     padding: 20px;
     margin: 20px auto;
+    word-wrap: break-word; /* Ensure long text wraps to a new line */
   }
   
   /*Blog Post Inner Styling*/
   .blog-post h3 {
     font-weight: bold;
-    font-size: 18px;
+    font-size: 24px; /* Make the story title bigger */
     margin-top: 0;
   }
 
@@ -142,6 +143,12 @@ header .nav a:hover {
   .blog-post small {
     font-size: 14px;
     color: #666;
+  }
+
+  .blog-post .post-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
 /*Blog Uploading Container*/
@@ -160,6 +167,7 @@ header .nav a:hover {
     font-size: 18px;
     border: none;
     border-radius: 8px;
+    resize: none; /* Prevent resizing */
   }
   
 #send-blog-post-button {
@@ -175,37 +183,26 @@ header .nav a:hover {
     cursor: pointer;
   }
   
-#blog-post-username-input {
-    width: 98%;
+#blog-post-username-input, #blog-post-title-input {
+    width: 48%;
     height: 40px;
     padding: 10px;
     font-size: 18px;
     border: none;
     border-radius: 8px;
     margin-bottom: 10px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
   }
   
 #blog-posts {
     margin-top: 20px;
   }
 
-
-/*Duplicate Section?*/
-/*
-.upload-container{
-    margin: 20px auto;
-    padding: 20px;
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 25%;
-    border-radius: 30px;
-    position: relative;
+.blog-post-inputs {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 4%;
 }
-*/
 
 /*Create a story section*/
 .upload-container{
