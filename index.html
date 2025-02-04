@@ -24,17 +24,19 @@
               <h1 class = "GatheringHub">Gathering Hub</h1>
           </div>
           <nav class = "nav">
-              <a href ="#">Home</a>
               <a href ="#">Messages</a>
+              <a href ="#">Home</a>
               <a href ="#">Profile</a>
           </nav>
         </header>
       <!-- Main Content -->
     <main>
-        <div class="upload-container">
+        <!--
+            <div class="upload-container">
             <h2>What did you hunt today?</h2>
             <button id="uploadButton" onclick="openUploadModal()">Upload</button>
         </div>
+        -->
       <!-- Upload Modal -->
         <div id="uploadModal" class="modal">
             <div class="modal-content">
@@ -83,11 +85,17 @@
         </div>
       </div>
 
-      <div class="stories-container" id="storiesContainer">
-        <div class="story add-story" id = "addButton" onclick="openUploadModal()">
-            <h1>+</h1>
+      <!--Stories Container-->
+      <div class="stories-container-container">
+        <span class="section-line"></span>
+        <div class="stories-container" id="storiesContainer">
+            <div class="story add-story" id = "addButton" onclick="openUploadModal()">
+                <h1>+</h1>
+            </div>
         </div>
+        <span class="section-line"></span>
       </div>
+      
    <!-- Story Viewer -->
 <div class="story-viewer" id="storyViewer">
     <button class="button" id="closeButton" onclick="closeStoryViewer()">
@@ -153,17 +161,21 @@
     </div>
 </div>
 
-<!--Blog Container-->
-<div class="post-container">
-    <input type="text" id="blog-post-username-input" placeholder="Username" maxlength="15">
-    <input type="text" id="blog-post-title-input" placeholder="Blog Title" maxlength="25">
-    <div class="post-content-container">
-      <textarea id="blog-post-input" placeholder="Write your post..."></textarea>
+<!--Blog Container Container-->
+<div class="blog-container">
+    <!--Blog Container-->
+    <div class="post-container">
+        <input type="text" id="blog-post-username-input" placeholder="Username" maxlength="15">
+        <input type="text" id="blog-post-title-input" placeholder="Blog Title" maxlength="25">
+        <div class="post-content-container">
+        <textarea id="blog-post-input" placeholder="Write your post..."></textarea>
+        </div>
+        <button id="send-blog-post-button">Post</button>
     </div>
-    <button id="send-blog-post-button">Post</button>
+    <!--Post Section-->
+    <div id="blog-posts"></div>
 </div>
-<!--Post Section-->
-<div id="blog-posts"></div>
+
 
     </main>
       <!-- Footer -->
