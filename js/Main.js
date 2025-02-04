@@ -37,7 +37,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             return;
         }
     
-        files.forEach((file) => {
+        files.forEach((file, index) => {
             const storyElement = document.createElement('div');
             storyElement.classList.add('story');
             const url = editedImageDataUrl || (editedVideoBlob ? URL.createObjectURL(editedVideoBlob) : URL.createObjectURL(file));
@@ -45,6 +45,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             const description = storyDescription || "No description";
             const username = storyUsername || "Anonymous";
             const audioUrl = editedAudioBlob ? URL.createObjectURL(editedAudioBlob) : null;
+            const uniqueId = `${Date.now()}-${index}`; // Generate a unique ID
     
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
@@ -52,6 +53,17 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 img.alt = title;
                 img.loading = 'lazy';
                 storyElement.appendChild(img);
+                if (audioUrl) {
+                    storyElement.classList.add('story-with-audio');
+                    const audio = new Audio(audioUrl);
+                    audio.id = `audio-${uniqueId}`;
+                    audio.volume = 0.5;
+                    audio.preload = 'auto';
+                    storyElement.appendChild(audio);
+                    console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
+                } else {
+                    storyElement.classList.add('story-without-audio');
+                }
             } else if (file.type.startsWith('video/')) {
                 const video = document.createElement('video');
                 video.src = url;
@@ -59,6 +71,17 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 video.alt = title;
                 video.loading = 'lazy';
                 storyElement.appendChild(video);
+                if (audioUrl) {
+                    storyElement.classList.add('story-with-audio');
+                    const audio = new Audio(audioUrl);
+                    audio.id = `audio-${uniqueId}`;
+                    audio.volume = 0.5;
+                    audio.preload = 'auto';
+                    storyElement.appendChild(audio);
+                    console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
+                } else {
+                    storyElement.classList.add('story-with-original-sound');
+                }
             } else {
                 alert('Unsupported file type.');
                 return;
@@ -67,14 +90,17 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             storyElement.addEventListener('click', () => {
                 storyQueue = Array.from(storiesContainer.children)
                     .filter(child => child !== storiesContainer.children[0])
-                    .map(child => ({
+                    .map((child, idx) => ({
                         src: child.querySelector('img, video').src,
                         type: child.querySelector('img') ? 'image' : 'video',
                         title: child.querySelector('img, video').alt || title,
                         description: child.querySelector('.story-description') ? child.querySelector('.story-description').textContent : description,
                         username: child.querySelector('.story-username').textContent,
                         uploadDate: uploadDate,
-                        audioUrl: audioUrl
+                        audioUrl: child.querySelector('audio') ? child.querySelector('audio').src : null,
+                        hasAudio: child.classList.contains('story-with-audio'),
+                        hasOriginalSound: child.classList.contains('story-with-original-sound'),
+                        audioId: child.querySelector('audio') ? child.querySelector('audio').id : null
                     }));
     
                 currentStoryIndex = storyQueue.findIndex(item => item.src === url);
@@ -101,7 +127,22 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         audioInput.value = '';
         updateStoryIndicators();
     }
-    
+
+    export function preloadAudio() {
+        console.log('Preloading audio for stories...');
+        storyQueue.forEach((story, index) => {
+            if (story.hasAudio) {
+                console.log(`Preloading audio for story ${index}: ${story.audioUrl}`);
+                const audio = new Audio(story.audioUrl);
+                audio.id = `audio-${index}`;
+                audio.volume = 0.5;
+                audio.preload = 'auto';
+                audio.src = story.audioUrl; // Ensure the audio source is set
+                document.body.appendChild(audio);
+            }
+        });
+    }
+      
     export function showStory(index) {
         const footer = document.querySelector('.footer');
         const storyViewerTitle = document.getElementById('storyViewerTitle');
@@ -115,12 +156,15 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             if (audioElement) {
                 audioElement.pause();
                 audioElement.currentTime = 0;
+                audioElement.src = ''; // Clear the audio source
+                audioElement = null;
             }
             return;
         }
     
         currentStoryIndex = index;
         const story = storyQueue[index];
+        console.log(`Showing story ${index}:`, story);
         storyViewerContent.innerHTML = '';
     
         storyViewerTitle.textContent = story.title;
@@ -174,15 +218,25 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         }
     
         if (audioElement) {
+            console.log('Pausing and resetting previous audio element');
             audioElement.pause();
             audioElement.currentTime = 0;
+            audioElement.src = ''; // Clear the audio source
             audioElement = null; // Ensure the audio element is reset
         }
     
-        if (story.audioUrl) {
+        if (story.hasAudio) {
+            console.log('Loading audio for the story:', story.audioUrl);
             audioElement = new Audio(story.audioUrl);
+            audioElement.id = story.audioId;
             audioElement.volume = 0.5;
-            audioElement.play();
+            audioElement.preload = 'auto';
+            audioElement.currentTime = 0;
+            audioElement.play().then(() => {
+                console.log('Audio started playing');
+            }).catch(error => {
+                console.error('Error playing audio:', error);
+            });
             const volumeControl = document.createElement('input');
             volumeControl.type = 'range';
             volumeControl.min = '0';
@@ -196,6 +250,12 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 audioElement.volume = event.target.value;
             });
             storyViewerContent.appendChild(volumeControl);
+        } else if (story.hasOriginalSound) {
+            console.log('Story has original sound');
+            // No need to do anything, the video will play its original sound
+        } else {
+            console.log('No audio for this story');
+            // No audio for this story
         }
     
         initializeReactionCounts(currentStoryIndex);
@@ -305,8 +365,11 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 video.currentTime = 0;
             }
             if (audioElement) {
+                console.log('Pausing and resetting previous audio element');
                 audioElement.pause();
                 audioElement.currentTime = 0;
+                audioElement.src = ''; // Clear the audio source
+                audioElement = null; // Ensure the audio element is reset
             }
             showStory(currentStoryIndex - 1);
         }
@@ -323,19 +386,21 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             if (audioElement) {
                 audioElement.pause();
                 audioElement.currentTime = 0;
+                audioElement.src = ''; // Clear the audio source
+                audioElement = null; // Ensure the audio element is reset
             }
             showStory(currentStoryIndex + 1);
         }
     }
-
+    
     document.getElementById('prevButton').addEventListener('click', prevStory);
     document.getElementById('nextButton').addEventListener('click', nextStory);
-
+    
     // Story Indicators
     export function updateStoryIndicators() {
         const storyIndicators = document.getElementById('storyIndicators');
         storyIndicators.innerHTML = '';
-
+    
         storyQueue.forEach((_, index) => {
             const indicator = document.createElement('div');
             indicator.classList.add('story-indicator');
@@ -345,7 +410,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             storyIndicators.appendChild(indicator);
         });
     }
-
+    
     // Lazy Loading (?) idk
     export function preloadNextStory() {
         if (currentStoryIndex < storyQueue.length - 1) {
@@ -358,9 +423,9 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             preloadElement.onloadedmetadata = () => document.body.removeChild(preloadElement);
         }
     }
-
+    
     // Keyboard Shortcuts
-
+    
     export function closeViewer() {
         const video = storyViewerContent.querySelector('video');
         if (video) {
@@ -382,8 +447,9 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
           closeViewer();
         }
       });
-
+    
       export function closeStoryViewer() {
+        const footer = document.querySelector('.footer'); // Define the footer variable
         const video = storyViewerContent.querySelector('video');
         if (video) {
             video.pause();
@@ -391,10 +457,14 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             storyViewerContent.removeChild(video); // Remove the video element from the DOM
         }
         if (audioElement) {
+            console.log('Pausing and resetting audio element on close');
             audioElement.pause();
             audioElement.currentTime = 0;
+            audioElement.src = ''; // Clear the audio source
+            audioElement = null; // Ensure the audio element is reset
         }
         storyViewer.classList.remove('active');
+        footer.classList.remove('hidden');
         clearTimeout(progressTimeout);
     }
     
