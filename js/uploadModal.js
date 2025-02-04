@@ -264,6 +264,7 @@ document.getElementById('editButton').addEventListener('click', () => {
     } 
 });
 
+/* Trimming Video */
 const applyEditHandler = async () => {
     console.log('Apply Edit button clicked');
     const previewImage = document.getElementById('previewImage');
@@ -281,15 +282,44 @@ const applyEditHandler = async () => {
         cropper.destroy();
         cropper = null;
     } else if (previewVideo) {
-        const startHours = parseInt(document.getElementById('startHours').value) || 0;
-        const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
-        const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
-        const endHours = parseInt(document.getElementById('endHours').value) || 0;
-        const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
-        const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
+        const startHoursElement = document.getElementById('startHours');
+        const startMinutesElement = document.getElementById('startMinutes');
+        const startSecondsElement = document.getElementById('startSeconds');
+        const endHoursElement = document.getElementById('endHours');
+        const endMinutesElement = document.getElementById('endMinutes');
+        const endSecondsElement = document.getElementById('endSeconds');
+
+        console.log('startHoursElement:', startHoursElement);
+        console.log('startMinutesElement:', startMinutesElement);
+        console.log('startSecondsElement:', startSecondsElement);
+        console.log('endHoursElement:', endHoursElement);
+        console.log('endMinutesElement:', endMinutesElement);
+        console.log('endSecondsElement:', endSecondsElement);
+
+        if (!startHoursElement || !startMinutesElement || !startSecondsElement || !endHoursElement || !endMinutesElement || !endSecondsElement) {
+            alert('Please provide valid start and end times.');
+            return;
+        }
+
+        const startHours = parseInt(startHoursElement.value) || 0;
+        const startMinutes = parseInt(startMinutesElement.value) || 0;
+        const startSeconds = parseInt(startSecondsElement.value) || 0;
+        const endHours = parseInt(endHoursElement.value) || 0;
+        const endMinutes = parseInt(endMinutesElement.value) || 0;
+        const endSeconds = parseInt(endSecondsElement.value) || 0;
+
+        console.log('startHours:', startHours);
+        console.log('startMinutes:', startMinutes);
+        console.log('startSeconds:', startSeconds);
+        console.log('endHours:', endHours);
+        console.log('endMinutes:', endMinutes);
+        console.log('endSeconds:', endSeconds);
 
         const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
         const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
+
+        console.log('startTime:', startTime);
+        console.log('endTime:', endTime);
 
         if (startTime >= endTime) {
             alert('End time must be greater than start time.');
@@ -303,7 +333,7 @@ const applyEditHandler = async () => {
         }
 
         if (confirm('Are you sure you want to apply the edit?')) {
-            processVideoTrim(startTime, endTime);
+            await processVideoTrim(startTime, endTime);
 
             // Close the edit modal only if the trim times are valid
             document.getElementById('editModal').style.display = 'none';
@@ -339,6 +369,7 @@ const processVideoTrim = async (startTime, endTime) => {
     loadingIndicator.style.display = 'none';
 };
 
+
 // Close edit modal
 document.getElementById('closeEditModal').addEventListener('click', () => {
     document.getElementById('editModal').style.display = 'none';
@@ -350,57 +381,6 @@ document.getElementById('closeEditModal').addEventListener('click', () => {
     if (editVideo) {
         editVideo.pause();
         editVideo.currentTime = 0;
-    }
-});
-
-document.getElementById('applyEditButton').addEventListener('click', async () => {
-    console.log('Apply Edit button clicked');
-    const previewImage = document.getElementById('previewImage');
-    const previewVideo = document.getElementById('previewVideo');
-    const previewAudio = document.getElementById('previewAudio');  // Get audio preview
-    const loadingIndicator = document.getElementById('loadingIndicator');
-        
-    // Close the edit modal
-    document.getElementById('editModal').style.display = 'none';
-        
-    if (cropper) {
-        console.log('Applying cropper edit');
-        const canvas = cropper.getCroppedCanvas();
-        editedImageDataUrl = canvas.toDataURL();
-        previewImage.src = editedImageDataUrl;
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-        cropper.destroy();
-        cropper = null;
-    } else if (previewVideo) {
-        const startInput = document.getElementById('startInput');
-        const endInput = document.getElementById('endInput');
-        const startTime = parseFloat(startInput.value) || 0;
-        const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
-
-        if (startTime >= endTime) {
-            alert('End time must be greater than start time.');
-            return;
-        }
-
-        const ffmpeg = FFmpeg.createFFmpeg({ log: true });
-        await ffmpeg.load();
-
-        const videoFile = await fetch(previewVideo.src).then(res => res.arrayBuffer());
-        ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
-
-        await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
-
-        const data = ffmpeg.FS('readFile', 'output.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
-        editedVideoBlob = blob;
-        previewVideo.src = URL.createObjectURL(blob);
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-    }
-
-    if (previewAudio) {
-        previewAudio.play();
     }
 });
 
