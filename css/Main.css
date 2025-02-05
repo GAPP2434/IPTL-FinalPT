@@ -142,13 +142,26 @@ footer {
 #addButton{
     width: 120px;
     height: 213px;
-    border-radius: 10px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    overflow: hidden;
-    position: relative;
-    background-color: lightblue;
+    justify-content: center;
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ff0000, #ff0000); /* Change to red */
+    border-image-slice: 1;
+    color: white; /* Change to a lighter red */
+    border-radius: 5px;
+    cursor: pointer;
+    background-image: linear-gradient(to top, rgba(255, 0, 0, 0.5), rgba(255, 0, 0, 0)); /* Change to red gradient */
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+#addButton:hover {
+  background-position: 0% 100%;
+  box-shadow: 0 10px 10px rgba(255, 0, 0, 0.2); /* Change to red shadow */
 }
 
 /*Main Blog Container*/
