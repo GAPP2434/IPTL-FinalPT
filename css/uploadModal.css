@@ -24,6 +24,27 @@
     overflow-y: auto; /* Enable scrolling if content overflows */
 }
 
+#editModal h2{
+    font-family: 'Markazi', sans-serif;
+    font-size: 3.0rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.modal-content h2{
+    text-shadow: -1px 0px #e4ddc9, 0px 1px #e4ddc9, 1px 0px #e4ddc9, 0px -1px #e4ddc9;
+}
+
+.modal-content h3{
+    text-shadow: -1px 0px #e4ddc9, 0px 1px #e4ddc9, 1px 0px #e4ddc9, 0px -1px #e4ddc9;
+}
+
+.audio-start-time label{
+    text-shadow: -1px 0px #e4ddc9, 0px 1px #e4ddc9, 1px 0px #e4ddc9, 0px -1px #e4ddc9;
+}
+
 @font-face {
     font-family: 'Markazi';
     src: url('../fonts/MarkaziText.ttf') format('truetype');
@@ -379,8 +400,10 @@
 
 .start-end-container {
     display: flex;
+    gap: 15px;
     margin: auto;
-    width: 70%;
+    width: 60%;
+
 }
 
 .apply-edit-button-container{
@@ -413,12 +436,12 @@
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
 }
 #startHours, #startMinutes, #startSeconds{
-    width: 10%;
+    width: 15%;
     background-color: #e4ddc9;
     border-color: #fff;
 }
 #endHours, #endMinutes, #endSeconds{
-    width: 10%;
+    width: 15%;
     background-color: #e4ddc9;
     border-color: #fff;
 }

@@ -32,7 +32,9 @@ main {
 
 .GatheringHub{
     font-family: 'MonsterHunter', sans-serif;
-    font-size: 70px;
+    font-size: 100px;
+    letter-spacing: 10px;
+    text-shadow: 20px 15px #000000, 0px 10px #000000, 10px 0px #000000, 0px -1px #000000;
 }
 
 .logo{
@@ -95,7 +97,7 @@ footer {
     overflow-y: hidden; /* Hide vertical scrollbar */
     margin: 3% auto;
     padding: 10px;
-    background-color: white;
+    background-color: #e4ddc9;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     width: 60%;
@@ -306,21 +308,6 @@ footer {
     border-radius: 8px;
     resize: none; /* Prevent resizing */
   }
-  
-/* Duplicate section?
-#send-blog-post-button {
-    width: 100%;
-    height: 40px;
-    padding: 10px;
-    font-size: 18px;
-    font-weight: bold;
-    background-color: #4CAF50;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-*/
 
 /* Add some CSS styles to the post button */
 #send-blog-post-button {
