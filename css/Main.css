@@ -193,7 +193,7 @@ header .nav a:hover {
 
   .blog-post img {
     max-width: 100%;
-    max-height: 100%;
+    max-height: 480px;
     object-fit: contain;
     margin: 1% auto;
     border-radius: 8px;
@@ -212,7 +212,6 @@ header .nav a:hover {
 
   .blog-post .post-header .username {
     font-weight: bold;
-    margin-bottom: 10px;
   }
   
   .blog-post .post-header .timestamp {
@@ -236,7 +235,8 @@ header .nav a:hover {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background-color: #ccc;
+    background-size: cover;
+    background-position: center;
     margin-right: 10px;
   }
 

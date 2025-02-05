@@ -451,6 +451,18 @@ document.getElementById('closeEditModal').addEventListener('click', () => {
 document.getElementById('applyEditButton').removeEventListener('click', applyEditHandler);
 document.getElementById('applyEditButton').addEventListener('click', applyEditHandler);
 
+// Random Avatars
+const avatarFolder = 'avatars/';
+const avatarFiles = [
+    '../avatars/Avatar_Anby_Demara.webp', '../avatars/Avatar_Nicole_Demara.webp', '../avatars/Avatar_Burnice_White.webp',
+    '../avatars/Avatar_Default_Anonymous.webp', '../avatars/Avatar_Default_Thiren_1.webp', '../avatars/Avatar_Default_Thiren_2.webp',
+    ]; // add more files as needed
+
+function getRandomAvatar() {
+  const randomIndex = Math.floor(Math.random() * avatarFiles.length);
+  return avatarFolder + avatarFiles[randomIndex];
+}
+
 // Blog Posts
 document.getElementById('send-blog-post-button').addEventListener('click', () => {
     const blogPostInput = document.getElementById('blog-post-input');
@@ -480,8 +492,10 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       let postContent = `
       <div class="post-header">
         <span class="avatar"></span>
-        <div class="username">${blogPostUsername}</div>
-        <div class="timestamp">on ${blogPostTimestamp}</div>
+        <div class="post-info">
+            <div class="username">${blogPostUsername}</div>
+            <div class="timestamp">on ${blogPostTimestamp}</div>
+        </div>
       </div>
     `;
 
@@ -495,11 +509,19 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
           postContent += `<img src="${reader.result}" alt="Uploaded image">`;
           newBlogPost.innerHTML = postContent;
           blogPosts.appendChild(newBlogPost);
+      
+          // Create a new avatarElement for this post
+          const postAvatarElement = newBlogPost.querySelector('.avatar');
+          postAvatarElement.style.backgroundImage = `url(${getRandomAvatar()})`;
         };
         reader.readAsDataURL(blogPostImage);
       } else {
         newBlogPost.innerHTML = postContent;
         blogPosts.appendChild(newBlogPost);
+      
+        // Create a new avatarElement for this post
+        const postAvatarElement = newBlogPost.querySelector('.avatar');
+        postAvatarElement.style.backgroundImage = `url(${getRandomAvatar()})`;
       }
 
       // LINE  484: <h3>${blogPostTitle}</h3>
