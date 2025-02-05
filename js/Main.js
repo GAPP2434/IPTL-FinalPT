@@ -65,6 +65,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 } else {
                     storyElement.classList.add('story-without-audio');
                 }
+                console.log('Image: ', file);
             } else if (file.type.startsWith('video/')) {
                 const video = document.createElement('video');
                 video.src = url;
@@ -123,6 +124,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             storyElement.appendChild(descriptionElement);
     
             storiesContainer.appendChild(storyElement);
+            console.log('Story posted with title:', title);
         });
     
         storyTitleInput.value = '';

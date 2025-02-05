@@ -83,6 +83,10 @@ document.getElementById('postButton').addEventListener('click', async () => {
             console.log('Story added');
             document.getElementById('uploadModal').style.display = 'none';
             editedImageDataUrl = null;
+            editedVideoBlob = null;
+            editedAudioBlob = null;
+            originalImageFile = null; // Reset the original image file
+            originalVideoFile = null;
             clearPreview(); // Clear preview after posting
             clearInputs(); // Clear inputs after posting
         } catch (error) {
@@ -291,9 +295,6 @@ document.getElementById('editButton').addEventListener('click', () => {
                 editContainer.style.height = `${height}px`;
                 console.log(`Image dimensions: ${width}x${height}`);
                 console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
-            } else {
-                console.warn('Failed to retrieve image dimensions, retrying...');
-                setTimeout(setImageDimensions, 100); // Retry after 100ms
             }
         };
 
