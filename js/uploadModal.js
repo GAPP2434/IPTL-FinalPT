@@ -255,7 +255,6 @@ document.getElementById('editButton').addEventListener('click', () => {
     if (previewImage) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Image';
-        rotateButtons.style.display = 'block';
         const editImage = document.createElement('img');
         editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);

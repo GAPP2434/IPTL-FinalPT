@@ -24,6 +24,13 @@
     overflow-y: auto; /* Enable scrolling if content overflows */
 }
 
+@font-face {
+    font-family: 'Markazi';
+    src: url('../fonts/MarkaziText.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 .close {
     color: #888;
     float: right;
@@ -37,12 +44,42 @@
     text-decoration: none;
     cursor: pointer;
 }
+.rotateEditButtons{
+    width: 50%;
+    height: 10%;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    justify-content: center;
+    margin: auto;
+}
+#rotateRightButton{
+    background-image: url("../images/rotateRight.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center; 
+    width: 70px; /* Adjust width as needed */
+    height: 70px; /* Adjust height as needed */
+}
+#rotateLeftButton{
+    background-image: url("../images/rotateLeft.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center; 
+    width: 70px; /* Adjust width as needed */
+    height: 70px; /* Adjust height as needed */
+}
 
+.post-button-container{
+    display: flex;
+    justify-content: center;
+    width: 50%;
+}
 #postButton{
     font-family: 'Markazi', sans-serif;
     font-size: 2.0em;
-    width: 20%;
-    margin-top: -20px;
+    width: 30%;
+    margin-top: 10px;
     /*COLORS*/
     background-color: #000;
     border: 2px solid;
@@ -75,9 +112,11 @@
 
 .uploadMediaContainer h2{
     display: flex;
-
-    justify-content: flex-end;
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0rem;
     width: 50%;
+    margin-left: 20px;
+    margin-bottom: 0px;
 }
 .upload-modal-main-content{
     display:flex;
@@ -94,9 +133,9 @@
 .upload-choose-file {
     background-color: #e4ddc9;
     display: flex;
-    justify-content: flex-end;
-    width: 85%;
+    width: 80%;
     padding: 8px;
+    margin-left: 30px;
     margin-bottom: 15px;
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -108,8 +147,10 @@
 }
 
 /* Styles for the upload details section */
-.upload-details {
+.upload-details h2{
     margin-bottom: 10px;
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0rem;
 }
 
 .upload-details input,
@@ -128,6 +169,13 @@
     resize: none;
 }
 
+.upload-audio h3{
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0rem;
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+
 /* Styles for the character counters */
 #titleCounter,
 #descriptionCounter, #userCounter {
@@ -143,12 +191,12 @@
     height: 40rem;
     aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
     position: relative;
-    margin: 10px auto;
+    margin-left: 50px;
 }
 
 #editButton{
     font-family: 'Markazi', sans-serif;
-    font-size: 2.0em;
+    font-size: 1.5em;
     width: 40%;
     /*COLORS*/
     background-color: #000;
@@ -209,6 +257,7 @@
     max-width: 100%;
     max-height: 80%;
     margin: auto;
+    margin-bottom: 20px;
 }
 
 #editContainer img {
@@ -264,6 +313,12 @@
     width: 100%; /* Make the audio player take full width of the container */
     border-radius: 5px;
     background-color: #e4ddc9; /* Optional: style the audio bar */
+}
+
+.audio-start-time label{
+    font-weight: bold;
+    font-family: "Markazi", sans-serif;
+    font-size: 1.5em;
 }
 
 .audio-start-time-input{

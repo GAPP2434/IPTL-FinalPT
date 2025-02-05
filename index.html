@@ -55,8 +55,9 @@
                                     <div class="audio-start-time">
                                         <label for="audioStartMinutes">Start Time:</label>
                                         <div class = "audio-start-time-input">
+                                            <label for="audioStartMinutes">Minutes:</label>
                                             <input type="number" id="audioStartMinutes" placeholder="MM" min="0" value="0">
-                                            <label for="audioStartSeconds">:</label>
+                                            <label for="audioStartSeconds">Seconds:</label>
                                             <input type="number" id="audioStartSeconds" placeholder="SS" min="0" max="59" value="0">
                                         </div>
                                     </div>
@@ -66,7 +67,7 @@
                     </div>
                     <div class = "previewContainer-main">
                         <div class = uploadMediaContainer>
-                            <h2>Upload Media</h2>
+                            <h2>Upload Media:</h2>
                             <div class="upload-choose-file">
                                 <input type="file" id="mediaInput" accept="video/*,image/*" multiple required>
                             </div>
@@ -89,9 +90,9 @@
             <span class="close" id="closeEditModal">&times;</span>
             <h2 id="editModalTitle">Edit Image</h2>
             <div id="editContainer"></div>
-            <div id="rotateButtons">
-                <button id="rotateLeftButton" onclick="rotateLeft()">Rotate Left</button>
-                <button id="rotateRightButton" onclick="rotateRight()">Rotate Right</button>
+            <div id="rotateButtons" class = "rotateEditButtons">
+                <button id="rotateLeftButton" onclick="rotateLeft()"></button>
+                <button id="rotateRightButton" onclick="rotateRight()"></button>
             </div>
             <div class="apply-edit-button-container">
                 <button id="applyEditButton">Apply Edit</button>
