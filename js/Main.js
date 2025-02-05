@@ -71,7 +71,9 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 video.controls = false;
                 video.alt = title;
                 video.loading = 'lazy';
+                video.muted = !!audioUrl; // Mute the original audio of the video if integrated audio is present
                 storyElement.appendChild(video);
+                console.log(`Video element created with src: ${url}, muted: ${video.muted}`);
                 if (audioUrl) {
                     storyElement.classList.add('story-with-audio');
                     const audio = new Audio(audioUrl);
@@ -198,7 +200,9 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             const video = document.createElement('video');
             video.src = story.src;
             video.autoplay = true;
+            video.muted = story.hasAudio; // Mute the video if it has integrated audio
             storyViewerContent.appendChild(video);
+            console.log(`Video element created with src: ${story.src}, muted: ${video.muted}`);
     
             video.onloadedmetadata = () => {
                 clearTimeout(progressTimeout);

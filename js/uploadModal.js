@@ -43,7 +43,7 @@ window.addEventListener('click', (event) => {
     }
 });
 
-document.getElementById('postButton').addEventListener('click', () => {
+document.getElementById('postButton').addEventListener('click', async () => {
     const mediaInput = document.getElementById('mediaInput');
     const storyTitleInput = document.getElementById('storyTitle');
     const storyUsernameInput = document.getElementById('storyUsername');
@@ -68,6 +68,10 @@ document.getElementById('postButton').addEventListener('click', () => {
 
     console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
+        if (editedAudioBlob && originalVideoFile) {
+            console.log('Replacing video audio...');
+            await replaceVideoAudio(originalVideoFile, editedAudioBlob);
+        }
         addStories(audioStartTime);
         console.log('Story added');
         document.getElementById('uploadModal').style.display = 'none';
@@ -76,6 +80,25 @@ document.getElementById('postButton').addEventListener('click', () => {
         clearInputs(); // Clear inputs after posting
     }
 });
+
+const replaceVideoAudio = async (videoFile, audioFile) => {
+    const ffmpeg = FFmpeg.createFFmpeg({ log: true });
+    await ffmpeg.load();
+
+    const videoData = await fetch(URL.createObjectURL(videoFile)).then(res => res.arrayBuffer());
+    ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoData));
+
+    const audioData = await fetch(URL.createObjectURL(audioFile)).then(res => res.arrayBuffer());
+    ffmpeg.FS('writeFile', 'audio.aac', new Uint8Array(audioData));
+
+    // Remove the original audio from the video and add the integrated audio
+    await ffmpeg.run('-i', 'input.mp4', '-i', 'audio.aac', '-c:v', 'copy', '-c:a', 'aac', 'output.mp4');
+
+    const data = ffmpeg.FS('readFile', 'output.mp4');
+    const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    editedVideoBlob = blob;
+    console.log('Video audio replaced successfully');
+};
 
 document.getElementById('mediaInput').addEventListener('change', () => {
     const files = document.getElementById('mediaInput').files;
