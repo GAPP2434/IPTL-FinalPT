@@ -349,7 +349,7 @@ const applyEditHandler = async () => {
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
     const loadingIndicator = document.getElementById('loadingIndicator');
         
-    if (cropper) {
+    if (cropper && previewImage) {
         console.log('Applying cropper edit');
         const canvas = cropper.getCroppedCanvas();
         editedImageDataUrl = canvas.toDataURL();
@@ -358,6 +358,7 @@ const applyEditHandler = async () => {
         cropper = null;
         document.getElementById('editModal').style.display = 'none';
         document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+        console.log('Image edit applied successfully');
     } else if (previewVideo) {
         const startHours = parseInt(document.getElementById('startHours').value) || 0;
         const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
@@ -394,6 +395,7 @@ const applyEditHandler = async () => {
             // Close the edit modal only if the trim times are valid and user confirms
             document.getElementById('editModal').style.display = 'none';
             document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+            console.log('Video edit applied successfully');
         }
     }
 
@@ -427,6 +429,7 @@ const processVideoTrim = async (startTime, endTime) => {
 
     // Hide the loading indicator
     loadingIndicator.style.display = 'none';
+    console.log('Video trim processed successfully');
 };
 
 
@@ -443,6 +446,10 @@ document.getElementById('closeEditModal').addEventListener('click', () => {
         editVideo.currentTime = 0;
     }
 });
+
+// Ensure only one event listener is added to the apply edit button
+document.getElementById('applyEditButton').removeEventListener('click', applyEditHandler);
+document.getElementById('applyEditButton').addEventListener('click', applyEditHandler);
 
 // Blog Posts
 document.getElementById('send-blog-post-button').addEventListener('click', () => {

@@ -132,7 +132,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         audioInput.value = '';
         updateStoryIndicators();
     }
-
+    
     export function preloadAudio() {
         console.log('Preloading audio for stories...');
         storyQueue.forEach((story, index) => {
