@@ -434,7 +434,7 @@
     appearance: none; /* Remove default styling */
     width: 150px; /* Adjust width to match the height */
     height: 8px; /* Adjust height to match the width */
-    background: linear-gradient(to right, #4CAF50 0%, #4CAF50 50%, #ccc 50%, #ccc 100%); /* Initial gradient */
+    background: linear-gradient(to right, #1877f2 0%, #1877f2 50%, #ccc 50%, #ccc 100%); /* Initial gradient */
     border-radius: 5px;
     cursor: pointer;
     outline: none;
@@ -460,7 +460,7 @@
     appearance: none;
     width: 15px;
     height: 15px;
-    background: #4CAF50;
+    background: #1877f2;
     cursor: pointer;
     border-radius: 50%;
     margin-top: -3.5px; /* Adjust to center the thumb */
@@ -469,7 +469,7 @@
 .volume-slider::-moz-range-thumb {
     width: 15px;
     height: 15px;
-    background: #4CAF50;
+    background: #1877f2;
     cursor: pointer;
     border-radius: 50%;
     margin-top: -3.5px; /* Adjust to center the thumb */

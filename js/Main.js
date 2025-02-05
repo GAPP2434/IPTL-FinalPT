@@ -290,7 +290,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
 
     export function updateVolumeSliderBackground(slider) {
         const value = slider.value * 100;
-        slider.style.background = `linear-gradient(to right, #4CAF50 ${value}%, #ccc ${value}%)`;
+        slider.style.background = `linear-gradient(to right, #1877f2 ${value}%, #ccc ${value}%)`;
     }
     
     export function togglePauseStory() {
