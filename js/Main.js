@@ -153,7 +153,8 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         const storyViewerTitle = document.getElementById('storyViewerTitle');
         const storyViewerDescription = document.getElementById('storyViewerDescription');
         const storyViewerUsername = document.getElementById('storyViewerUsername');
-    
+        const volumeSlider = document.getElementById('volumeSlider');
+
         if (index < 0 || index >= storyQueue.length) {
             storyViewer.classList.remove('active');
             footer.classList.remove('hidden');
@@ -164,30 +165,31 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 audioElement.src = ''; // Clear the audio source
                 audioElement = null;
             }
+            volumeSlider.style.display = 'none'; // Hide the volume slider
             return;
         }
-    
+
         currentStoryIndex = index;
         const story = storyQueue[index];
         console.log(`Showing story ${index}:`, story);
         storyViewerContent.innerHTML = '';
-    
+
         storyViewerTitle.textContent = story.title;
         storyViewerDescription.textContent = story.description;
         storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
-    
+
         isPaused = false;
         remainingTime = 0;
         startTime = 0;
         elapsedTime = 0;
-    
+
         storyViewerContent.addEventListener('click', togglePauseStory);
-    
+
         if (story.type === 'image') {
             const img = document.createElement('img');
             img.src = story.src;
             storyViewerContent.appendChild(img);
-    
+
             img.onload = () => {
                 clearTimeout(progressTimeout);
                 remainingTime = 5000;
@@ -203,7 +205,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             video.muted = story.hasAudio; // Mute the video if it has integrated audio
             storyViewerContent.appendChild(video);
             console.log(`Video element created with src: ${story.src}, muted: ${video.muted}`);
-    
+
             video.onloadedmetadata = () => {
                 clearTimeout(progressTimeout);
                 remainingTime = Math.min(video.duration, 15) * 1000;
@@ -212,7 +214,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     showStory(index + 1);
                 });
             };
-    
+
             video.ontimeupdate = () => {
                 if (video.currentTime >= 15) {
                     video.pause();
@@ -222,8 +224,16 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     showStory(index + 1);
                 }
             };
+
+            volumeSlider.style.display = 'block'; // Show the volume slider
+            volumeSlider.style.transform = "rotate(270deg)"; // Rotate to vertical
+            volumeSlider.value = 0.5; // Reset to middle position
+
+            volumeSlider.addEventListener('input', () => {
+                video.volume = volumeSlider.value;
+            });
         }
-    
+
         if (audioElement) {
             console.log('Pausing and resetting previous audio element');
             audioElement.pause();
@@ -231,7 +241,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             audioElement.src = ''; // Clear the audio source
             audioElement = null; // Ensure the audio element is reset
         }
-    
+
         if (story.hasAudio) {
             console.log('Loading audio for the story:', story.audioUrl);
             audioElement = new Audio(story.audioUrl);
@@ -244,36 +254,27 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             }).catch(error => {
                 console.error('Error playing audio:', error);
             });
-            const volumeControl = document.createElement('input');
-            volumeControl.type = 'range';
-            volumeControl.min = '0';
-            volumeControl.max = '1';
-            volumeControl.step = '0.01';
-            volumeControl.value = audioElement.volume;
-            volumeControl.classList.add('volume-slider'); 
-            volumeControl.style.writingMode = 'vertical-lr'; // Vertical slider
-            volumeControl.style.direction = 'rtl';
-            volumeControl.addEventListener('input', (event) => {
-                audioElement.volume = event.target.value;
+
+            volumeSlider.style.display = 'block'; // Show the volume slider
+            volumeSlider.style.transform = 'rotate(270deg)';
+            volumeSlider.value = 0.5; // Reset to middle position
+            volumeSlider.addEventListener('input', () => {
+                audioElement.volume = volumeSlider.value;
             });
-            if (nextButton && nextButton.parentNode === storyViewer) {
-                storyViewer.insertBefore(volumeControl, nextButton);
-            } else {
-                storyViewer.appendChild(volumeControl);
-            }
         } else if (story.hasOriginalSound) {
             console.log('Story has original sound');
             // No need to do anything, the video will play its original sound
         } else {
             console.log('No audio for this story');
             // No audio for this story
+            volumeSlider.style.display = 'none'; // Hide the volume slider
         }
-    
+
         initializeReactionCounts(currentStoryIndex);
         updateReactionCounts(currentStoryIndex);
         initializeComments(currentStoryIndex);
         updateComments(currentStoryIndex);
-    
+
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
         updateNavButtons();
