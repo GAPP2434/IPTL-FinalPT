@@ -255,24 +255,40 @@ document.getElementById('editButton').addEventListener('click', () => {
     if (previewImage) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Image';
+        rotateButtons.style.display = 'block';
         const editImage = document.createElement('img');
         editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);
         cropper = new Cropper(editImage, {
-            aspectRatio: 9/16,
+            aspectRatio: 9 / 16,
             viewMode: 1,
             background: false,
             zoomable: false,
         });
 
-        editImage.onload = () => {
+        const setImageDimensions = () => {
             const { width, height } = editImage.getBoundingClientRect();
-            editContainer.style.width = `${width}px`;
-            editContainer.style.height = `${height}px`;
-            console.log(`Image dimensions: ${width}x${height}`);
-            console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
+            if (width > 0 && height > 0) {
+                editContainer.style.width = `${width}px`;
+                editContainer.style.height = `${height}px`;
+                console.log(`Image dimensions: ${width}x${height}`);
+                console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
+            } else {
+                console.warn('Failed to retrieve image dimensions, retrying...');
+                setTimeout(setImageDimensions, 100); // Retry after 100ms
+            }
         };
-        
+
+        editImage.onload = () => {
+            setImageDimensions();
+        };
+
+        // Add a fallback in case the onload event doesn't fire
+        setTimeout(() => {
+            if (editContainer.style.width === '' || editContainer.style.height === '') {
+                setImageDimensions();
+            }
+        }, 500); // Retry after 500ms if dimensions are not set
     } else if (previewVideo) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Video';
