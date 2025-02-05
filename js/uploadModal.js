@@ -68,16 +68,34 @@ document.getElementById('postButton').addEventListener('click', async () => {
 
     console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
-        if (editedAudioBlob && originalVideoFile) {
-            console.log('Replacing video audio...');
-            await replaceVideoAudio(originalVideoFile, editedAudioBlob);
+        // Show the loading modal
+        const loadingModal = document.getElementById('loadingModal');
+        loadingModal.style.display = 'flex';
+
+        const startTime = Date.now();
+
+        try {
+            if (editedAudioBlob && originalVideoFile) {
+                console.log('Replacing video audio...');
+                await replaceVideoAudio(originalVideoFile, editedAudioBlob);
+            }
+            addStories(audioStartTime);
+            console.log('Story added');
+            document.getElementById('uploadModal').style.display = 'none';
+            editedImageDataUrl = null;
+            clearPreview(); // Clear preview after posting
+            clearInputs(); // Clear inputs after posting
+        } catch (error) {
+            console.error('Error posting story:', error);
+            alert('An error occurred while posting your story. Please try again.');
+        } finally {
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(0, 1000 - elapsedTime); // Ensure at least 1 second display time
+            setTimeout(() => {
+                // Hide the loading modal
+                loadingModal.style.display = 'none';
+            }, remainingTime);
         }
-        addStories(audioStartTime);
-        console.log('Story added');
-        document.getElementById('uploadModal').style.display = 'none';
-        editedImageDataUrl = null;
-        clearPreview(); // Clear preview after posting
-        clearInputs(); // Clear inputs after posting
     }
 });
 
