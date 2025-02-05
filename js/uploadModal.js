@@ -68,8 +68,10 @@ document.getElementById('postButton').addEventListener('click', async () => {
 
     console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
-        // Show the loading modal
+        // Show the loading modal and update the text
         const loadingModal = document.getElementById('loadingModal');
+        const loadingText = document.querySelector('#loadingModal .loading-content p');
+        loadingText.textContent = 'Posting your story...';
         loadingModal.style.display = 'flex';
 
         const startTime = Date.now();
@@ -422,59 +424,79 @@ const applyEditHandler = async () => {
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
-        
-    if (cropper && previewImage) {
-        console.log('Applying cropper edit');
-        const canvas = cropper.getCroppedCanvas();
-        editedImageDataUrl = canvas.toDataURL();
-        previewImage.src = editedImageDataUrl;
-        cropper.destroy();
-        cropper = null;
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-        console.log('Image edit applied successfully');
-    } else if (previewVideo) {
-        const startHours = parseInt(document.getElementById('startHours').value) || 0;
-        const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
-        const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
-        const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
-        const endHours = parseInt(document.getElementById('endHours').value) || 0;
-        const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
-        const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
-        const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
 
-        console.log('startHours:', startHours);
-        console.log('startMinutes:', startMinutes);
-        console.log('startSeconds:', startSeconds);
-        console.log('endHours:', endHours);
-        console.log('endMinutes:', endMinutes);
-        console.log('endSeconds:', endSeconds);
+    // Show the loading modal and update the text
+    const loadingModal = document.getElementById('loadingModal');
+    const loadingText = document.querySelector('#loadingModal .loading-content p');
+    loadingText.textContent = 'Applying Edit...';
+    loadingModal.style.display = 'flex';
 
-        console.log('startTime:', startTime);
-        console.log('endTime:', endTime);
+    const startTime = Date.now();
 
-        if (startTime >= endTime) {
-            alert('End time must be greater than start time.');
-            return;
-        }
-
-        if (endTime - startTime > 15) {
-            alert('Trim duration cannot exceed 15 seconds.');
-            return;
-        }
-
-        if (confirm('Are you sure you want to apply the edit?')) {
-            await processVideoTrim(startTime, endTime);
-
-            // Close the edit modal only if the trim times are valid and user confirms
+    try {
+        if (cropper && previewImage) {
+            console.log('Applying cropper edit');
+            const canvas = cropper.getCroppedCanvas();
+            editedImageDataUrl = canvas.toDataURL();
+            previewImage.src = editedImageDataUrl;
+            cropper.destroy();
+            cropper = null;
             document.getElementById('editModal').style.display = 'none';
             document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-            console.log('Video edit applied successfully');
-        }
-    }
+            console.log('Image edit applied successfully');
+        } else if (previewVideo) {
+            const startHours = parseInt(document.getElementById('startHours').value) || 0;
+            const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
+            const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
+            const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
+            const endHours = parseInt(document.getElementById('endHours').value) || 0;
+            const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
+            const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
+            const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
 
-    if (previewAudio) {
-        previewAudio.play();
+            console.log('startHours:', startHours);
+            console.log('startMinutes:', startMinutes);
+            console.log('startSeconds:', startSeconds);
+            console.log('endHours:', endHours);
+            console.log('endMinutes:', endMinutes);
+            console.log('endSeconds:', endSeconds);
+
+            console.log('startTime:', startTime);
+            console.log('endTime:', endTime);
+
+            if (startTime >= endTime) {
+                alert('End time must be greater than start time.');
+                return;
+            }
+
+            if (endTime - startTime > 15) {
+                alert('Trim duration cannot exceed 15 seconds.');
+                return;
+            }
+
+            if (confirm('Are you sure you want to apply the edit?')) {
+                await processVideoTrim(startTime, endTime);
+
+                // Close the edit modal only if the trim times are valid and user confirms
+                document.getElementById('editModal').style.display = 'none';
+                document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
+                console.log('Video edit applied successfully');
+            }
+        }
+
+        if (previewAudio) {
+            previewAudio.play();
+        }
+    } catch (error) {
+        console.error('Error applying edit:', error);
+        alert('An error occurred while applying the edit. Please try again.');
+    } finally {
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, 1000 - elapsedTime); // Ensure at least 1 second display time
+        setTimeout(() => {
+            // Hide the loading modal
+            loadingModal.style.display = 'none';
+        }, remainingTime);
     }
 };
 
