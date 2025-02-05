@@ -30,8 +30,8 @@ function clearInputs() {
     document.getElementById('storyUsername').value = ''; // Clear the username input
     document.getElementById('audioInput').value = ''; // Clear the audio input
     document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
-    document.getElementById('audioStartMinutes').value = '0'; // Clear the audio start minutes input
-    document.getElementById('audioStartSeconds').value = '0'; // Clear the audio start seconds input
+    document.getElementById('audioStartMinutes').value = ''; // Clear the audio start minutes input
+    document.getElementById('audioStartSeconds').value = ''; // Clear the audio start seconds input
     editedAudioBlob = null;
 }
 
@@ -306,6 +306,7 @@ document.getElementById('editButton').addEventListener('click', () => {
     if (previewImage) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Image';
+        rotateButtons.style.display = 'flex'; 
         const editImage = document.createElement('img');
         editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);

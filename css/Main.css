@@ -33,7 +33,8 @@ main {
 .GatheringHub{
     font-family: 'MonsterHunter', sans-serif;
     font-size: 100px;
-    letter-spacing: 10px;
+    letter-spacing: 9px;
+    color: #a49884  ;
     text-shadow: 20px 15px #000000, 0px 10px #000000, 10px 0px #000000, 0px -1px #000000;
 }
 
