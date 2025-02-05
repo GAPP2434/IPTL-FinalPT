@@ -485,23 +485,40 @@ function getRandomAvatar() {
   return avatarFolder + avatarFiles[randomIndex];
 }
 
+// Get list of files
+const fileInput = document.getElementById('blog-post-image-input');
+const fileNamesSpan = document.getElementById('file-names');
+
+fileInput.addEventListener('change', (e) => {
+    const files = e.target.files;
+    const fileNames = Array.from(files).map((file) => file.name);
+    console.log(fileNames); //  Debugging
+    fileNamesSpan.textContent = fileNames.join(', ');
+    console.log(fileNamesSpan.textContent); // Debugging
+});
+
 // Blog Posts
 document.getElementById('send-blog-post-button').addEventListener('click', () => {
+    // Post Content
     const blogPostInput = document.getElementById('blog-post-input');
     const blogPostText = blogPostInput.value.trim();
     const blogPostUsernameInput = document.getElementById('blog-post-username-input');
     //const blogPostTitleInput = document.getElementById('blog-post-title-input');
     let blogPostUsername = blogPostUsernameInput.value.trim();
     //const blogPostTitle = blogPostTitleInput.value.trim();
+   
+    // Get the selected image
     const blogPostImageInput = document.getElementById('blog-post-image-input');
     const blogPostImage = blogPostImageInput.files[0];
-  
+    
+    // Generate a random username
     if (!blogPostUsername) {
       // Generate a random username if the user didn't enter one
       const randomNumbers = Array(4).fill(0).map(() => Math.floor(Math.random() * 10));
       blogPostUsername = `Anon #${randomNumbers.join('')}`;
     }
-  
+    
+    // Check if there is text or an image
     if (blogPostText || blogPostImage) { // && blogPostTitle
       // Get the current date and time
       const currentTime = new Date();
@@ -511,11 +528,12 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       const blogPosts = document.getElementById('blog-posts');
       const newBlogPost = document.createElement('div');
       newBlogPost.classList.add('blog-post');
+      // Inner HTML
       let postContent = `
       <div class="post-header">
         <span class="avatar"></span>
         <div class="post-info">
-            <div class="username">${blogPostUsername}</div>
+            <div class="username" style="${blogPostUsernameInput.value.trim() === '' ? 'color: #bc4749' : 'color: #a7c957'}">${blogPostUsername}</div>
             <div class="timestamp">on ${blogPostTimestamp}</div>
         </div>
       </div>
@@ -557,6 +575,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       blogPostUsernameInput.value = '';
       //blogPostTitleInput.value = '';
       blogPostImageInput.value = '';
+      document.getElementById('file-names').innerHTML = '';
     }
   });
 
