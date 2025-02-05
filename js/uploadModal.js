@@ -272,7 +272,11 @@ document.getElementById('editButton').addEventListener('click', () => {
         editContainer.appendChild(editVideo);
 
         // Add video clipping controls
+        const startEndContainer = document.createElement('div');
+        startEndContainer.classList.add('start-end-container'); // Add the class here
+
         const startInputContainer = document.createElement('div');
+        startInputContainer.classList.add('input-container'); // Add the class here
         startInputContainer.innerHTML = `
             <label for="startHours">Start Time:</label>
             <input type="number" id="startHours" placeholder="HH" min="0" value="0">
@@ -281,9 +285,10 @@ document.getElementById('editButton').addEventListener('click', () => {
             <label for="startSeconds">:</label>
             <input type="number" id="startSeconds" placeholder="SS" min="0" max="59" value="0">
         `;
-        editContainer.appendChild(startInputContainer);
+        startEndContainer.appendChild(startInputContainer);
 
         const endInputContainer = document.createElement('div');
+        endInputContainer.classList.add('input-container'); // Add the class here
         endInputContainer.innerHTML = `
             <label for="endHours">End Time:</label>
             <input type="number" id="endHours" placeholder="HH" min="0" value="0">
@@ -292,7 +297,9 @@ document.getElementById('editButton').addEventListener('click', () => {
             <label for="endSeconds">:</label>
             <input type="number" id="endSeconds" placeholder="SS" min="0" max="59" value="0">
         `;
-        editContainer.appendChild(endInputContainer);
+        startEndContainer.appendChild(endInputContainer);
+
+        editContainer.appendChild(startEndContainer);
 
         const validateTrimTimes = (videoDuration) => {
             const startHours = parseInt(document.getElementById('startHours').value) || 0;

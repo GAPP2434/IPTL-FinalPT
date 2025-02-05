@@ -154,7 +154,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         const storyViewerDescription = document.getElementById('storyViewerDescription');
         const storyViewerUsername = document.getElementById('storyViewerUsername');
         const volumeSlider = document.getElementById('volumeSlider');
-
+    
         if (index < 0 || index >= storyQueue.length) {
             storyViewer.classList.remove('active');
             footer.classList.remove('hidden');
@@ -168,28 +168,28 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             volumeSlider.style.display = 'none'; // Hide the volume slider
             return;
         }
-
+    
         currentStoryIndex = index;
         const story = storyQueue[index];
         console.log(`Showing story ${index}:`, story);
         storyViewerContent.innerHTML = '';
-
+    
         storyViewerTitle.textContent = story.title;
         storyViewerDescription.textContent = story.description;
         storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
-
+    
         isPaused = false;
         remainingTime = 0;
         startTime = 0;
         elapsedTime = 0;
-
+    
         storyViewerContent.addEventListener('click', togglePauseStory);
-
+    
         if (story.type === 'image') {
             const img = document.createElement('img');
             img.src = story.src;
             storyViewerContent.appendChild(img);
-
+    
             img.onload = () => {
                 clearTimeout(progressTimeout);
                 remainingTime = 5000;
@@ -205,7 +205,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             video.muted = story.hasAudio; // Mute the video if it has integrated audio
             storyViewerContent.appendChild(video);
             console.log(`Video element created with src: ${story.src}, muted: ${video.muted}`);
-
+    
             video.onloadedmetadata = () => {
                 clearTimeout(progressTimeout);
                 remainingTime = Math.min(video.duration, 15) * 1000;
@@ -214,7 +214,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     showStory(index + 1);
                 });
             };
-
+    
             video.ontimeupdate = () => {
                 if (video.currentTime >= 15) {
                     video.pause();
@@ -224,16 +224,18 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     showStory(index + 1);
                 }
             };
-
-            volumeSlider.style.display = 'block'; // Show the volume slider
-            volumeSlider.style.transform = "rotate(270deg)"; // Rotate to vertical
+    
             volumeSlider.value = 0.5; // Reset to middle position
-
+            volumeSlider.style.display = 'block'; // Ensure the volume slider is visible
+            volumeSlider.style.transform = 'rotate(270deg)'; // Rotate the slider
+            updateVolumeSliderBackground(volumeSlider);
+    
             volumeSlider.addEventListener('input', () => {
                 video.volume = volumeSlider.value;
+                updateVolumeSliderBackground(volumeSlider);
             });
         }
-
+    
         if (audioElement) {
             console.log('Pausing and resetting previous audio element');
             audioElement.pause();
@@ -241,7 +243,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             audioElement.src = ''; // Clear the audio source
             audioElement = null; // Ensure the audio element is reset
         }
-
+    
         if (story.hasAudio) {
             console.log('Loading audio for the story:', story.audioUrl);
             audioElement = new Audio(story.audioUrl);
@@ -254,12 +256,13 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             }).catch(error => {
                 console.error('Error playing audio:', error);
             });
-
-            volumeSlider.style.display = 'block'; // Show the volume slider
-            volumeSlider.style.transform = 'rotate(270deg)';
+    
             volumeSlider.value = 0.5; // Reset to middle position
+            updateVolumeSliderBackground(volumeSlider);
+    
             volumeSlider.addEventListener('input', () => {
                 audioElement.volume = volumeSlider.value;
+                updateVolumeSliderBackground(volumeSlider);
             });
         } else if (story.hasOriginalSound) {
             console.log('Story has original sound');
@@ -269,17 +272,22 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             // No audio for this story
             volumeSlider.style.display = 'none'; // Hide the volume slider
         }
-
+    
         initializeReactionCounts(currentStoryIndex);
         updateReactionCounts(currentStoryIndex);
         initializeComments(currentStoryIndex);
         updateComments(currentStoryIndex);
-
+    
         storyViewer.classList.add('active');
         footer.classList.add('hidden');
         updateNavButtons();
         updateStoryIndicators();
         preloadNextStory();
+    }
+
+    export function updateVolumeSliderBackground(slider) {
+        const value = slider.value * 100;
+        slider.style.background = `linear-gradient(to right, #4CAF50 ${value}%, #ccc ${value}%)`;
     }
     
     export function togglePauseStory() {

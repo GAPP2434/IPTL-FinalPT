@@ -82,8 +82,9 @@
                         </div>
                     </div>
                 </div>
-                <div id="loadingIndicator" style="display: none;">Loading...</div>
-                <button id="postButton">Post</button>
+                <div class = "post-button-container">
+                    <button id="postButton">Post</button>
+                </div>
             </div>
         </div>
     
@@ -97,7 +98,9 @@
                 <button id="rotateLeftButton" onclick="rotateLeft()">Rotate Left</button>
                 <button id="rotateRightButton" onclick="rotateRight()">Rotate Right</button>
             </div>
-            <button id="applyEditButton">Apply Edit</button>
+            <div class="apply-edit-button-container">
+                <button id="applyEditButton">Apply Edit</button>
+            </div>
         </div>
       </div>
 
@@ -119,10 +122,12 @@
         <span class="Y"></span>
     </button>
     <div class="story-viewer-left">
-        <div class="story-viewer-content" id="storyViewerContent"></div>
-        <div class="volume-slider-container">
-            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="0.5">
+        <div class = "slider-container">
+            <div class="volume-slider-container">
+                <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="0.5">
+            </div>
         </div>
+        <div class="story-viewer-content" id="storyViewerContent"></div>
         <div class="nav-button">
             <div class="prev-button-container">
                 <li class="icon-next-prev black" id="prevButton">
@@ -158,10 +163,10 @@
                 <div class="story-viewer-username" id="storyViewerUsername"></div>
                 <hr class="separator">
                 <div class="reaction-buttons" id="reactionButtons">
-                    <button class="reaction-button" id="happyButton">😊 <span id="happyCount">0</span></button>
-                    <button class="reaction-button" id="heartButton">❤️ <span id="heartCount">0</span></button>
-                    <button class="reaction-button" id="laughButton">😂 <span id="laughCount">0</span></button>
-                    <button class="reaction-button" id="likeButton">👍 <span id="likeCount">0</span></button>
+                    <button class="reaction-button" id="happyButton">👍<span id="happyCount">0</span></button>
+                    <button class="reaction-button" id="heartButton">❤️<span id="heartCount">0</span></button>
+                    <button class="reaction-button" id="laughButton">😂<span id="laughCount">0</span></button>
+                    <button class="reaction-button" id="likeButton">😊<span id="likeCount">0</span></button>
                 </div>
                 <hr class="separator">
                 <div class="comment-section">

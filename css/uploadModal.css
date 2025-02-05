@@ -37,6 +37,32 @@
     cursor: pointer;
 }
 
+#postButton{
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0em;
+    width: 20%;
+    margin-top: -20px;
+    /*COLORS*/
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+#postButton:hover{
+    background-position: 0% 100%;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
+}
+
 /* Container for the upload modal content */
 .upload-modal-container {
     display: flex;
@@ -112,16 +138,27 @@
 }
 
 #editButton{
-    margin-top: 10px;
-    width: 80%;
-    padding: 10px;
-    font-size: 18px;
-    font-weight: bold;
-    background-color: #4CAF50;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0em;
+    width: 40%;
+    /*COLORS*/
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    padding: 10px 20px;
+    border-radius: 5px;
     cursor: pointer;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+#editButton:hover{
+    background-position: 0% 100%;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
 }
 .editButtonContainer{
     display: flex;
@@ -215,6 +252,51 @@
     width: 15%;
 }
 
+.start-end-container {
+    display: flex;
+    margin: auto;
+    width: 70%;
+}
+
+.apply-edit-button-container{
+   display:flex;
+   justify-content: center;
+}
+#applyEditButton{
+    font-family: 'Markazi', sans-serif;
+    font-size: 2.0em;
+    width: 30%;
+    margin-top: 20px;
+    /*COLORS*/
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+#applyEditButton:hover{
+    background-position: 0% 100%;
+    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
+}
+#startHours, #startMinutes, #startSeconds{
+    width: 10%;
+    background-color: #e4ddc9;
+    border-color: #fff;
+}
+#endHours, #endMinutes, #endSeconds{
+    width: 10%;
+    background-color: #e4ddc9;
+    border-color: #fff;
+}
 /* Responsive Styles */
 @media (max-width: 768px) {
     .modal-content {
