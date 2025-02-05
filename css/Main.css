@@ -95,7 +95,7 @@ footer {
     overflow-y: hidden; /* Hide vertical scrollbar */
     margin: 3% auto;
     padding: 10px;
-    background-color: #e4ddc9;
+    background-color: white;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     width: 60%;
@@ -408,6 +408,19 @@ footer {
 
 .upload-container h2 {
     margin: 0 0 10px 0; /* Add some margin below the heading */
+}
+
+.upload-container button {
+    padding: 10px 20px;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.upload-container button:hover {
+    background-color:#1558b0;
 }
 
 /* Footer Styling */

@@ -53,22 +53,67 @@
     justify-content: center;
     margin: auto;
 }
+
+/*Rotation Buttons*/
 #rotateRightButton{
-    background-image: url("../images/rotateRight.png");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center; 
     width: 70px; /* Adjust width as needed */
-    height: 70px; /* Adjust height as needed */
+    height: 70px;
+    /*COLORS*/
+    background-image: linear-gradient(to top, rgba(69, 160, 230, 0.5), rgba(69, 160, 230, 0));
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #45a0e6, #45a0e6);
+    border-image-slice: 1;
+    color: #87ceeb;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-size: 100% 150%, contain;
+    background-position: 0% 3%, center;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
+
+#rotateRightButton:hover {
+    box-shadow: 0 10px 10px rgba(69, 160, 230, 0.2);
+    background-position: 0% 102%;
+}
+
+#rotateRightButton img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
 #rotateLeftButton{
-    background-image: url("../images/rotateLeft.png");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center; 
     width: 70px; /* Adjust width as needed */
-    height: 70px; /* Adjust height as needed */
+    height: 70px;
+    /*COLORS*/
+    background-image: linear-gradient(to top, rgba(69, 160, 230, 0.5), rgba(69, 160, 230, 0));
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #45a0e6, #45a0e6);
+    border-image-slice: 1;
+    color: #87ceeb;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-size: 100% 150%, contain;
+    background-position: 0% 3%, center;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
+
+#rotateLeftButton:hover {
+    box-shadow: 0 10px 10px rgba(69, 160, 230, 0.2);
+    background-position: 0% 102%;
+}
+
+#rotateLeftButton img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
 .post-button-container{
     display: flex;
@@ -201,21 +246,21 @@
     /*COLORS*/
     background-color: #000;
     border: 2px solid;
-    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-source: linear-gradient(to bottom, #45a0e6, #45a0e6);
     border-image-slice: 1;
-    color: #aca06d;
+    color: #87ceeb;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
-    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-image: linear-gradient(to top, rgba(69, 160, 230, 0.5), rgba(69, 160, 230, 0));
     background-size: 100% 150%;
     background-position: 0% 3%;
     background-clip: padding-box;
     transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 #editButton:hover{
-    background-position: 0% 100%;
-    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
+    background-position: 0% 105%;
+    box-shadow: 0 10px 10px rgba(69, 160, 230, 0.2);
 }
 .editButtonContainer{
     display: flex;
