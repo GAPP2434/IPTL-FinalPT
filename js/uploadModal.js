@@ -244,12 +244,33 @@ export function clearPreview() {
 export function rotateLeft() {
     if (cropper) {
         cropper.rotate(-90);
+        centerImage();
     }
 }
 
 export function rotateRight() {
     if (cropper) {
         cropper.rotate(90);
+        centerImage();
+    }
+}
+
+function centerImage() {
+    if (cropper) {
+        const canvasData = cropper.getCanvasData();
+        const containerData = cropper.getContainerData();
+        const centerX = containerData.width / 2;
+        const centerY = containerData.height / 2;
+
+        const newLeft = centerX - (canvasData.width / 2);
+        const newTop = centerY - (canvasData.height / 2);
+
+        cropper.setCanvasData({
+            left: newLeft,
+            top: newTop,
+            width: canvasData.width,
+            height: canvasData.height
+        });
     }
 }
 
@@ -279,7 +300,6 @@ document.getElementById('editButton').addEventListener('click', () => {
     if (previewImage) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Image';
-        rotateButtons.style.display = 'block';
         const editImage = document.createElement('img');
         editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);
