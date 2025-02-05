@@ -68,16 +68,34 @@ document.getElementById('postButton').addEventListener('click', async () => {
 
     console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
-        if (editedAudioBlob && originalVideoFile) {
-            console.log('Replacing video audio...');
-            await replaceVideoAudio(originalVideoFile, editedAudioBlob);
+        // Show the loading modal
+        const loadingModal = document.getElementById('loadingModal');
+        loadingModal.style.display = 'flex';
+
+        const startTime = Date.now();
+
+        try {
+            if (editedAudioBlob && originalVideoFile) {
+                console.log('Replacing video audio...');
+                await replaceVideoAudio(originalVideoFile, editedAudioBlob);
+            }
+            addStories(audioStartTime);
+            console.log('Story added');
+            document.getElementById('uploadModal').style.display = 'none';
+            editedImageDataUrl = null;
+            clearPreview(); // Clear preview after posting
+            clearInputs(); // Clear inputs after posting
+        } catch (error) {
+            console.error('Error posting story:', error);
+            alert('An error occurred while posting your story. Please try again.');
+        } finally {
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = Math.max(0, 1000 - elapsedTime); // Ensure at least 1 second display time
+            setTimeout(() => {
+                // Hide the loading modal
+                loadingModal.style.display = 'none';
+            }, remainingTime);
         }
-        addStories(audioStartTime);
-        console.log('Story added');
-        document.getElementById('uploadModal').style.display = 'none';
-        editedImageDataUrl = null;
-        clearPreview(); // Clear preview after posting
-        clearInputs(); // Clear inputs after posting
     }
 });
 
@@ -255,24 +273,40 @@ document.getElementById('editButton').addEventListener('click', () => {
     if (previewImage) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Image';
+        rotateButtons.style.display = 'block';
         const editImage = document.createElement('img');
         editImage.src = URL.createObjectURL(originalImageFile); // Use the original image file
         editContainer.appendChild(editImage);
         cropper = new Cropper(editImage, {
-            aspectRatio: 9/16,
+            aspectRatio: 9 / 16,
             viewMode: 1,
             background: false,
             zoomable: false,
         });
 
-        editImage.onload = () => {
+        const setImageDimensions = () => {
             const { width, height } = editImage.getBoundingClientRect();
-            editContainer.style.width = `${width}px`;
-            editContainer.style.height = `${height}px`;
-            console.log(`Image dimensions: ${width}x${height}`);
-            console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
+            if (width > 0 && height > 0) {
+                editContainer.style.width = `${width}px`;
+                editContainer.style.height = `${height}px`;
+                console.log(`Image dimensions: ${width}x${height}`);
+                console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
+            } else {
+                console.warn('Failed to retrieve image dimensions, retrying...');
+                setTimeout(setImageDimensions, 100); // Retry after 100ms
+            }
         };
-        
+
+        editImage.onload = () => {
+            setImageDimensions();
+        };
+
+        // Add a fallback in case the onload event doesn't fire
+        setTimeout(() => {
+            if (editContainer.style.width === '' || editContainer.style.height === '') {
+                setImageDimensions();
+            }
+        }, 500); // Retry after 500ms if dimensions are not set
     } else if (previewVideo) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Video';
@@ -387,7 +421,6 @@ const applyEditHandler = async () => {
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
-    const loadingIndicator = document.getElementById('loadingIndicator');
         
     if (cropper && previewImage) {
         console.log('Applying cropper edit');
@@ -455,10 +488,6 @@ const processVideoTrim = async (startTime, endTime) => {
     const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
     ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
 
-    // Show the loading indicator
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    loadingIndicator.style.display = 'block';
-
     await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
 
     const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -468,7 +497,6 @@ const processVideoTrim = async (startTime, endTime) => {
     previewVideo.src = URL.createObjectURL(blob);
 
     // Hide the loading indicator
-    loadingIndicator.style.display = 'none';
     console.log('Video trim processed successfully');
 };
 

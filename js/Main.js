@@ -249,6 +249,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             audioElement = new Audio(story.audioUrl);
             audioElement.id = story.audioId;
             audioElement.volume = 0.5;
+            volumeSlider.style.display = 'block';
             audioElement.preload = 'auto';
             audioElement.currentTime = story.audioStartTime; // Set the start time
             audioElement.play().then(() => {
