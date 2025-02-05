@@ -456,9 +456,11 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
     const blogPostInput = document.getElementById('blog-post-input');
     const blogPostText = blogPostInput.value.trim();
     const blogPostUsernameInput = document.getElementById('blog-post-username-input');
-    const blogPostTitleInput = document.getElementById('blog-post-title-input');
+    //const blogPostTitleInput = document.getElementById('blog-post-title-input');
     let blogPostUsername = blogPostUsernameInput.value.trim();
-    const blogPostTitle = blogPostTitleInput.value.trim();
+    //const blogPostTitle = blogPostTitleInput.value.trim();
+    const blogPostImageInput = document.getElementById('blog-post-image-input');
+    const blogPostImage = blogPostImageInput.files[0];
   
     if (!blogPostUsername) {
       // Generate a random username if the user didn't enter one
@@ -466,7 +468,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       blogPostUsername = `Anon #${randomNumbers.join('')}`;
     }
   
-    if (blogPostText && blogPostTitle) {
+    if (blogPostText || blogPostImage) { // && blogPostTitle
       // Get the current date and time
       const currentTime = new Date();
       const blogPostTimestamp = `${currentTime.toLocaleDateString()} ${currentTime.toLocaleTimeString()}`;
@@ -475,19 +477,38 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       const blogPosts = document.getElementById('blog-posts');
       const newBlogPost = document.createElement('div');
       newBlogPost.classList.add('blog-post');
-      newBlogPost.innerHTML = `
-        <h3>${blogPostTitle}</h3>
-        <p>${blogPostText}</p>
-        <div class="post-meta">
-          <small>Uploaded by ${blogPostUsername} on ${blogPostTimestamp}</small>
-        </div>
-      `;
-      blogPosts.appendChild(newBlogPost);
+      let postContent = `
+      <div class="post-header">
+        <span class="avatar"></span>
+        <div class="username">${blogPostUsername}</div>
+        <div class="timestamp">on ${blogPostTimestamp}</div>
+      </div>
+    `;
+
+      if (blogPostText) {
+        postContent += `<p>${blogPostText}</p>`;
+      }
+  
+      if (blogPostImage) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          postContent += `<img src="${reader.result}" alt="Uploaded image">`;
+          newBlogPost.innerHTML = postContent;
+          blogPosts.appendChild(newBlogPost);
+        };
+        reader.readAsDataURL(blogPostImage);
+      } else {
+        newBlogPost.innerHTML = postContent;
+        blogPosts.appendChild(newBlogPost);
+      }
+
+      // LINE  484: <h3>${blogPostTitle}</h3>
   
       // Clear the input fields
       blogPostInput.value = '';
       blogPostUsernameInput.value = '';
-      blogPostTitleInput.value = '';
+      //blogPostTitleInput.value = '';
+      blogPostImageInput.value = '';
     }
   });
 

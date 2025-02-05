@@ -171,26 +171,36 @@ header .nav a:hover {
     border: 1px solid #ccd6dd;
     border-radius: 16px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 60%;
+    width: 50%;
     padding: 20px;
     margin: 20px auto;
     word-wrap: break-word; /* Ensure long text wraps to a new line */
   }
   
   /*Blog Post Inner Styling*/
+  /*
   .blog-post h3 {
     font-weight: bold;
-    font-size: 24px; /* Make the story title bigger */
+    font-size: 24px; /* Make the story title bigger
     margin-top: 0;
   }
+  */
 
   .blog-post p {
     font-size: 16px;
     margin-bottom: 10px;
   }
+
+  .blog-post img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    margin: 1% auto;
+    border-radius: 8px;
+  }
   
   .blog-post small {
-    font-size: 14px;
+    font-size: 16px;
     color: #666;
   }
 
@@ -198,6 +208,36 @@ header .nav a:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .blog-post .post-header .username {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .blog-post .post-header .timestamp {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .post-header {
+    display: flex;
+    align-items: center;
+  }
+
+  .post-header h5 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .avatar {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #ccc;
+    margin-right: 10px;
   }
 
 /*Blog Uploading Container*/
