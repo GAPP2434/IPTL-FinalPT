@@ -403,7 +403,6 @@ const applyEditHandler = async () => {
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     const previewAudio = document.getElementById('previewAudio');  // Get audio preview
-    const loadingIndicator = document.getElementById('loadingIndicator');
         
     if (cropper && previewImage) {
         console.log('Applying cropper edit');
@@ -471,10 +470,6 @@ const processVideoTrim = async (startTime, endTime) => {
     const videoFile = await fetch(URL.createObjectURL(originalVideoFile)).then(res => res.arrayBuffer());
     ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
 
-    // Show the loading indicator
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    loadingIndicator.style.display = 'block';
-
     await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
 
     const data = ffmpeg.FS('readFile', 'output.mp4');
@@ -484,7 +479,6 @@ const processVideoTrim = async (startTime, endTime) => {
     previewVideo.src = URL.createObjectURL(blob);
 
     // Hide the loading indicator
-    loadingIndicator.style.display = 'none';
     console.log('Video trim processed successfully');
 };
 
