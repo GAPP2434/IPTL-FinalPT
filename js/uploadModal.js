@@ -530,7 +530,9 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
         reader.onload = () => {
           postContent += `<img src="${reader.result}" alt="Uploaded image">`;
           newBlogPost.innerHTML = postContent;
-          blogPosts.appendChild(newBlogPost);
+      
+          // Prepend the new post to the blogPosts element
+          blogPosts.prepend(newBlogPost);
       
           // Create a new avatarElement for this post
           const postAvatarElement = newBlogPost.querySelector('.avatar');
@@ -539,7 +541,9 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
         reader.readAsDataURL(blogPostImage);
       } else {
         newBlogPost.innerHTML = postContent;
-        blogPosts.appendChild(newBlogPost);
+      
+        // Prepend the new post to the blogPosts element
+        blogPosts.prepend(newBlogPost);
       
         // Create a new avatarElement for this post
         const postAvatarElement = newBlogPost.querySelector('.avatar');
