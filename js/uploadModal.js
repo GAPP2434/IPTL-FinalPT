@@ -576,6 +576,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       //blogPostTitleInput.value = '';
       blogPostImageInput.value = '';
       document.getElementById('file-names').innerHTML = '';
+      document.getElementById('postContentCounter').innerHTML = '0/250';
     }
   });
 
@@ -586,6 +587,12 @@ const storyUsernameInput = document.getElementById('storyUsername');
 const titleCounter = document.getElementById('titleCounter');
 const descriptionCounter = document.getElementById('descriptionCounter');
 const userCounter = document.getElementById('userCounter');
+const postContentInput = document.getElementById('blog-post-input');
+const postContentCounter = document.getElementById('postContentCounter');
+
+postContentInput.addEventListener('input', () => {
+  postContentCounter.textContent = `${postContentInput.value.length}/250`;
+});
 
 storyTitleInput.addEventListener('input', () => {
     titleCounter.textContent = `${storyTitleInput.value.length}/25`;

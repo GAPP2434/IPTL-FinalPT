@@ -186,7 +186,8 @@
     <div class="post-container">
         <!-- <input type="text" id="blog-post-title-input" placeholder="Blog Title" maxlength="25"> -->
         <div class="post-content-container">
-            <textarea id="blog-post-input" placeholder="Write your post..."></textarea>
+            <textarea id="blog-post-input" maxlength="250" placeholder="Write your post..."></textarea>
+            <span id="postContentCounter">0/250</span>
             <!-- <input type="file" id="blog-post-image-input" accept="image/*"> -->
             <div class="post-attachments">
                 <label class="post-image-input-label" for="blog-post-image-input">
@@ -196,7 +197,7 @@
             </div>
         </div>
         <div class="name-post-container">
-            <input type="text" id="blog-post-username-input" placeholder="Username" maxlength="15">
+            <input type="text" id="blog-post-username-input" placeholder="Username (optional)" maxlength="15">
             <button id="send-blog-post-button">Post</button>
         </div>
     </div>
