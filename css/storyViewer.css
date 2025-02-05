@@ -489,4 +489,15 @@
     .comment-username input{
         margin-bottom: 10px;
     }
+
+    .volume-slider {
+        position: absolute;
+        right: 50px; /* Adjust as needed */
+        top: 50%;
+        transform: translateY(-50%);
+        width: 5px;
+        height: 100px;
+        writing-mode: vertical-lr; /* Vertical slider */
+        direction: rtl;
+    }
 }

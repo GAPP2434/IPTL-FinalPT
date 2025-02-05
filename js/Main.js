@@ -250,13 +250,17 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             volumeControl.max = '1';
             volumeControl.step = '0.01';
             volumeControl.value = audioElement.volume;
-            volumeControl.style.position = 'absolute';
-            volumeControl.style.top = '10px';
-            volumeControl.style.right = '10px';
+            volumeControl.classList.add('volume-slider'); 
+            volumeControl.style.writingMode = 'vertical-lr'; // Vertical slider
+            volumeControl.style.direction = 'rtl';
             volumeControl.addEventListener('input', (event) => {
                 audioElement.volume = event.target.value;
             });
-            storyViewerContent.appendChild(volumeControl);
+            if (nextButton && nextButton.parentNode === storyViewer) {
+                storyViewer.insertBefore(volumeControl, nextButton);
+            } else {
+                storyViewer.appendChild(volumeControl);
+            }
         } else if (story.hasOriginalSound) {
             console.log('Story has original sound');
             // No need to do anything, the video will play its original sound
