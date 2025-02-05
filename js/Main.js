@@ -50,7 +50,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = url;
-                img.alt = title;
+                img.alt = title; // Set the alt text to the title
                 img.loading = 'lazy';
                 storyElement.appendChild(img);
                 if (audioUrl) {
@@ -70,7 +70,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                 const video = document.createElement('video');
                 video.src = url;
                 video.controls = false;
-                video.alt = title;
+                video.alt = title; // Set the alt text to the title
                 video.loading = 'lazy';
                 video.muted = !!audioUrl; // Mute the original audio of the video if integrated audio is present
                 storyElement.appendChild(video);

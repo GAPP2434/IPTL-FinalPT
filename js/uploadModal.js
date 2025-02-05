@@ -127,6 +127,8 @@ const replaceVideoAudio = async (videoFile, audioFile) => {
 document.getElementById('mediaInput').addEventListener('change', () => {
     const files = document.getElementById('mediaInput').files;
     const previewContainer = document.getElementById('previewContainer');
+    const storyTitleInput = document.getElementById('storyTitle');
+    const storyTitle = storyTitleInput.value.trim();
     previewContainer.innerHTML = ''; // Clear previous previews
 
     Array.from(files).forEach(file => {
@@ -137,17 +139,21 @@ document.getElementById('mediaInput').addEventListener('change', () => {
             previewElement = document.createElement('img');
             previewElement.src = url;
             previewElement.id = 'previewImage';
+            previewElement.alt = storyTitle; // Set the alt text to the title
             originalImageFile = file; // Store the original image file
         } else if (file.type.startsWith('video/')) {
             previewElement = document.createElement('video');
             previewElement.src = url;
             previewElement.controls = true;
             previewElement.id = 'previewVideo';
+            previewElement.alt = storyTitle; // Set the alt text to the title
             originalVideoFile = file; // Store the original video file
         } else {
             alert('Unsupported file type.');
             return;
         }
+
+        console.log(`Added ${file.type.startsWith('image/') ? 'image' : 'video'} with alt text: ${previewElement.alt}`);
 
         previewContainer.appendChild(previewElement);
     });
