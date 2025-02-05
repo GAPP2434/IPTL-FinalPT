@@ -60,6 +60,12 @@
                                 <h3>Upload Audio:</h3>
                                 <input type="file" id="audioInput" accept="audio/*" />
                                 <div id="audioPreviewContainer"></div>
+                                <div class="audio-start-time">
+                                    <label for="audioStartMinutes">Start Time:</label>
+                                    <input type="number" id="audioStartMinutes" placeholder="MM" min="0" value="0">
+                                    <label for="audioStartSeconds">:</label>
+                                    <input type="number" id="audioStartSeconds" placeholder="SS" min="0" max="59" value="0">
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -20,19 +20,26 @@ document.getElementById('closeUploadModal').addEventListener('click', () => {
     document.getElementById('uploadModal').style.display = 'none';
     editedImageDataUrl = null;
     clearPreview(); // Clear preview when closing the modal
+    clearInputs(); // Clear inputs when closing the modal
+});
+
+function clearInputs() {
     document.getElementById('mediaInput').value = ''; // Clear the file input
     document.getElementById('storyTitle').value = ''; // Clear the title input
     document.getElementById('storyDescription').value = ''; // Clear the description input
     document.getElementById('storyUsername').value = ''; // Clear the username input
     document.getElementById('audioInput').value = ''; // Clear the audio input
     document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
+    document.getElementById('audioStartMinutes').value = '0'; // Clear the audio start minutes input
+    document.getElementById('audioStartSeconds').value = '0'; // Clear the audio start seconds input
     editedAudioBlob = null;
-});
+}
 
 window.addEventListener('click', (event) => {
     if (event.target === document.getElementById('uploadModal')) {
         document.getElementById('uploadModal').style.display = 'none';
         clearPreview();
+        clearInputs(); // Clear inputs when closing the modal
     }
 });
 
@@ -40,6 +47,9 @@ document.getElementById('postButton').addEventListener('click', () => {
     const mediaInput = document.getElementById('mediaInput');
     const storyTitleInput = document.getElementById('storyTitle');
     const storyUsernameInput = document.getElementById('storyUsername');
+    const audioStartMinutes = parseInt(document.getElementById('audioStartMinutes').value) || 0;
+    const audioStartSeconds = parseInt(document.getElementById('audioStartSeconds').value) || 0;
+    const audioStartTime = audioStartMinutes * 60 + audioStartSeconds;
 
     if (!mediaInput.files.length) {
         alert('Please select at least one image or video.');
@@ -58,18 +68,12 @@ document.getElementById('postButton').addEventListener('click', () => {
 
     console.log('All inputs validated, calling addStories...');
     if (confirm('Are you sure you want to post this story?')) {
-        addStories();
+        addStories(audioStartTime);
         console.log('Story added');
         document.getElementById('uploadModal').style.display = 'none';
         editedImageDataUrl = null;
         clearPreview(); // Clear preview after posting
-        document.getElementById('mediaInput').value = ''; // Clear the file input
-        document.getElementById('storyTitle').value = ''; // Clear the title input
-        document.getElementById('storyDescription').value = ''; // Clear the description input
-        document.getElementById('storyUsername').value = ''; // Clear the username input
-        document.getElementById('audioInput').value = ''; // Clear the audio input
-        document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
-        editedAudioBlob = null; // Reset the edited audio blob
+        clearInputs(); // Clear inputs after posting
     }
 });
 
@@ -122,8 +126,44 @@ document.getElementById('audioInput').addEventListener('change', () => {
 
         // Store the audio file
         editedAudioBlob = file;
+
+        // Get the duration of the audio file
+        audioPreview.addEventListener('loadedmetadata', () => {
+            const duration = audioPreview.duration;
+            console.log(`Audio duration: ${duration} seconds`);
+
+            // Add validation for the start time input
+            const audioStartMinutes = document.getElementById('audioStartMinutes');
+            const audioStartSeconds = document.getElementById('audioStartSeconds');
+
+            const validateStartTime = () => {
+                const maxMinutes = Math.floor(duration / 60);
+                const maxSeconds = Math.floor(duration % 60);
+
+                const startMinutes = parseInt(audioStartMinutes.value) || 0;
+                let startSeconds = parseInt(audioStartSeconds.value) || 0;
+
+                if (startMinutes > maxMinutes) {
+                    audioStartMinutes.value = maxMinutes;
+                }
+
+                if (startMinutes === maxMinutes) {
+                    if (startSeconds > maxSeconds) {
+                        audioStartSeconds.value = maxSeconds;
+                    }
+                } else {
+                    if (startSeconds > 59) {
+                        audioStartSeconds.value = 59;
+                    }
+                }
+            };
+
+            audioStartMinutes.addEventListener('input', validateStartTime);
+            audioStartSeconds.addEventListener('input', validateStartTime);
+        });
     }
 });
+
 
 export function clearPreview() {
     const previewContainer = document.getElementById('previewContainer');
@@ -245,10 +285,24 @@ document.getElementById('editButton').addEventListener('click', () => {
 
             document.getElementById('startHours').addEventListener('input', (e) => validateInput(e.target, 0));
             document.getElementById('startMinutes').addEventListener('input', (e) => validateInput(e.target, maxMinutes));
-            document.getElementById('startSeconds').addEventListener('input', (e) => validateInput(e.target, maxSeconds));
+            document.getElementById('startSeconds').addEventListener('input', (e) => {
+                const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
+                if (startMinutes === maxMinutes) {
+                    validateInput(e.target, maxSeconds);
+                } else {
+                    validateInput(e.target, 59);
+                }
+            });
             document.getElementById('endHours').addEventListener('input', (e) => validateInput(e.target, 0));
             document.getElementById('endMinutes').addEventListener('input', (e) => validateInput(e.target, maxMinutes));
-            document.getElementById('endSeconds').addEventListener('input', (e) => validateInput(e.target, maxSeconds));
+            document.getElementById('endSeconds').addEventListener('input', (e) => {
+                const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
+                if (endMinutes === maxMinutes) {
+                    validateInput(e.target, maxSeconds);
+                } else {
+                    validateInput(e.target, 59);
+                }
+            });
         };
 
         editVideo.onloadedmetadata = () => {
@@ -277,36 +331,19 @@ const applyEditHandler = async () => {
         const canvas = cropper.getCroppedCanvas();
         editedImageDataUrl = canvas.toDataURL();
         previewImage.src = editedImageDataUrl;
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
         cropper.destroy();
         cropper = null;
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
     } else if (previewVideo) {
-        const startHoursElement = document.getElementById('startHours');
-        const startMinutesElement = document.getElementById('startMinutes');
-        const startSecondsElement = document.getElementById('startSeconds');
-        const endHoursElement = document.getElementById('endHours');
-        const endMinutesElement = document.getElementById('endMinutes');
-        const endSecondsElement = document.getElementById('endSeconds');
-
-        console.log('startHoursElement:', startHoursElement);
-        console.log('startMinutesElement:', startMinutesElement);
-        console.log('startSecondsElement:', startSecondsElement);
-        console.log('endHoursElement:', endHoursElement);
-        console.log('endMinutesElement:', endMinutesElement);
-        console.log('endSecondsElement:', endSecondsElement);
-
-        if (!startHoursElement || !startMinutesElement || !startSecondsElement || !endHoursElement || !endMinutesElement || !endSecondsElement) {
-            alert('Please provide valid start and end times.');
-            return;
-        }
-
-        const startHours = parseInt(startHoursElement.value) || 0;
-        const startMinutes = parseInt(startMinutesElement.value) || 0;
-        const startSeconds = parseInt(startSecondsElement.value) || 0;
-        const endHours = parseInt(endHoursElement.value) || 0;
-        const endMinutes = parseInt(endMinutesElement.value) || 0;
-        const endSeconds = parseInt(endSecondsElement.value) || 0;
+        const startHours = parseInt(document.getElementById('startHours').value) || 0;
+        const startMinutes = parseInt(document.getElementById('startMinutes').value) || 0;
+        const startSeconds = parseInt(document.getElementById('startSeconds').value) || 0;
+        const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
+        const endHours = parseInt(document.getElementById('endHours').value) || 0;
+        const endMinutes = parseInt(document.getElementById('endMinutes').value) || 0;
+        const endSeconds = parseInt(document.getElementById('endSeconds').value) || 0;
+        const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
 
         console.log('startHours:', startHours);
         console.log('startMinutes:', startMinutes);
@@ -315,15 +352,11 @@ const applyEditHandler = async () => {
         console.log('endMinutes:', endMinutes);
         console.log('endSeconds:', endSeconds);
 
-        const startTime = startHours * 3600 + startMinutes * 60 + startSeconds;
-        const endTime = endHours * 3600 + endMinutes * 60 + endSeconds;
-
         console.log('startTime:', startTime);
         console.log('endTime:', endTime);
 
         if (startTime >= endTime) {
             alert('End time must be greater than start time.');
-            console.log("Test");
             return;
         }
 
@@ -335,7 +368,7 @@ const applyEditHandler = async () => {
         if (confirm('Are you sure you want to apply the edit?')) {
             await processVideoTrim(startTime, endTime);
 
-            // Close the edit modal only if the trim times are valid
+            // Close the edit modal only if the trim times are valid and user confirms
             document.getElementById('editModal').style.display = 'none';
             document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
         }
@@ -347,6 +380,10 @@ const applyEditHandler = async () => {
 };
 
 const processVideoTrim = async (startTime, endTime) => {
+    console.log('Processing video trim');
+    console.log('startTime:', startTime);
+    console.log('endTime:', endTime);
+
     const ffmpeg = FFmpeg.createFFmpeg({ log: true });
     await ffmpeg.load();
 
@@ -423,58 +460,6 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       blogPostTitleInput.value = '';
     }
   });
-
-document.getElementById('applyEditButton').addEventListener('click', async () => {
-    console.log('Apply Edit button clicked');
-    const previewImage = document.getElementById('previewImage');
-    const previewVideo = document.getElementById('previewVideo');
-    const previewAudio = document.getElementById('previewAudio');  // Get audio preview
-    const loadingIndicator = document.getElementById('loadingIndicator');
-        
-    // Close the edit modal
-    document.getElementById('editModal').style.display = 'none';
-        
-    if (cropper) {
-        console.log('Applying cropper edit');
-        const canvas = cropper.getCroppedCanvas();
-        editedImageDataUrl = canvas.toDataURL();
-        previewImage.src = editedImageDataUrl;
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-        cropper.destroy();
-        cropper = null;
-    } else if (previewVideo) {
-        const startInput = document.getElementById('startInput');
-        const endInput = document.getElementById('endInput');
-        const startTime = parseFloat(startInput.value) || 0;
-        const endTime = Math.min(parseFloat(endInput.value) || 15, 15);
-
-        if (startTime >= endTime) {
-            alert('End time must be greater than start time.');
-            return;
-        }
-
-        const ffmpeg = FFmpeg.createFFmpeg({ log: true });
-        await ffmpeg.load();
-
-        const videoFile = await fetch(previewVideo.src).then(res => res.arrayBuffer());
-        ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoFile));
-
-        await ffmpeg.run('-i', 'input.mp4', '-ss', `${startTime}`, '-to', `${endTime}`, '-c', 'copy', 'output.mp4');
-
-        const data = ffmpeg.FS('readFile', 'output.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
-        editedVideoBlob = blob;
-        previewVideo.src = URL.createObjectURL(blob);
-        document.getElementById('editModal').style.display = 'none';
-        document.getElementById('uploadModal').style.display = 'block'; // Show upload modal
-    }
-
-    if (previewAudio) {
-        previewAudio.play();
-    }
-});
-
 
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');

@@ -18,7 +18,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
     export let audioElement = null;
 
     //Add Story Function
-    export function addStories() {
+    export function addStories(audioStartTime) {
         console.log('addStories function triggered');
         const mediaInput = document.getElementById('mediaInput');
         const storyTitleInput = document.getElementById('storyTitle');
@@ -59,6 +59,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     audio.id = `audio-${uniqueId}`;
                     audio.volume = 0.5;
                     audio.preload = 'auto';
+                    audio.dataset.startTime = audioStartTime; // Store the start time in a data attribute
                     storyElement.appendChild(audio);
                     console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
                 } else {
@@ -77,6 +78,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                     audio.id = `audio-${uniqueId}`;
                     audio.volume = 0.5;
                     audio.preload = 'auto';
+                    audio.dataset.startTime = audioStartTime; // Store the start time in a data attribute
                     storyElement.appendChild(audio);
                     console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
                 } else {
@@ -100,7 +102,8 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
                         audioUrl: child.querySelector('audio') ? child.querySelector('audio').src : null,
                         hasAudio: child.classList.contains('story-with-audio'),
                         hasOriginalSound: child.classList.contains('story-with-original-sound'),
-                        audioId: child.querySelector('audio') ? child.querySelector('audio').id : null
+                        audioId: child.querySelector('audio') ? child.querySelector('audio').id : null,
+                        audioStartTime: child.querySelector('audio') ? parseInt(child.querySelector('audio').dataset.startTime) : 0 // Retrieve the start time from the data attribute
                     }));
     
                 currentStoryIndex = storyQueue.findIndex(item => item.src === url);
@@ -231,7 +234,7 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
             audioElement.id = story.audioId;
             audioElement.volume = 0.5;
             audioElement.preload = 'auto';
-            audioElement.currentTime = 0;
+            audioElement.currentTime = story.audioStartTime; // Set the start time
             audioElement.play().then(() => {
                 console.log('Audio started playing');
             }).catch(error => {
