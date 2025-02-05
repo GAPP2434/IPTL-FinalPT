@@ -392,12 +392,35 @@
 }
 
 .comment {
+    font-family: 'Markazi', serif;
+    font-size: 1.5rem;
     padding: 10px;
     border-bottom: 1px solid #ddd;
 }
 
 .comment:last-child {
     border-bottom: none;
+}
+
+#sendCommentButton{
+    background-image: linear-gradient(to top, rgba(69, 160, 230, 0.5), rgba(69, 160, 230, 0));
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #45a0e6, #45a0e6);
+    border-image-slice: 1;
+    color: #87ceeb;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    background-size: 100% 150%, contain;
+    background-position: 0% 3%, center;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+#sendCommentButton:hover{
+    box-shadow: 0 10px 10px rgba(69, 160, 230, 0.2);
+    background-position: 0% 102%;
 }
 
 /* Username styling */
