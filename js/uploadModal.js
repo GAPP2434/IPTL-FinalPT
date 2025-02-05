@@ -529,7 +529,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
     if (blogPostText || blogPostImage) { // && blogPostTitle
       // Get the current date and time
       const currentTime = new Date();
-      const blogPostTimestamp = `${currentTime.toLocaleDateString()} ${currentTime.toLocaleTimeString()}`;
+      const blogPostTimestamp = `${currentTime.toLocaleDateString()} | ${currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   
       // Add the blog post to the list of blog posts
       const blogPosts = document.getElementById('blog-posts');
@@ -540,7 +540,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       <div class="post-header">
         <span class="avatar"></span>
         <div class="post-info">
-            <div class="username" style="${blogPostUsernameInput.value.trim() === '' ? 'color: #bc4749' : 'color: #a7c957'}">${blogPostUsername}</div>
+            <div class="username" style="${blogPostUsernameInput.value.trim() === '' ? 'color: #e37f8a' : 'color: #a7c957'}">${blogPostUsername}</div>
             <div class="timestamp">on ${blogPostTimestamp}</div>
         </div>
       </div>
