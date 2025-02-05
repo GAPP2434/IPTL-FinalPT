@@ -43,6 +43,16 @@
     justify-content: space-between;
     align-items: flex-start;
     flex-wrap: wrap; /* Allow wrapping for smaller screens */
+    width: 50%;
+}
+
+.uploadMediaContainer h2{
+    display: flex;
+    justify-content: flex-end;
+    width: 50%;
+}
+.upload-modal-main-content{
+    display:flex;
 }
 
 /* Styles for the left side of the upload modal */
@@ -54,12 +64,13 @@
 
 /* Styles for the upload choose file section */
 .upload-choose-file {
-    margin-bottom: 10px;
+    display: flex;
+    justify-content: flex-end;
+    width: 80%;
 }
 
 .upload-choose-file input[type="file"] {
     display: block;
-    margin-bottom: 10px;
 }
 
 /* Styles for the upload details section */
@@ -92,6 +103,32 @@
 }
 
 /* Preview container styles */
+.previewContainer-main{
+    max-width: 25rem; /* Maximum width for the preview container */
+    height: 40rem;
+    aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
+    position: relative;
+    margin: 10px auto;
+}
+
+#editButton{
+    margin-top: 10px;
+    width: 80%;
+    padding: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.editButtonContainer{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
 #previewContainer {
     flex: 1;
     max-width: 300px; /* Maximum width for the preview container */
@@ -165,6 +202,17 @@
     width: 100%; /* Make the audio player take full width of the container */
     border-radius: 5px;
     background-color: #f1f1f1; /* Optional: style the audio bar */
+}
+
+.audio-start-time-input{
+    display: flex;
+    gap: 5px;
+}
+.audio-start-time-input label{
+    margin-top: 10px;
+}
+.audio-start-time input{
+    width: 15%;
 }
 
 /* Responsive Styles */

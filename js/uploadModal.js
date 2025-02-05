@@ -132,6 +132,8 @@ document.getElementById('mediaInput').addEventListener('change', () => {
 document.getElementById('audioInput').addEventListener('change', () => {
     const audioInput = document.getElementById('audioInput');
     const previewContainer = document.getElementById('audioPreviewContainer');
+    const audioStartMinutes = document.getElementById('audioStartMinutes');
+    const audioStartSeconds = document.getElementById('audioStartSeconds');
 
     previewContainer.innerHTML = ''; // Clear previous previews
     
@@ -150,42 +152,62 @@ document.getElementById('audioInput').addEventListener('change', () => {
         // Store the audio file
         editedAudioBlob = file;
 
+        // Enable the input boxes
+        audioStartMinutes.disabled = false;
+        audioStartSeconds.disabled = false;
+
         // Get the duration of the audio file
         audioPreview.addEventListener('loadedmetadata', () => {
             const duration = audioPreview.duration;
-            console.log(`Audio duration: ${duration} seconds`);
 
             // Add validation for the start time input
-            const audioStartMinutes = document.getElementById('audioStartMinutes');
-            const audioStartSeconds = document.getElementById('audioStartSeconds');
-
-            const validateStartTime = () => {
-                const maxMinutes = Math.floor(duration / 60);
-                const maxSeconds = Math.floor(duration % 60);
-
-                const startMinutes = parseInt(audioStartMinutes.value) || 0;
-                let startSeconds = parseInt(audioStartSeconds.value) || 0;
-
-                if (startMinutes > maxMinutes) {
-                    audioStartMinutes.value = maxMinutes;
-                }
-
-                if (startMinutes === maxMinutes) {
-                    if (startSeconds > maxSeconds) {
-                        audioStartSeconds.value = maxSeconds;
-                    }
-                } else {
-                    if (startSeconds > 59) {
-                        audioStartSeconds.value = 59;
-                    }
+            const validateInput = (input, max) => {
+                if (parseInt(input.value) > max) {
+                    input.value = max;
                 }
             };
 
-            audioStartMinutes.addEventListener('input', validateStartTime);
-            audioStartSeconds.addEventListener('input', validateStartTime);
+            const addInputValidation = (audioDuration) => {
+                const maxMinutes = Math.floor(audioDuration / 60);
+                const maxSeconds = Math.floor(audioDuration % 60);
+
+                audioStartMinutes.addEventListener('input', (e) => validateInput(e.target, maxMinutes));
+                audioStartSeconds.addEventListener('input', (e) => {
+                    const startMinutes = parseInt(audioStartMinutes.value) || 0;
+                    if (startMinutes === maxMinutes) {
+                        validateInput(e.target, maxSeconds);
+                    } else {
+                        validateInput(e.target, 59);
+                    }
+                });
+
+                // Reset to max if the total time exceeds the duration
+                const resetToMaxTime = () => {
+                    const startMinutes = parseInt(audioStartMinutes.value) || 0;
+                    const startSeconds = parseInt(audioStartSeconds.value) || 0;
+                    const totalTime = startMinutes * 60 + startSeconds;
+                    if (totalTime > audioDuration) {
+                        audioStartMinutes.value = maxMinutes;
+                        audioStartSeconds.value = maxSeconds;
+                    }
+                };
+
+                audioStartMinutes.addEventListener('blur', resetToMaxTime);
+                audioStartSeconds.addEventListener('blur', resetToMaxTime);
+            };
+
+            addInputValidation(duration);
         });
+    } else {
+        // Disable the input boxes if no audio is uploaded
+        audioStartMinutes.disabled = true;
+        audioStartSeconds.disabled = true;
     }
 });
+
+// Disable the input boxes initially
+document.getElementById('audioStartMinutes').disabled = true;
+document.getElementById('audioStartSeconds').disabled = true;
 
 
 export function clearPreview() {
