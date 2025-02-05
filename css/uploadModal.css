@@ -13,7 +13,8 @@
 }
 
 .modal-content {
-    background-color: #fefefe;
+    background-color: #e4ddc9;
+    background-image: url("../images/mhwi-paper.png");
     margin: 2% auto; /* 15% from the top and centered */
     padding: 20px;
     border: 1px solid #888;
@@ -24,7 +25,7 @@
 }
 
 .close {
-    color: #aaa;
+    color: #888;
     float: right;
     font-size: 28px;
     font-weight: bold;
@@ -74,6 +75,7 @@
 
 .uploadMediaContainer h2{
     display: flex;
+
     justify-content: flex-end;
     width: 50%;
 }
@@ -90,9 +92,15 @@
 
 /* Styles for the upload choose file section */
 .upload-choose-file {
+    background-color: #e4ddc9;
     display: flex;
     justify-content: flex-end;
-    width: 80%;
+    width: 85%;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
 }
 
 .upload-choose-file input[type="file"] {
@@ -106,6 +114,7 @@
 
 .upload-details input,
 .upload-details textarea {
+    background-color: #e4ddc9;
     width: 100%;
     padding: 10px;
     margin-bottom: 10px;
@@ -172,9 +181,9 @@
     aspect-ratio: 9 / 16; /* Maintain 9:16 aspect ratio */
     position: relative;
     overflow: hidden; /* Ensure content does not overflow */
-    border: white 10px solid;
+    padding: 10px;
     border-radius: 50px;
-    background-color: #000;
+    background-color: #e4ddc9;
     margin: 10px auto;
 }
 
@@ -195,9 +204,21 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    background-color: #e4ddc9;
+    background-image: url("../images/mhwi-paper.png"); 
+    max-width: 100%;
+    max-height: 80%;
+    margin: auto;
 }
 
-#editContainer img,
+#editContainer img {
+    max-width: 100%;
+    max-height: 600px;
+    margin-bottom: 10px;
+    background-color: #e4ddc9;
+}
+
+
 #editContainer video {
     max-width: 100%;
     max-height: 400px;
@@ -215,6 +236,10 @@
     margin-top: 5px;
 }
 
+#previewAudio audio{
+    background-color: #e4ddc9;
+}
+
 .upload-audio label {
     font-size: 14px;
     color: #333;
@@ -229,7 +254,7 @@
     height: 55px;
     margin: 10px auto;
     padding: 10px;
-    background-color: #f1f1f1;
+    background-color: #e4ddc9;
     border-radius: 20px;
     text-align: center;
 }
@@ -238,7 +263,7 @@
 #audioPreviewContainer audio {
     width: 100%; /* Make the audio player take full width of the container */
     border-radius: 5px;
-    background-color: #f1f1f1; /* Optional: style the audio bar */
+    background-color: #e4ddc9; /* Optional: style the audio bar */
 }
 
 .audio-start-time-input{

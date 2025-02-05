@@ -146,6 +146,7 @@ document.getElementById('audioInput').addEventListener('change', () => {
         audioPreview.src = url;
         audioPreview.controls = true;
         audioPreview.id = 'previewAudio';
+        previewContainer.style.backgroundColor = ' #e4ddc9';
         
         previewContainer.appendChild(audioPreview);
 
@@ -260,8 +261,19 @@ document.getElementById('editButton').addEventListener('click', () => {
         editContainer.appendChild(editImage);
         cropper = new Cropper(editImage, {
             aspectRatio: 9/16,
-            viewMode: 1
+            viewMode: 1,
+            background: false,
+            zoomable: false,
         });
+
+        editImage.onload = () => {
+            const { width, height } = editImage.getBoundingClientRect();
+            editContainer.style.width = `${width}px`;
+            editContainer.style.height = `${height}px`;
+            console.log(`Image dimensions: ${width}x${height}`);
+            console.log(`Edit container size: ${editContainer.style.width}x${editContainer.style.height}`);
+        };
+        
     } else if (previewVideo) {
         document.getElementById('editModal').style.display = 'block';
         editModalTitle.textContent = 'Edit Video';
@@ -474,6 +486,11 @@ document.getElementById('closeEditModal').addEventListener('click', () => {
         editVideo.pause();
         editVideo.currentTime = 0;
     }
+    // Reset the edit container
+    const editContainer = document.getElementById('editContainer');
+    editContainer.innerHTML = '';
+    editContainer.style.width = '';
+    editContainer.style.height = '';
 });
 
 // Ensure only one event listener is added to the apply edit button
