@@ -484,14 +484,16 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
     window.closeStoryViewer = closeStoryViewer;
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft') {
-          prevStory();
-        } else if (event.key === 'ArrowRight') {
-          nextStory();
-        } else if (event.key === 'Escape') {
-          closeStoryViewer();
-        } else if (event.key === ' ') { // Use ' ' for Space bar
-            event.preventDefault(); // Prevent default space bar action (scrolling)
-            togglePauseStory();
+        if (storyViewer.classList.contains('active')) {
+            if (event.key === 'ArrowLeft') {
+                prevStory();
+            } else if (event.key === 'ArrowRight') {
+                nextStory();
+            } else if (event.key === 'Escape') {
+                closeStoryViewer();
+            } else if (event.key === ' ') { // Use ' ' for Space bar
+                event.preventDefault(); // Prevent default space bar action (scrolling)
+                togglePauseStory();
+            }
         }
-      });
+    });
