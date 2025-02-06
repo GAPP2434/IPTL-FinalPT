@@ -109,7 +109,7 @@ const replaceVideoAudio = async (videoFile, audioFile) => {
     const ffmpeg = FFmpeg.createFFmpeg({ log: true });
     await ffmpeg.load();
 
-    const videoData = await fetch(URL.createObjectURL(videoFile)).then(res => res.arrayBuffer());
+    const videoData = await fetch(URL.createObjectURL(editedVideoBlob || videoFile)).then(res => res.arrayBuffer());
     ffmpeg.FS('writeFile', 'input.mp4', new Uint8Array(videoData));
 
     const audioData = await fetch(URL.createObjectURL(audioFile)).then(res => res.arrayBuffer());
@@ -148,6 +148,7 @@ document.getElementById('mediaInput').addEventListener('change', () => {
             previewElement.id = 'previewVideo';
             previewElement.alt = storyTitle; // Set the alt text to the title
             originalVideoFile = file; // Store the original video file
+            editedImageDataUrl = null;
         } else {
             alert('Unsupported file type.');
             return;
