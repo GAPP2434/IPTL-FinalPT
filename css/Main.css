@@ -127,7 +127,12 @@ footer {
     border-radius: 10px;
     overflow: hidden;
     position: relative;
-    cursor: pointer
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out; /* Add this line to animate the story on hover */ 
+}
+
+.story:hover {
+  transform: scale(1.05); /* Add this line to scale the story on hover */
 }
 
 .story .add-story{
@@ -462,5 +467,9 @@ footer {
         display: flex;
         align-items: center;
         flex-direction: column;
+    }
+
+    .story story-with-audio::hover {
+         transform: scale(00.3);
     }
 }

@@ -460,16 +460,6 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         footer.classList.remove('hidden');
         clearTimeout(progressTimeout);
       }
-      
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowLeft') {
-          prevStory();
-        } else if (event.key === 'ArrowRight') {
-          nextStory();
-        } else if (event.key === 'Escape') {
-          closeViewer();
-        }
-      });
     
       export function closeStoryViewer() {
         const footer = document.querySelector('.footer'); // Define the footer variable
@@ -492,3 +482,16 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
     }
     
     window.closeStoryViewer = closeStoryViewer;
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          prevStory();
+        } else if (event.key === 'ArrowRight') {
+          nextStory();
+        } else if (event.key === 'Escape') {
+          closeStoryViewer();
+        } else if (event.key === ' ') { // Use ' ' for Space bar
+            event.preventDefault(); // Prevent default space bar action (scrolling)
+            togglePauseStory();
+        }
+      });
