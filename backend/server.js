@@ -11,7 +11,7 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from the parent directory
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Start the server
 app.listen(port, () => {
