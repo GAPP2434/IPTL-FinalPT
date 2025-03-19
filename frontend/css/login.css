@@ -170,3 +170,39 @@ button[type="submit"]:hover {
 button[type="submit"]:active {
     transform: scale(0.98);
 }
+
+/* Divider styling */
+.login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: #666;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ccc;
+}
+
+.login-divider span {
+    padding: 0 10px;
+    font-size: 0.9rem;
+}
+
+/* Google login container */
+.google-login-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+/* Style adjustments for Google button to match the theme */
+.google-login-container .g_id_signin {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+

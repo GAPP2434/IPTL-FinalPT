@@ -1,4 +1,3 @@
-PT\frontend\login.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +6,8 @@ PT\frontend\login.html
     <title>Gathering Hub - Login</title>
     <link rel="icon" type="image/x-icon" href="images/Icon.ico">
     <link rel="stylesheet" href="css/login.css">
+    <!-- Google Sign-In API -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="auth-container">
@@ -25,6 +26,18 @@ PT\frontend\login.html
 
                 <div class="form-actions">
                     <button type="submit" id="loginButton">Login</button>
+                </div>
+
+                <div class="login-divider">
+                    <span>OR</span>
+                </div>
+
+                <!-- Google Sign-In Button -->
+                <div class="google-login-container">
+                    <button id="googleSignInBtn" class="google-btn">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+                        <span>Sign in with Google</span>
+                    </button>
                 </div>
 
                 <div class="form-footer">
