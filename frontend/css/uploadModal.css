@@ -201,6 +201,20 @@
   overflow-y: auto; /* Enable scrolling if content overflows */
 }
 
+#postSubmissionModal .modal-content {
+  width: 100%;
+  max-width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#postSubmissionModal .post-content-container,
+#postSubmissionModal .name-post-container {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
 /* Post Modal Close Button */
 .modal-header .close {
   position: absolute;

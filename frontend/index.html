@@ -204,25 +204,22 @@
  
  <!-- Post submission modal -->
  <div id="postSubmissionModal" class="modal">
-   <div class="modal-content">
-     <div class="modal-header">
-       <span class="close" id="closePostModal">&times;</span>
+   <div class="modal-header">
+     <span class="close" id="closePostModal">&times;</span>
+   </div>
+   <div class="post-content-container">
+     <textarea id="blog-post-input" maxlength="250" placeholder="Write your post..."></textarea>
+     <span id="postContentCounter">0/250</span>
+     <div class="post-attachments">
+       <label class="post-image-input-label" for="blog-post-image-input">
+         <input type="file" id="blog-post-image-input" class="post-image-input" accept="image/*">
+       </label>
+       <span id="file-names">No file selected</span>
      </div>
-     <!-- Rest of the modal content remains the same -->
-     <div class="post-content-container">
-       <textarea id="blog-post-input" maxlength="250" placeholder="Write your post..."></textarea>
-       <span id="postContentCounter">0/250</span>
-       <div class="post-attachments">
-         <label class="post-image-input-label" for="blog-post-image-input">
-           <input type="file" id="blog-post-image-input" class="post-image-input" accept="image/*">
-         </label>
-         <span id="file-names">No file selected</span>
-       </div>
-     </div>
-     <div class="name-post-container">
-       <input type="text" id="blog-post-username-input" placeholder="Username (optional)" maxlength="15">
-       <button id="send-blog-post-button">Post</button>
-     </div>
+   </div>
+   <div class="name-post-container">
+     <input type="text" id="blog-post-username-input" placeholder="Username (optional)" maxlength="15">
+     <button id="send-blog-post-button">Post</button>
    </div>
  </div>
 
