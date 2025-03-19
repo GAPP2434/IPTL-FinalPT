@@ -682,6 +682,16 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
     }
   });
 
+// Get the floating post button and modal elements
+const floatingPostButton = document.getElementById('floatingPostButton');
+const postSubmissionModal = document.getElementById('postSubmissionModal');
+
+// Add event listener to the floating post button
+floatingPostButton.addEventListener('click', () => {
+  // Toggle the modal visibility
+  postSubmissionModal.style.display = 'block';
+});
+
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');
 const storyDescriptionInput = document.getElementById('storyDescription');

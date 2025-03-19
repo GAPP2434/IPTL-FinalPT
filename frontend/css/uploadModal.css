@@ -167,6 +167,40 @@
     box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
 }
 
+.floating-button {
+  position: fixed;
+  top: 50%; /* Move the button to the middle of the screen */
+  right: 20px; /* Keep the button 20px from the right edge */
+  transform: translateY(50%); /* Move the button down by 50% of its own height */
+  background-color: #e4ddc9;
+  border: none;
+  padding: 20px; /* Increase the padding to make the button bigger */
+  border-radius: 50%;
+  cursor: pointer;
+  width: 60px; /* Set the width of the button */
+  height: 60px; /* Set the height of the button */
+}
+
+.floating-button i {
+  font-size: 36px; /* Increase the font size of the icon */
+  color: #a7c957;
+}
+
+/* Post submission modal */
+#postSubmissionModal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #e4ddc9;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 50%; /* Adjust width as needed */
+  height: auto; /* Automatically adjust height */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+}
+
 /* Container for the upload modal content */
 .upload-modal-container {
     display: flex;
