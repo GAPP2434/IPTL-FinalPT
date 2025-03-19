@@ -692,6 +692,15 @@ floatingPostButton.addEventListener('click', () => {
   postSubmissionModal.style.display = 'block';
 });
 
+// Get the close button element
+const closePostModalButton = document.getElementById('closePostModal');
+
+// Add event listener to the close button
+closePostModalButton.addEventListener('click', () => {
+  // Hide the modal
+  document.getElementById('postSubmissionModal').style.display = 'none';
+});
+
 // Character counting logic
 const storyTitleInput = document.getElementById('storyTitle');
 const storyDescriptionInput = document.getElementById('storyDescription');
