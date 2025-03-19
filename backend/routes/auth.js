@@ -6,6 +6,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/Users');
+const axios = require('axios');
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
@@ -123,4 +124,55 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Google Authentication
+router.post('/google', async (req, res) => {
+    try {
+        const { email, name, picture } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+        
+        // Check if user exists
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            // User doesn't exist, create a new one
+            // Generate a random secure password
+            const randomPassword = Math.random().toString(36).slice(-10) + 
+                                  Math.random().toString(36).slice(-10);
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(randomPassword, salt);
+            
+            user = new User({
+                name: name || email.split('@')[0],
+                email,
+                password: hashedPassword,
+                profilePicture: picture || 'avatars/Avatar_Default_Anonymous.webp'
+            });
+            
+            await user.save();
+        }
+        
+        // Generate JWT token
+        const payload = {
+            user: {
+                id: user._id
+            }
+        };
+        
+        jwt.sign(
+            payload,
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' },
+            (err, token) => {
+                if (err) throw err;
+                res.json({ token });
+            }
+        );
+    } catch (err) {
+        console.error('Google auth error:', err);
+        res.status(500).json({ message: 'Server error during Google authentication' });
+    }
+});
 module.exports = router;

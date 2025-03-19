@@ -17,6 +17,14 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
     export let elapsedTime = 0;
     export let audioElement = null;
 
+    window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data && event.data.type === 'oauthSuccess' && event.data.token) {
+            localStorage.setItem('token', event.data.token);
+            window.location.replace('index.html');
+        }
+    });
+    
     //Add Story Function
     export function addStories(audioStartTime) {
         console.log('addStories function triggered');
