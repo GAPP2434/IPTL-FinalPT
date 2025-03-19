@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loginForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const email = document.getElementById('email').value.trim();
+        const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
         
-        if (!email || !password) {
-            showMessage('Please enter both email and password', 'error');
+        if (!username || !password) {
+            showMessage('Please enter both username and password', 'error');
             return;
         }
         
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ username, password })
         })
         .then(response => {
             if (!response.ok) {

@@ -87,18 +87,18 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { username, password } = req.body;
         
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ name: username });
         if (!user) {
-            return res.status(400).json({ message: 'Invalid email or password' });
+            return res.status(400).json({ message: 'Invalid username or password' });
         }
         
         // Validate password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid email or password' });
+            return res.status(400).json({ message: 'Invalid username or password' });
         }
         
         // Generate JWT token
