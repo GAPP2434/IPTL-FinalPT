@@ -1,0 +1,44 @@
+d\login.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gathering Hub - Login</title>
+    <link rel="icon" type="image/x-icon" href="images/Icon.ico">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <h1>Welcome Back</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="loginButton">Login</button>
+                </div>
+
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="register.html">Create one</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Message display for errors or success -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+    
+    <script src="js/login.js"></script>
+</body>
+</html>

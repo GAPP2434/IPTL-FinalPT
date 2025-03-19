@@ -15,12 +15,16 @@ const UserSchema = new mongoose.Schema({
         unique: true
     },
     profilePicture: {
-        type: Buffer,
-        contentType: String
+        type: String,
+        default: 'avatars/Avatar_Default_Anonymous.webp'
     },
     password: {
         type: String,
         required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 });
 

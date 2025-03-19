@@ -1,0 +1,172 @@
+/* Auth styling */
+@font-face {
+    font-family: 'Markazi';
+    src: url('../fonts/MarkaziText.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'MonsterHunter';
+    src: url('../fonts/monsterhunter.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Markazi', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('../images/mhwi-black1.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 20px;
+}
+
+.auth-box {
+    background-color: #e4ddc9;
+    background-image: url('../images/mhwi-paper.png');
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+}
+
+h1 {
+    text-align: center;
+    font-family: 'MonsterHunter', sans-serif;
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    background-color: #e4ddc9;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: #a49884;
+    outline: none;
+}
+
+.form-actions {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.form-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.form-footer a {
+    color: #a49884;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+
+button[type="submit"] {
+    padding: 10px 20px;
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Markazi', sans-serif;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+button[type="submit"]:hover {
+    background-position: 0% 100%;
+    box-shadow: 0 10px 10px rgba(255, 215, 0, 0.2);
+}
+
+/* Message container styling */
+.message-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: none;
+}
+
+.message {
+    padding: 15px 25px;
+    border-radius: 5px;
+    font-size: 1rem;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.message.error {
+    background-color: #ff4d4d;
+}
+
+.message.success {
+    background-color: #4CAF50;
+}
+
+/* Added animation for login box */
+.auth-box {
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Button press effect */
+button[type="submit"]:active {
+    transform: scale(0.98);
+}

@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gathering Hub</title>
     <!--User css and js-->
-    <!--User css and js-->
     <link rel="stylesheet" href="css/Main.css">
     <link rel="stylesheet" href="css/storyViewer.css">
     <link rel="stylesheet" href="css/uploadModal.css">
+    <script src="js/authCheck.js"></script>
     <script type="module" src="js/Main.js" defer></script>
     <script type="module" src="js/ReactionAndComments.js" defer></script>
     <script type="module" src="js/uploadModal.js" defer></script>
@@ -21,9 +21,12 @@
   <body>
       <!-- Header -->
        <header class = "header">
-          <div class = "logo">
+            <div class = "logo">
               <h1 class = "GatheringHub">Gathering Hub</h1>
-          </div>
+            </div>
+            <div class="user-controls">
+                <button id="logoutButton" class="logout-button">Logout</button>
+            </div>
         </header>
       <!-- Main Content -->
     <main>

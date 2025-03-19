@@ -446,6 +446,43 @@ footer {
     display: none;
 }
 
+/*logout*/
+/* Add to your existing Main.css file */
+
+/* User controls and logout button styling */
+.user-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.logout-button {
+  padding: 8px 15px;
+  background-color: #000;
+  border: 2px solid;
+  border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+  border-image-slice: 1;
+  color: #aca06d;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: 'Markazi', sans-serif;
+  background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+  background-size: 100% 150%;
+  background-position: 0% 3%;
+  background-clip: padding-box;
+  transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.logout-button:hover {
+  background-position: 0% 100%;
+  box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
+}
+
+header {
+  position: relative; /* Make sure this is set for absolute positioning of user-controls */
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
     .upload-container {
