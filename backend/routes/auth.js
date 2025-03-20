@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/Users');
 const axios = require('axios');
+const passport = require('passport');
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
@@ -86,6 +86,7 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 });
 
 // Login user
+// Update the login route to use session-based auth only
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -95,84 +96,58 @@ router.post('/login', async (req, res) => {
         if (!user) {
             return res.status(400).json({ message: 'Invalid username or password' });
         }
-        
         // Validate password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid username or password' });
         }
         
-        // Generate JWT token
-        const payload = {
-            user: {
-                id: user._id
+        // Use passport to login the user (session-based auth)
+        req.login(user, (err) => {
+            if (err) {
+                return res.status(500).json({ message: 'Error during login' });
             }
-        };
-        
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' },
-            (err, token) => {
-                if (err) throw err;
-                res.json({ token });
-            }
-        );
+            return res.json({ 
+                success: true, 
+                user: { 
+                    name: user.name, 
+                    email: user.email,
+                    profilePicture: user.profilePicture 
+                } 
+            });
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ message: 'Server error during login' });
     }
 });
 
-// Google Authentication
-router.post('/google', async (req, res) => {
-    try {
-        const { email, name, picture } = req.body;
-        
-        if (!email) {
-            return res.status(400).json({ message: 'Email is required' });
+
+// Update the Google auth routes in your existing auth.js file
+router.get("/google",
+    passport.authenticate("google", {
+        scope: ["profile", "email"],
+    })
+);
+
+router.get("/google/callback",
+    passport.authenticate("google", {
+        // Update these redirect URLs to match your application
+        successRedirect: "/index.html", // Or wherever you want to redirect after success
+        failureRedirect: "/login.html"
+    })
+);
+
+router.get("/logout", (req, res) => {
+    req.logout((err) => {
+        if (err) {
+            return next(err);
         }
-        
-        // Check if user exists
-        let user = await User.findOne({ email });
-        
-        if (!user) {
-            // User doesn't exist, create a new one
-            // Generate a random secure password
-            const randomPassword = Math.random().toString(36).slice(-10) + 
-                                  Math.random().toString(36).slice(-10);
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(randomPassword, salt);
-            
-            user = new User({
-                name: name || email.split('@')[0],
-                email,
-                password: hashedPassword,
-                profilePicture: picture || 'avatars/Avatar_Default_Anonymous.webp'
-            });
-            
-            await user.save();
-        }
-        
-        // Generate JWT token
-        const payload = {
-            user: {
-                id: user._id
-            }
-        };
-        
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' },
-            (err, token) => {
-                if (err) throw err;
-                res.json({ token });
-            }
-        );
-    } catch (err) {
-        console.error('Google auth error:', err);
-        res.status(500).json({ message: 'Server error during Google authentication' });
-    }
+        res.redirect("/login.html");
+    });
+});
+
+router.get("/user", (req, res) => {
+    res.send(req.user || null);
 });
 module.exports = router;

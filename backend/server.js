@@ -5,6 +5,9 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const app = express();
 const port = 5500;
+const cookieSession = require('cookie-session');
+const passport = require('passport');
+require("./passportSetup");
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +28,32 @@ app.use(express.urlencoded({ extended: true }));
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB Connected'))
     .catch(err => console.log('MongoDB Connection Error:', err));
+
+    app.use(
+        cookieSession({
+            name: "session",
+            keys: [process.env.SESSION_SECRET],
+            maxAge: 24 * 60 * 60 * 1000,
+        })
+    );
+    
+    // Add this compatibility middleware for Passport 0.6+ with cookie-session
+    app.use(function(req, res, next) {
+        if (req.session && !req.session.regenerate) {
+            req.session.regenerate = (callback) => {
+                callback();
+            };
+        }
+        if (req.session && !req.session.save) {
+            req.session.save = (callback) => {
+                callback();
+            };
+        }
+        next();
+    });
+     
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
