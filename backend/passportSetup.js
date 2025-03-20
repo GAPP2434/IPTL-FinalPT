@@ -3,8 +3,8 @@ const passport = require('passport');
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require('./models/Users');
 const dotenv = require("dotenv");
-const path = require('path'); // Add this import
-const fs = require('fs');     // Add this import
+const path = require('path');
+const fs = require('fs');
 
 dotenv.config();
 

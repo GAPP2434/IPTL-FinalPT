@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+
 // Check if the user is authenticated
 function checkAuthentication() {
     fetch('/api/auth/user', {
