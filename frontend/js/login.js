@@ -31,6 +31,7 @@ loginForm.addEventListener('submit', function(e) {
         return response.json();
     })
     .then(data => {
+        // Remove localStorage.setItem('token', data.token);
         
         showMessage('Login successful! Redirecting...', 'success');
         
@@ -61,19 +62,85 @@ loginForm.addEventListener('submit', function(e) {
     }
 });
 
-// Update this function to use session-based auth check
-function isLoggedIn() {
-    // Make a synchronous request to check auth status
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/auth/user', false); // false makes it synchronous
-    xhr.withCredentials = true;
+// Google Sign-In handler
+function handleGoogleSignIn(response) {
+    console.log("Google response received:", response);
+    
+    if (!response || !response.credential) {
+        showMessage('Google authentication failed: Invalid response', 'error');
+        return;
+    }
     
     try {
-        xhr.send();
-        return xhr.status === 200;
-    } catch (e) {
-        return false;
+        // Decode the JWT credential returned from Google
+        const credential = parseJwt(response.credential);
+        
+        console.log("Google Sign-In successful", credential);
+        
+        // Send Google credential to your backend for verification/login
+        fetch('/api/auth/google', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                token: response.credential,
+                email: credential.email,
+                name: credential.name || credential.email.split('@')[0],
+                picture: credential.picture
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Google authentication failed on server');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Store token in localStorage
+            localStorage.setItem('token', data.token);
+            
+            showMessage('Login successful! Redirecting...', 'success');
+            
+            // Redirect to home page after 1 second
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        })
+        .catch(error => {
+            showMessage(error.message || 'Google authentication failed', 'error');
+            console.error('Google auth server error:', error);
+        });
+    } catch (error) {
+        showMessage('Failed to process Google authentication', 'error');
+        console.error('Google auth processing error:', error);
     }
+}
+
+// Helper function to parse JWT token
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        if (!base64Url) throw new Error('Invalid token format');
+        
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Error parsing JWT token:', error);
+        return null;
+    }
+}
+
+// Check if user is logged in
+function isLoggedIn() {
+    const token = localStorage.getItem('token');
+    return !!token;
 }
 
 // Redirect to home page
