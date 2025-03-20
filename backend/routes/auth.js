@@ -86,7 +86,6 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 });
 
 // Login user
-// Update the login route to use session-based auth only
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
