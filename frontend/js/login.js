@@ -6,46 +6,42 @@ document.addEventListener('DOMContentLoaded', function() {
         redirectToHome();
     }
     
-   // Update the login form submission handler
-// Remove JWT token storage from login form submission
-loginForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include' // Important! This sends cookies with the request
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.message || 'Login failed');
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Remove localStorage.setItem('token', data.token);
+    // Update the login form submission handler
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
         
-        showMessage('Login successful! Redirecting...', 'success');
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
         
-        // Redirect to home page after 1 second
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
-    })
-    .catch(error => {
-        showMessage(error.message || 'Login failed. Please check your credentials.', 'error');
+        fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password }),
+            credentials: 'include' // Important! This sends cookies with the request
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Login failed');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            showMessage('Login successful! Redirecting...', 'success');
+            
+            // Redirect to home page after 1 second
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        })
+        .catch(error => {
+            showMessage(error.message || 'Login failed. Please check your credentials.', 'error');
+        });
     });
-});
 
-    
     // Message display function
     function showMessage(message, type) {
         const messageContainer = document.getElementById('message-container');
@@ -60,6 +56,25 @@ loginForm.addEventListener('submit', function(e) {
             messageContainer.style.display = 'none';
         }, 5000);
     }
+
+    // Check if user is logged in
+    function isLoggedIn() {
+        const token = localStorage.getItem('token');
+        return !!token;
+    }
+
+    // Redirect to home page
+    function redirectToHome() {
+        window.location.href = 'index.html';
+    }
+
+    // Update the Google Sign-In icon click handler
+    document.getElementById('googleSignInIcon').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Redirect to the backend Google auth route
+        window.location.href = '/api/auth/google';
+    });
 });
 
 // Google Sign-In handler
@@ -136,37 +151,3 @@ function parseJwt(token) {
         return null;
     }
 }
-
-// Check if user is logged in
-function isLoggedIn() {
-    const token = localStorage.getItem('token');
-    return !!token;
-}
-
-// Redirect to home page
-function redirectToHome() {
-    window.location.href = 'index.html';
-}
-
-// Message display function for Google Sign-In
-function showMessage(message, type) {
-    const messageContainer = document.getElementById('message-container');
-    const messageElement = document.getElementById('message');
-    
-    messageElement.textContent = message;
-    messageElement.className = 'message ' + type;
-    messageContainer.style.display = 'block';
-    
-    // Hide after 5 seconds
-    setTimeout(() => {
-        messageContainer.style.display = 'none';
-    }, 5000);
-}
-
-// Update the Google Sign-In button click handler
-document.getElementById('googleSignInBtn').addEventListener('click', function(e) {
-    e.preventDefault();
-    
-    // Redirect to the backend Google auth route
-    window.location.href = '/api/auth/google';
-});

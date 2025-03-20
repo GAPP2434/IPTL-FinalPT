@@ -206,3 +206,12 @@ button[type="submit"]:active {
     justify-content: center;
 }
 
+.google-login-container {
+    text-align: center;
+    margin-top: 20px;
+}
+.google-icon {
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+}
