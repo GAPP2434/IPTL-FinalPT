@@ -18,38 +18,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Check if the user is authenticated
 function checkAuthentication() {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-        // No token found, redirect to login
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    // Optional: Verify token with server
-    // This adds security but requires an API endpoint
-    /* 
-    fetch('/api/auth/verify', {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
+    fetch('/api/auth/user', {
+        credentials: 'include' // Important! This sends cookies with the request
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Token invalid');
+            throw new Error('Not authenticated');
         }
         return response.json();
     })
+    .then(user => {
+        // User is authenticated, do nothing
+        console.log('Authenticated as:', user);
+    })
     .catch(error => {
         console.error('Auth error:', error);
-        localStorage.removeItem('token');
         window.location.href = 'login.html';
     });
-    */
 }
 
 // Logout function
 function logout() {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
+    fetch('/api/auth/logout', {
+        credentials: 'include'
+    })
+    .then(() => {
+        window.location.href = 'login.html';
+    })
+    .catch(error => {
+        console.error('Logout error:', error);
+        window.location.href = 'login.html';
+    });
 }

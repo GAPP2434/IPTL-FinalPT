@@ -5,6 +5,9 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         auto: true
     },
+    googleId: {
+        type: String
+    },
     name: {
         type: String,
         required: true
@@ -20,7 +23,10 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        // Only require password for non-Google users
+        required: function() {
+            return !this.googleId;
+        }
     },
     createdAt: {
         type: Date,
