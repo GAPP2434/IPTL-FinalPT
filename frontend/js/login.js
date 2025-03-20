@@ -6,49 +6,45 @@ document.addEventListener('DOMContentLoaded', function() {
         redirectToHome();
     }
     
-    // Handle form submission
-    loginForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value.trim();
-        
-        if (!username || !password) {
-            showMessage('Please enter both username and password', 'error');
-            return;
+   // Update the login form submission handler
+// Remove JWT token storage from login form submission
+loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include' // Important! This sends cookies with the request
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Login failed');
+            });
         }
+        return response.json();
+    })
+    .then(data => {
+        // Remove localStorage.setItem('token', data.token);
         
-        // Send login request to server
-        fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username, password })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.message || 'Invalid credentials');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Store token in localStorage
-            localStorage.setItem('token', data.token);
-            
-            showMessage('Login successful! Redirecting...', 'success');
-            
-            // Redirect to home page after 1 second
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
-        })
-        .catch(error => {
-            showMessage(error.message || 'Login failed. Please check your credentials.', 'error');
-        });
+        showMessage('Login successful! Redirecting...', 'success');
+        
+        // Redirect to home page after 1 second
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 1000);
+    })
+    .catch(error => {
+        showMessage(error.message || 'Login failed. Please check your credentials.', 'error');
     });
+});
+
     
     // Message display function
     function showMessage(message, type) {
@@ -171,61 +167,6 @@ function showMessage(message, type) {
 document.getElementById('googleSignInBtn').addEventListener('click', function(e) {
     e.preventDefault();
     
-    const oauth2Endpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
-    
-    // Set up a global flag to detect successful authentication
-    window.googleAuthSuccess = false;
-    
-    // Parameters for the OAuth 2.0 request
-    const params = {
-        client_id: '712516669615-rg0nuespsi624h26glc18hia85g0emj2.apps.googleusercontent.com',
-        redirect_uri: window.location.origin + '/oauth-callback.html',
-        response_type: 'token',
-        scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
-        include_granted_scopes: 'true',
-        state: 'pass-through-value'
-    };
-    
-    // Build the URL with query parameters
-    const url = oauth2Endpoint + '?' + Object.keys(params).map(key => 
-        key + '=' + encodeURIComponent(params[key])
-    ).join('&');
-    
-    // Open the OAuth 2.0 endpoint in a popup window
-    const popup = window.open(url, 'googleSignIn', 'width=600,height=700');
-    
-    // Track if authentication has been completed
-    let authCompleted = false;
-    
-    // Check for successful authentication and popup closure
-    const authCheckInterval = setInterval(() => {
-        // First check if our success flag was set
-        if (window.googleAuthSuccess === true) {
-            clearInterval(authCheckInterval);
-            authCompleted = true;
-            window.googleAuthSuccess = false; // Reset flag
-            
-            showMessage('Login successful! Redirecting...', 'success');
-            
-            // Redirect to home page after success
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
-        }
-        // Then check if popup was closed
-        else if (popup.closed) {
-            clearInterval(authCheckInterval);
-            
-            // Only check for token if not already completed
-            if (!authCompleted) {
-                // Check if token was stored directly
-                if (localStorage.getItem('token')) {
-                    showMessage('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1000);
-                }
-            }
-        }
-    }, 500); // Check more frequently for better UX
+    // Redirect to the backend Google auth route
+    window.location.href = '/api/auth/google';
 });
