@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/Icon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Gathering Hub</title>
+    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="css/commonlyUsed.css">
+    <script src="js/authCheck.js"></script>
+    <script src="js/profile.js" defer></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <h1 class="GatheringHub">Gathering Hub</h1>
+        </div>
+        <div class="user-controls">
+            <button id="logoutButton" class="logout-button">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div class="profile-container">
+            <!-- Cover photo section -->
+            <div class="cover-photo-section">
+                <!-- Cover photo will be blank for now -->
+            </div>
+
+            <!-- User details section -->
+            <div class="user-details-section">
+                <button id="editProfileBtn" class="edit-profile-button">Edit Profile</button>
+                <div class="profile-picture-container">
+                    <img id="profilePicture" src="avatars/Avatar_Default_Anonymous.webp" alt="Profile Picture">
+                </div>
+                <div class="user-info">
+                    <h2 id="userName">User Name</h2>
+                    <p id="userBio">No bio available</p>
+                </div>
+            </div>
+            
+            <!-- Posts section -->
+            <div class="posts-section">
+                <h3>Posts</h3>
+                <div id="userPosts" class="user-posts">
+                    <!-- Posts will be loaded here -->
+                    <div class="no-posts-message">User has no Posts</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Profile Edit Modal -->
+    <div id="profileEditModal" class="modal">
+        <div class="profile-edit-modal-content">
+            <span class="profile-edit-close">&times;</span>
+            <h2>Edit Profile</h2>
+            <form id="profileEditForm" class="profile-edit-form">
+                <div class="profile-edit-section">
+                    <h3>Cover Photo</h3>
+                    <div class="profile-photo-upload">
+                        <div class="cover-photo-preview">
+                            <img id="coverPhotoPreview" src="images/mhwi-paper.png" alt="Cover Photo Preview">
+                        </div>
+                        <div class="upload-buttons">
+                            <input type="file" id="coverPhotoInput" accept="image/*" style="display:none">
+                            <button type="button" class="upload-btn" id="changeCoverBtn">Change Cover Photo</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-edit-section">
+                    <h3>Profile Picture</h3>
+                    <div class="profile-photo-upload">
+                        <div class="profile-pic-preview">
+                            <img id="profilePicPreview" src="avatars/Avatar_Default_Anonymous.webp" alt="Profile Pic Preview">
+                        </div>
+                        <div class="upload-buttons">
+                            <input type="file" id="profilePicInput" accept="image/*" style="display:none">
+                            <button type="button" class="upload-btn" id="changeProfilePicBtn">Change Profile Picture</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-edit-section">
+                    <h3>Bio</h3>
+                    <textarea id="bioInput" class="bio-input" placeholder="Write something about yourself..."></textarea>
+                </div>
+                
+                <button type="submit" class="save-profile-btn">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Message container for notifications -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="loading-content">
+            <img src="images/loadingScreen.png" alt="Loading..." class="loader-image">
+            <p>Updating profile...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 Gathering Hub</p>
+    </footer>
+</body>
+</html>
