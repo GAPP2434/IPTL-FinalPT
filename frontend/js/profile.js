@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Open modal when Edit Profile button is clicked
     editProfileBtn.addEventListener('click', function() {
         // Get current values for preview
-        coverPhotoPreview.src = document.querySelector('.cover-photo-section').style.backgroundImage?.replace(/url\(['"](.+)['"]\)/, '$1') || 'images/mhwi-paper.png';
+        if (document.querySelector('.cover-photo-section').style.backgroundImage) {
+            const coverPhotoUrl = document.querySelector('.cover-photo-section').style.backgroundImage.replace(/url\(['"](.+)['"]\)/, '$1');
+            if (coverPhotoUrl) coverPhotoPreview.src = coverPhotoUrl;
+        }
+        
         profilePicPreview.src = document.getElementById('profilePicture').src;
         bioInput.value = document.getElementById('userBio').textContent !== 'No bio available' ? 
             document.getElementById('userBio').textContent : '';
@@ -104,8 +108,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('API endpoint not found. Make sure the backend server is running.');
+                }
                 return response.json().then(data => {
                     throw new Error(data.message || 'Failed to update profile');
+                }).catch(err => {
+                    // If the response isn't JSON, throw a generic error
+                    if (err instanceof SyntaxError) {
+                        throw new Error('Server response was not valid JSON');
+                    }
+                    throw err;
                 });
             }
             return response.json();
@@ -121,6 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.bio) {
                 document.getElementById('userBio').textContent = data.bio;
+            } else {
+                document.getElementById('userBio').textContent = 'No bio available';
             }
             
             if (data.coverPhoto) {
@@ -132,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Close the modal
             profileEditModal.style.display = 'none';
             
-            // Show success message if available
+            // Show success message
             showMessage('Profile updated successfully!', 'success');
         })
         .catch(error => {
@@ -145,7 +160,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Function to show messages (if message container exists)
+// Function to fetch user profile data
+function fetchUserProfile() {
+    fetch('/api/user/profile', {
+        credentials: 'include' // Important for sending cookies
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Fall back to using auth/user if user/profile doesn't exist yet
+            return fetch('/api/auth/user', {
+                credentials: 'include'
+            });
+        }
+        return response;
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+        }
+        return response.json();
+    })
+    .then(user => {
+        // Update profile information
+        document.getElementById('userName').textContent = user.name || 'User Name';
+        
+        // Update profile picture if available
+        if (user.profilePicture) {
+            document.getElementById('profilePicture').src = user.profilePicture;
+        }
+        
+        // Update bio if available
+        if (user.bio) {
+            document.getElementById('userBio').textContent = user.bio;
+        }
+        
+        // Update cover photo if available
+        if (user.coverPhoto) {
+            document.querySelector('.cover-photo-section').style.backgroundImage = `url('${user.coverPhoto}')`;
+            document.querySelector('.cover-photo-section').style.backgroundSize = 'cover';
+            document.querySelector('.cover-photo-section').style.backgroundPosition = 'center';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching user profile:', error);
+        showMessage('Failed to load profile. Please try refreshing the page.', 'error');
+    });
+}
+
+// Function to show messages
 function showMessage(message, type) {
     const messageContainer = document.getElementById('message-container');
     if (!messageContainer) {
@@ -163,37 +225,7 @@ function showMessage(message, type) {
     }, 5000);
 }
 
-// Function to fetch user profile data
-function fetchUserProfile() {
-    fetch('/api/auth/user', {
-        credentials: 'include' // Important for sending cookies
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to fetch user data');
-        }
-        return response.json();
-    })
-    .then(user => {
-        // Update profile information
-        document.getElementById('userName').textContent = user.name || 'User Name';
-        
-        // Update profile picture if available
-        if (user.profilePicture) {
-            document.getElementById('profilePicture').src = user.profilePicture;
-        }
-        
-        // Update bio if available (can be added to user model later)
-        if (user.bio) {
-            document.getElementById('userBio').textContent = user.bio;
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching user profile:', error);
-    });
-}
-
-// Function to fetch user posts
+// Function to fetch user posts (placeholder)
 function fetchUserPosts() {
     // This would be replaced with actual API call when posts are implemented
     const userPosts = []; // Placeholder for user posts

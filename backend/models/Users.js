@@ -21,6 +21,15 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: 'avatars/Avatar_Default_Anonymous.webp'
     },
+    // Add these new fields
+    coverPhoto: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
+    },
     password: {
         type: String,
         // Only require password for non-Google users
@@ -32,10 +41,8 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    
     resetPasswordToken: String,
     resetPasswordExpires: Date
-    
 });
 
 module.exports = mongoose.model("User", UserSchema);

@@ -50,13 +50,14 @@ mongoose.connect(process.env.MONGO_URI)
             };
         }
         next();
-    });
+    });    
      
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/user', require('./routes/userRoutes'));
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
