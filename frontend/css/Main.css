@@ -9,20 +9,6 @@ html, body {
     /*background-image: url('../images/Wallpaper.jpg');*/
 }
 
-@font-face {
-    font-family: 'MonsterHunter';
-    src: url('../fonts/monsterhunter.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Markazi';
-    src: url('../fonts/MarkaziText.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
 /* Main content container */
 main {
     flex: 1;
@@ -40,21 +26,6 @@ main {
 
 .logo{
     margin: 20px;
-}
-
-header{
-    background-color: #333;
-    color: white;
-    padding: 15px 0; 
-    text-align: center;
-    opacity: 0.9;
-    background-image: url('../images/mhwi-banner.png');
-    background-size: cover;
-    background-position: center;
-}
-
-header .logo h1 {
-    margin: 0;
 }
 
 header .nav a {
@@ -429,142 +400,4 @@ footer {
 
 .upload-container button:hover {
     background-color:#1558b0;
-}
-
-/* Footer Styling */
-.footer {
-    background-color: #333;
-    color: white;
-    padding: 15px 0;
-    text-align: center;
-    width: 100%;
-    position: relative;
-    clear: both;
-    bottom: 0;
-    left: 0;
-}
-
-.footer.hidden {
-    display: none;
-}
-
-/*logout*/
-/* Add to your existing Main.css file */
-
-/* User controls and logout button styling */
-.user-controls {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
-
-.logout-button {
-  padding: 8px 15px;
-  background-color: #000;
-  border: 2px solid;
-  border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
-  border-image-slice: 1;
-  color: #aca06d;
-  font-size: 0.9rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-family: 'Markazi', sans-serif;
-  background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
-  background-size: 100% 150%;
-  background-position: 0% 3%;
-  background-clip: padding-box;
-  transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-}
-
-.logout-button:hover {
-  background-position: 0% 100%;
-  box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
-}
-
-header {
-  position: relative; /* Make sure this is set for absolute positioning of user-controls */
-}
-
-/* Add these styles to your existing Main.css file */
-.dropdown {
-  position: relative;
-  display: inline-block;
-  margin-right: 10px;
-}
-
-.dropdown-content {
-  display: none;
-  position: absolute;
-  right: 0;
-  background-color: #e4ddc9;
-  min-width: 160px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-  z-index: 1;
-  border-radius: 5px;
-}
-
-.dropdown-content a {
-  color: #333;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  font-family: 'Markazi', serif;
-}
-
-.dropdown-content a:hover {
-  background-color: rgba(0,0,0,0.1);
-}
-
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-
-.profile-button {
-  padding: 8px 15px;
-  background-color: #000;
-  border: 2px solid;
-  border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
-  border-image-slice: 1;
-  color: #aca06d;
-  font-size: 0.9rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-family: 'Markazi', sans-serif;
-  background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
-  background-size: 100% 150%;
-  background-position: 0% 3%;
-  background-clip: padding-box;
-  transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-}
-
-.profile-button:hover {
-  background-position: 0% 100%;
-  box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
-}
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .upload-container {
-        width: 80%; /* Adjust width for smaller screens */
-    }
-    .stories-container{
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-    }
-}
-
-@media (max-width: 480px) {
-    .upload-container {
-        width: 40%; /* Adjust width for even smaller screens */
-    }
-
-    .stories-container{
-        display: flex;
-        align-items: center;
-        flex-direction: column;
-    }
-
-    .story story-with-audio::hover {
-         transform: scale(00.3);
-    }
 }

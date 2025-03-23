@@ -99,64 +99,6 @@
     background-color: rgba(255, 255, 255, 0.5);
 }
 
-/* Dropdown styles */
-.dropdown {
-    position: relative;
-    display: inline-block;
-    margin-right: 10px;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: #e4ddc9;
-    background-image: url('../images/mhwi-paper.png');
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    z-index: 1;
-    border-radius: 5px;
-}
-
-.dropdown-content a {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    font-family: 'Markazi', serif;
-}
-
-.dropdown-content a:hover {
-    background-color: rgba(0,0,0,0.1);
-}
-
-.dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.profile-button {
-    padding: 8px 15px;
-    background-color: #000;
-    border: 2px solid;
-    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
-    border-image-slice: 1;
-    color: #aca06d;
-    font-size: 0.9rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: 'Markazi', sans-serif;
-    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
-    background-size: 100% 150%;
-    background-position: 0% 3%;
-    background-clip: padding-box;
-    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-}
-
-.profile-button:hover {
-    background-position: 0% 100%;
-    box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
-}
-
 /* Add styles for the Edit Profile button */
 .edit-profile-button {
     position: absolute;
@@ -337,17 +279,4 @@
     width: 100%;
     border-radius: 10px 10px 0 0;
     margin-bottom: -50px;
-}
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .user-info {
-        margin-left: 0;
-        width: 100%;
-        margin-top: 70px;
-    }
-
-    #profilePicture {
-        left: 50%;
-        transform: translateX(-50%);
-    }
 }
