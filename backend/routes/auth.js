@@ -7,6 +7,8 @@ const path = require('path');
 const User = require('../models/Users');
 const axios = require('axios');
 const passport = require('passport');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
@@ -39,6 +41,15 @@ const upload = multer({
     storage,
     fileFilter,
     limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB
+});
+
+// Add this configuration for nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
 });
 
 // Register user
@@ -148,5 +159,83 @@ router.get("/logout", (req, res) => {
 
 router.get("/user", (req, res) => {
     res.send(req.user || null);
+});
+
+// Forgot password - request reset link
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        // Find user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with this email' });
+        }
+        
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpires = Date.now() + 3600000; // Token expires in 1 hour
+        
+        // Save token to user document
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = resetTokenExpires;
+        await user.save();
+        
+        // Create reset URL
+        const resetUrl = `${process.env.APP_URL}/resetPassword.html?token=${resetToken}`;
+        
+        // Send email with reset link
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+                <h1>Password Reset</h1>
+                <p>You requested a password reset. Click the link below to reset your password:</p>
+                <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #a7c957; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                <p>If you didn't request this, please ignore this email.</p>
+                <p>This link will expire in 1 hour.</p>
+            `
+        };
+        
+        await transporter.sendMail(mailOptions);
+        
+        res.json({ message: 'Password reset link sent to email' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ message: 'Server error during password reset request' });
+    }
+});
+
+// Reset password - process new password
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        
+        // Find user with the token and check if it's still valid
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+        
+        if (!user) {
+            return res.status(400).json({ message: 'Password reset token is invalid or has expired' });
+        }
+        
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        
+        // Update user's password and clear reset token fields
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        
+        res.json({ message: 'Password has been reset successfully' });
+    } catch (err) {
+        console.error('Reset password error:', err);
+        res.status(500).json({ message: 'Server error during password reset' });
+    }
 });
 module.exports = router;
