@@ -3,6 +3,7 @@ const router = express.Router();
 const Message = require('../models/Messages');
 const User = require('../models/Users');
 const mongoose = require('mongoose');
+const WebSocket = require('ws');
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
@@ -144,6 +145,24 @@ router.post('/send', isAuthenticated, async (req, res) => {
         });
         
         await newMessage.save();
+        
+        // Broadcast using WebSocket
+        if (global.wss) {
+            global.wss.clients.forEach((client) => {
+                if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'new_message',
+                        message: {
+                            senderId: senderId.toString(),
+                            recipientId: recipientId.toString(),
+                            content: content,
+                            timestamp: new Date(),
+                            conversationId: conversationId
+                        }
+                    }));
+                }
+            });
+        }
         
         res.status(201).json(newMessage);
         

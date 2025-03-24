@@ -109,6 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
             item.classList.remove('active');
         });
         
+        window.currentRecipient = conversation.userId;
+
         const conversationItem = document.querySelector(`.conversation-item[data-user-id="${conversation.userId}"]`);
         if (conversationItem) {
             conversationItem.classList.add('active');
@@ -193,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = messageInput.value.trim();
         if (!text || !currentRecipient) return;
         
-        // Append message to UI immediately for responsiveness
+        // Append message to UI immediately
         appendMessage(text, true);
         
         // Clear input
@@ -228,6 +230,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateConversationWithNewMessage(currentRecipient, text);
         });
     }
+
+    // Expose loadConversations to window for WebSocket updates
+    window.loadConversations = loadConversations;
+    window.currentRecipient = null;
     
     // Update conversation with new message (local state)
     function updateConversationWithNewMessage(recipientId, text) {

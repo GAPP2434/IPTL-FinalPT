@@ -7,6 +7,11 @@ const app = express();
 const port = 5500;
 const cookieSession = require('cookie-session');
 const passport = require('passport');
+const http = require('http');
+const WebSocket = require('ws');
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+global.wss = wss;
 require("./passportSetup");
 
 // Load environment variables
@@ -55,6 +60,78 @@ mongoose.connect(process.env.MONGO_URI)
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Handle WebSocket connections
+wss.on('connection', (ws, req) => {  // Add 'req' parameter here
+    console.log('Client connected');
+    
+    // Extract user ID from session cookie
+    const cookies = req.headers.cookie;
+    if (cookies) {
+        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        if (sessionCookie) {
+            try {
+                // Parse session cookie to extract user ID - this is simplified
+                // In a real app, you'd need to decode the session properly
+                const session = JSON.parse(Buffer.from(sessionCookie.split('=')[1], 'base64').toString());
+                if (session.passport && session.passport.user) {
+                    ws.userId = session.passport.user;
+                    console.log('WebSocket authenticated for user:', ws.userId);
+                }
+            } catch (err) {
+                console.error('Error parsing session:', err);
+            }
+        }
+    }
+    
+    // Handle messages from clients
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            // Broadcast to all connected clients based on the event type
+            switch (data.type) {
+                case 'new_message':
+                    broadcastToUser(data.recipientId, data);
+                    break;
+                case 'new_story':
+                    broadcastToAll(data);
+                    break;
+                case 'new_reaction':
+                    broadcastToAll(data);
+                    break;
+                case 'new_comment':
+                    broadcastToAll(data);
+                    break;
+            }
+        } catch (error) {
+            console.error('WebSocket message error:', error);
+        }
+    });
+    
+    // Handle disconnections
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
+});
+
+// Utility function to broadcast to specific user
+function broadcastToUser(userId, data) {
+    wss.clients.forEach((client) => {
+        if (client.userId === userId && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+
+// Utility function to broadcast to all connected clients
+function broadcastToAll(data) {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/userRoutes'));
@@ -72,6 +149,6 @@ app.get('*', (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}/login.html`);
 });
