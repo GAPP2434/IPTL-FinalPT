@@ -146,19 +146,22 @@ router.post('/send', isAuthenticated, async (req, res) => {
         
         await newMessage.save();
         
-        // Broadcast using WebSocket
+        // Broadcast using WebSocket - REPLACE THIS SECTION with your new code
         if (global.wss) {
             global.wss.clients.forEach((client) => {
                 if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify({
                         type: 'new_message',
                         message: {
+                            _id: newMessage._id,
                             senderId: senderId.toString(),
                             recipientId: recipientId.toString(),
                             content: content,
                             timestamp: new Date(),
-                            conversationId: conversationId
-                        }
+                            conversationId: conversationId,
+                            read: false
+                        },
+                        recipientId: recipientId.toString()
                     }));
                 }
             });
@@ -199,6 +202,45 @@ router.get('/search', isAuthenticated, async (req, res) => {
         
     } catch (error) {
         console.error('Error searching users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Add this new route
+router.get('/online-users', isAuthenticated, (req, res) => {
+    try {
+        // If global.onlineUsers is available, return it as an array
+        const onlineUserIds = global.onlineUsers ? Array.from(global.onlineUsers) : [];
+        res.json(onlineUserIds);
+    } catch (error) {
+        console.error('Error fetching online users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Add this new route to messagesRoutes.js
+router.put('/mark-read/:senderId', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const senderId = req.params.senderId;
+        
+        // Generate conversation ID
+        const conversationId = Message.generateConversationId(currentUserId.toString(), senderId);
+        
+        // Update read status for messages
+        const result = await Message.updateMany(
+            { 
+                conversationId, 
+                recipientId: currentUserId,
+                read: false
+            },
+            { $set: { read: true } }
+        );
+        
+        res.json({ success: true, updated: result.nModified });
+        
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

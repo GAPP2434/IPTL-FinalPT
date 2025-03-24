@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // State
     let currentRecipient = null;
     let conversations = [];
+    let onlineUsers = [];
+    window.onlineUsers = onlineUsers;
     
     function debounce(func, wait) {
         let timeout;
@@ -31,8 +33,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     function init() {
+        loadOnlineUsers();
         loadConversations();
         setupEventListeners();
+        
+        // Reconnect WebSocket if needed
+        if (window.connectWebSocket && typeof window.connectWebSocket === 'function') {
+            console.log("Initializing WebSocket connection");
+            window.connectWebSocket();
+        }
+    }
+
+    // Add this new function to load online users
+    function loadOnlineUsers() {
+        fetch('/api/messages/online-users', {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load online users');
+            }
+            return response.json();
+        })
+        .then(data => {
+            onlineUsers = data;
+            window.onlineUsers = onlineUsers;
+            
+            // Update UI if conversations are already loaded
+            if (conversations.length > 0) {
+                renderConversations();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading online users:', error);
+        });
     }
     
     // Load conversations from server
@@ -68,28 +102,50 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Render conversations list
     function renderConversations() {
+        console.log("Rendering conversations:", conversations);
+        
         if (conversations.length === 0) {
             conversationsList.innerHTML = '<div class="no-messages">No Recent Messages</div>';
             return;
         }
         
+        // Completely clear and rebuild the conversations list
         conversationsList.innerHTML = '';
+        
         conversations.forEach(conversation => {
             const conversationItem = createConversationElement(conversation);
             conversationsList.appendChild(conversationItem);
         });
+        
+        // If there's an active conversation, reapply the active class
+        if (currentRecipient) {
+            const activeItem = document.querySelector(`.conversation-item[data-user-id="${currentRecipient}"]`);
+            if (activeItem) {
+                activeItem.classList.add('active');
+            }
+        }
     }
     
     // Create conversation element
     function createConversationElement(conversation) {
         const div = document.createElement('div');
         div.classList.add('conversation-item');
+        if (conversation.unreadCount > 0) {
+            div.classList.add('unread');
+        }
         div.dataset.userId = conversation.userId;
+        
+        // Check if user is online
+        const isOnline = window.onlineUsers && window.onlineUsers.includes(conversation.userId);
         
         div.innerHTML = `
             <img src="${conversation.profilePicture}" alt="${conversation.name}" class="conversation-avatar">
             <div class="conversation-info">
-                <div class="conversation-name">${conversation.name}</div>
+                <div class="conversation-name-container">
+                    <div class="conversation-name">${conversation.name}</div>
+                    <span class="online-indicator ${isOnline ? 'online' : 'offline'}" 
+                          data-user-id="${conversation.userId}"></span>
+                </div>
                 <div class="conversation-preview">${conversation.lastMessage || 'No messages yet'}</div>
             </div>
             ${conversation.unreadCount ? `<span class="unread-badge">${conversation.unreadCount}</span>` : ''}
@@ -102,26 +158,64 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     
-    // Select a conversation
+    // Update the selectConversation function
     function selectConversation(conversation) {
         // Update UI to show this conversation is selected
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.classList.remove('active');
         });
         
-        window.currentRecipient = conversation.userId;
-
         const conversationItem = document.querySelector(`.conversation-item[data-user-id="${conversation.userId}"]`);
         if (conversationItem) {
             conversationItem.classList.add('active');
+            conversationItem.classList.remove('unread'); // Remove unread highlight
+            
+            // Remove unread badge
+            const badge = conversationItem.querySelector('.unread-badge');
+            if (badge) {
+                badge.remove();
+            }
+            
+            // Update the conversation object
+            const conversationIndex = conversations.findIndex(c => c.userId === conversation.userId);
+            if (conversationIndex >= 0) {
+                conversations[conversationIndex].unreadCount = 0;
+            }
         }
         
         // Set current recipient
         currentRecipient = conversation.userId;
+        window.currentRecipient = currentRecipient;
+        
+        // Check if user is online
+        const isOnline = onlineUsers.includes(conversation.userId);
         
         // Update chat header
         chatUsername.textContent = conversation.name;
         chatUserImg.src = conversation.profilePicture;
+        
+        // Update the chat header to include online status
+        const chatHeaderHTML = `
+            <div class="chat-user-info">
+                <div class="chat-header-name-container">
+                    <h3>${conversation.name}</h3>
+                    <span class="online-indicator ${isOnline ? 'online' : 'offline'}" 
+                        data-user-id="${conversation.userId}"></span>
+                </div>
+                <div class="chat-status">${isOnline ? 'Online' : 'Offline'}</div>
+            </div>
+        `;
+        
+        // Replace the h3 element with our new structure
+        const chatUser = document.querySelector('.chat-user');
+        const userImage = chatUser.querySelector('img'); // Use a different variable name here
+        
+        // Keep the image but replace the rest
+        chatUser.innerHTML = '';
+        chatUser.appendChild(userImage);
+        const chatUserInfo = document.createElement('div');
+        chatUserInfo.innerHTML = chatHeaderHTML;
+        chatUser.appendChild(chatUserInfo);
         
         // Show chat area and hide empty state
         emptyChat.style.display = 'none';
@@ -157,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
             messages.forEach(message => {
                 // If senderId is the current user, then it's a sent message
                 const isSent = message.senderId === currentUser._id;
-                appendMessage(message.content, isSent);
+                appendMessage(message.content, isSent, message.timestamp);
             });
             
             // Scroll to bottom
@@ -178,11 +272,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Append a message to the chat
-    function appendMessage(text, sent) {
+    function appendMessage(text, sent, timestamp = new Date()) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(sent ? 'sent' : 'received');
-        messageElement.textContent = text;
+        
+        // Format the timestamp
+        const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        messageElement.innerHTML = `
+            <div class="message-content">${text}</div>
+            <div class="message-time">${formattedTime}</div>
+        `;
         
         messagesContainer.appendChild(messageElement);
         
@@ -220,32 +321,44 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            // Update conversation with new message
-            updateConversationWithNewMessage(currentRecipient, text);
+            // Update conversation with new message (true means message is sent by current user)
+            updateConversationWithNewMessage(currentRecipient, text, true);
         })
         .catch(error => {
             console.error('Error sending message:', error);
             
             // Even if server fails, update local state for demo purposes
-            updateConversationWithNewMessage(currentRecipient, text);
+            updateConversationWithNewMessage(currentRecipient, text, true);
         });
     }
 
     // Expose loadConversations to window for WebSocket updates
+    window.renderConversations = renderConversations;
+    window.appendMessage = appendMessage;
+    window.updateConversationWithNewMessage = updateConversationWithNewMessage;
+    window.conversations = conversations;
     window.loadConversations = loadConversations;
     window.currentRecipient = null;
     
     // Update conversation with new message (local state)
-    function updateConversationWithNewMessage(recipientId, text) {
-        const conversationIndex = conversations.findIndex(c => c.userId === recipientId);
+    function updateConversationWithNewMessage(userId, text, isSent = true) {
+        const conversationIndex = conversations.findIndex(c => c.userId === userId);
         
         if (conversationIndex >= 0) {
             // Update existing conversation
             conversations[conversationIndex].lastMessage = text;
+            // Don't increase unread count for messages the current user sent
+            if (!isSent) {
+                conversations[conversationIndex].unreadCount = 
+                    (conversations[conversationIndex].unreadCount || 0) + 1;
+            }
             
             // Move this conversation to the top
             const conversation = conversations.splice(conversationIndex, 1)[0];
             conversations.unshift(conversation);
+        } else {
+            // If this is a new conversation, try to add it (might need user details)
+            loadConversations();
         }
         
         // Re-render conversations

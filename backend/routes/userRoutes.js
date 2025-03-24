@@ -126,4 +126,27 @@ router.get('/profile', isAuthenticated, async (req, res) => {
     }
 });
 
+// Add this new route to get basic user info
+router.get('/basic-info/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        // Find user by ID
+        const user = await User.findById(userId).select('name profilePicture');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Return basic user info
+        res.json({
+            name: user.name,
+            profilePicture: user.profilePicture
+        });
+    } catch (error) {
+        console.error('Error fetching user info:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

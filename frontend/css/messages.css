@@ -75,6 +75,53 @@
     background-color: #333;
 }
 
+/* Online status indicators - add to messages.css */
+.online-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 8px;
+    margin-right: 5px;
+}
+
+.online {
+    background-color: #4CAF50;
+    box-shadow: 0 0 5px #4CAF50;
+}
+
+.offline {
+    background-color: #8a8a8a;
+}
+
+/* Update the conversation name container */
+.conversation-name-container {
+    display: flex;
+    align-items: center;
+}
+
+.chat-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header-name-container {
+    display: flex;
+    align-items: center;
+}
+
+.chat-status {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Update chat user to include the status */
+.chat-user {
+    display: flex;
+    align-items: center;
+}
+
 /* Recent conversations section */
 .recent-conversations {
     flex: 1;
@@ -134,6 +181,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 150px;
+    display: block; /* Ensure it's a block element */
+    width: 100%; /* Take up all available width */
+    margin-top: 3px; /* Add a little spacing */
 }
 
 .no-messages {
@@ -236,27 +286,52 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .message {
     margin-bottom: 15px;
     max-width: 70%;
+    position: relative;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border: none !important;
+    background: none !important; /* Ensure no background on the container */
+    box-shadow: none !important; /* Remove any shadow on the container */
+    clear: both;
+}
+
+.message-content {
+    border-radius: 18px;
+    padding: 10px 15px;
+    display: inline-block;
+    word-break: break-word;
 }
 
 .message.sent {
     align-self: flex-end;
-    background-color: #a7c957;
+    float: right;
+    float: none !important;
+}
+
+.message.sent .message-content {
+    background-color: #0084ff;
     color: #fff;
     border-radius: 18px 18px 0 18px;
-    padding: 10px 15px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .message.received {
     align-self: flex-start;
-    background-color: #fff;
+    float: left;
+    float: none !important;
+}
+
+.message.received .message-content {
+    background-color: #f1f0f0;
+    color: #333;
     border-radius: 18px 18px 18px 0;
-    padding: 10px 15px;
-    color: black;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .message-input-container {
@@ -264,6 +339,24 @@
     padding: 15px;
     border-top: 1px solid #ccc;
     background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Message time */
+.message-time {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 5px;
+    display: block;
+    text-align: right;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.message.sent .message-time {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.message.received .message-time {
+    color: rgba(0, 0, 0, 0.5);
 }
 
 .message-input-container textarea {
@@ -298,6 +391,30 @@
 
 .message-input-container button:hover {
     transform: scale(1.1);
+}
+
+.conversation-item.unread {
+    background-color: rgba(0, 132, 255, 0.05);
+    font-weight: bold;
+}
+
+.conversation-item.unread .conversation-preview {
+    color: #333;
+    font-weight: normal;
+}
+
+.unread-badge {
+    background-color: #0084ff;
+    color: white;
+    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    margin-left: 10px;
+    padding: 0 4px;
 }
 
 /* Find People Modal */

@@ -11,6 +11,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const onlineUsers = new Set();
 global.wss = wss;
 require("./passportSetup");
 
@@ -70,12 +71,21 @@ wss.on('connection', (ws, req) => {  // Add 'req' parameter here
         const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
         if (sessionCookie) {
             try {
-                // Parse session cookie to extract user ID - this is simplified
-                // In a real app, you'd need to decode the session properly
+                // Parse session cookie to extract user ID
                 const session = JSON.parse(Buffer.from(sessionCookie.split('=')[1], 'base64').toString());
                 if (session.passport && session.passport.user) {
                     ws.userId = session.passport.user;
                     console.log('WebSocket authenticated for user:', ws.userId);
+                    
+                    // Add user to online users set
+                    onlineUsers.add(ws.userId);
+                    
+                    // Broadcast online status update
+                    broadcastToAll({
+                        type: 'user_status_update',
+                        userId: ws.userId,
+                        status: 'online'
+                    });
                 }
             } catch (err) {
                 console.error('Error parsing session:', err);
@@ -111,8 +121,33 @@ wss.on('connection', (ws, req) => {  // Add 'req' parameter here
     // Handle disconnections
     ws.on('close', () => {
         console.log('Client disconnected');
+        
+        if (ws.userId) {
+            // Check if user has other active connections
+            let userStillOnline = false;
+            wss.clients.forEach((client) => {
+                if (client !== ws && client.userId === ws.userId && client.readyState === WebSocket.OPEN) {
+                    userStillOnline = true;
+                }
+            });
+            
+            if (!userStillOnline) {
+                // Remove user from online users
+                onlineUsers.delete(ws.userId);
+                
+                // Broadcast offline status
+                broadcastToAll({
+                    type: 'user_status_update',
+                    userId: ws.userId,
+                    status: 'offline'
+                });
+            }
+        }
     });
 });
+
+// Make onlineUsers available to routes
+global.onlineUsers = onlineUsers;
 
 // Utility function to broadcast to specific user
 function broadcastToUser(userId, data) {
@@ -134,7 +169,7 @@ function broadcastToAll(data) {
 
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/user', require('./routes/userRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
 
 // Serve static files from the frontend directory
