@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/Icon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - Gathering Hub</title>
+    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/messages.css">
+    <link rel="stylesheet" href="css/commonlyUsed.css">
+    <script src="js/authCheck.js"></script>
+    <script src="js/messages.js" defer></script>
+    <script src="js/components.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <header class="header"></header>
+    <!-- Main Content -->
+    <main class="messages-main">
+        <div class="messages-main-container">
+            <!-- Left Side -->
+            <div class="messages-left">
+                <!-- Section 2: Search Bar -->
+                <div class="messages-search-section">
+                    <div class="search-container">
+                        <input type="text" id="userSearchInput" placeholder="Search users...">
+                        <button id="searchButton"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                
+                <!-- Section 3: Recent Conversations -->
+                <div class="recent-conversations">
+                    <h3>Recent Messages</h3>
+                    <div id="conversationsList" class="conversations-list">
+                        <div class="no-messages">No Recent Messages</div>
+                    </div>
+                    <button id="newMessageButton" class="new-message-button">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Section 4: Chat Area -->
+            <div class="messages-right">
+                <div id="emptyChat" class="empty-chat">
+                    <div class="empty-chat-message">
+                        <i class="fas fa-comments"></i>
+                        <p>Select a conversation or start a new one</p>
+                    </div>
+                </div>
+                
+                <div id="chatArea" class="chat-area" style="display: none;">
+                    <div class="chat-header">
+                        <div class="chat-user">
+                            <img id="chatUserImg" src="avatars/Avatar_Default_Anonymous.webp" alt="User">
+                            <h3 id="chatUsername">Username</h3>
+                        </div>
+                    </div>
+                    
+                    <div id="messagesContainer" class="messages-chat-container">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                    
+                    <div class="message-input-container">
+                        <textarea id="messageInput" placeholder="Type a message..."></textarea>
+                        <button id="sendMessageButton">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Find New People Modal -->
+    <div id="findPeopleModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="closeFindPeopleModal">&times;</span>
+            <h2>Find New People</h2>
+            <div class="modal-search-container">
+                <input type="text" id="modalSearchInput" placeholder="Search for users...">
+                <button id="modalSearchButton"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="searchResults" class="search-results">
+                <!-- Search results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Message container for notifications -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer"></footer>
+</body>
+</html>

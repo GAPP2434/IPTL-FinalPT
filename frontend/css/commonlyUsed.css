@@ -197,6 +197,34 @@
     animation: spin 2s linear infinite;
 }
 
+/* Add this with the other buttons in commonlyUsed.css */
+.messages-button {
+    padding: 8px 15px;
+    margin-right: 10px;
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Markazi', sans-serif;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 150%;
+    background-position: 0% 3%;
+    background-clip: padding-box;
+    transition: background-position 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.messages-button:hover {
+    background-position: 0% 100%;
+    box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(-360deg); }

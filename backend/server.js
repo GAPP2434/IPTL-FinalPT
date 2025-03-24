@@ -58,6 +58,7 @@ app.use(passport.session());
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/userRoutes'));
+app.use('/api/messages', require('./routes/messagesRoutes'));
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
