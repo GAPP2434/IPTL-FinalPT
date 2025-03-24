@@ -621,8 +621,15 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
     const blogPostImage = blogPostImageInput.files[0];
     
     // Fetch username and avatar from database
-    const blogPostUsername = await getUsernameFromDatabase(); // Replace with your actual function to fetch username from database
-    const avatarUrl = await getAvatarUrlFromDatabase(); // Replace with your actual function to fetch avatar URL from database
+    fetch('/api/current-user-id')
+      .then(response => response.json())
+      .then(async data => {
+        const userId = data.userId;
+        const blogPostUsername = await getUsernameFromDatabase(userId);
+        const avatarUrl = await getAvatarUrlFromDatabase(userId);
+        // Rest of your code here...
+      })
+      .catch(error => console.error(error));
     
     // Check if there is text or an image
     if (blogPostText || blogPostImage) { // && blogPostTitle

@@ -119,7 +119,8 @@ router.post('/login', async (req, res) => {
             }
             return res.json({ 
                 success: true, 
-                user: { 
+                user: {
+                    id: req.user.id, 
                     name: user.name, 
                     email: user.email,
                     profilePicture: user.profilePicture 
@@ -205,6 +206,15 @@ router.post('/forgot-password', async (req, res) => {
         console.error('Forgot password error:', err);
         res.status(500).json({ message: 'Server error during password reset request' });
     }
+});
+
+// Get UID of Logged-in User
+router.get('/current-user-id', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ userId: req.user.id });
+  } else {
+    res.status(401).json({ message: 'You are not logged in' });
+  }
 });
 
 // Reset password - process new password
