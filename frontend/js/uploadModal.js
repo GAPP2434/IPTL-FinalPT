@@ -620,17 +620,24 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
     const blogPostImageInput = document.getElementById('blog-post-image-input');
     const blogPostImage = blogPostImageInput.files[0];
     
-    // Fetch username and avatar from database
     fetch('/api/current-user-id')
-      .then(response => response.json())
-      .then(async data => {
-        const userId = data.userId;
-        const blogPostUsername = await getUsernameFromDatabase(userId);
-        const avatarUrl = await getAvatarUrlFromDatabase(userId);
-        // Rest of your code here...
+      .then(response => {
+        console.log('Response status code:', response.status);
+        console.log('Response headers:', response.headers);
+        return response.text();
+      })
+      .then(async responseText => {
+        try {
+          const data = JSON.parse(responseText);
+          const userId = data.userId;
+          const blogPostUsername = await getUsernameFromDatabase(userId);
+          const avatarUrl = await getAvatarUrlFromDatabase(userId);
+        } catch (error) {
+          console.error('Error parsing response data:', error);
+        }
       })
       .catch(error => console.error(error));
-    
+
     // Check if there is text or an image
     if (blogPostText || blogPostImage) { // && blogPostTitle
       // Get the current date and time
