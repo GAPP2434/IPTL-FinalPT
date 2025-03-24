@@ -599,26 +599,30 @@ fileInput.addEventListener('change', (e) => {
     console.log(fileNamesSpan.textContent); // Debugging
 });
 
+// Get user info
+function getUsernameFromDatabase(userId) {
+    return User.findById(userId).then(user => user.name);
+  }
+  
+  function getAvatarUrlFromDatabase(userId) {
+    return User.findById(userId).then(user => user.profilePicture);
+  }
+
 // Blog Posts
-document.getElementById('send-blog-post-button').addEventListener('click', () => {
+document.getElementById('send-blog-post-button').addEventListener('click', async () => {
     // Post Content
     const blogPostInput = document.getElementById('blog-post-input');
     const blogPostText = blogPostInput.value.trim();
-    const blogPostUsernameInput = document.getElementById('blog-post-username-input');
     //const blogPostTitleInput = document.getElementById('blog-post-title-input');
-    let blogPostUsername = blogPostUsernameInput.value.trim();
     //const blogPostTitle = blogPostTitleInput.value.trim();
    
     // Get the selected image
     const blogPostImageInput = document.getElementById('blog-post-image-input');
     const blogPostImage = blogPostImageInput.files[0];
     
-    // Generate a random username
-    if (!blogPostUsername) {
-      // Generate a random username if the user didn't enter one
-      const randomNumbers = Array(4).fill(0).map(() => Math.floor(Math.random() * 10));
-      blogPostUsername = `Anon #${randomNumbers.join('')}`;
-    }
+    // Fetch username and avatar from database
+    const blogPostUsername = await getUsernameFromDatabase(); // Replace with your actual function to fetch username from database
+    const avatarUrl = await getAvatarUrlFromDatabase(); // Replace with your actual function to fetch avatar URL from database
     
     // Check if there is text or an image
     if (blogPostText || blogPostImage) { // && blogPostTitle
@@ -633,9 +637,9 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       // Inner HTML
       let postContent = `
       <div class="post-header">
-        <span class="avatar"></span>
+        <span class="avatar" style="background-image: url(${avatarUrl})"></span>
         <div class="post-info">
-            <div class="username" style="${blogPostUsernameInput.value.trim() === '' ? 'color: #e37f8a' : 'color: #a7c957'}">${blogPostUsername}</div>
+            <div class="username">${blogPostUsername}</div>
             <div class="timestamp">on ${blogPostTimestamp}</div>
         </div>
       </div>
@@ -653,10 +657,6 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       
           // Prepend the new post to the blogPosts element
           blogPosts.prepend(newBlogPost);
-      
-          // Create a new avatarElement for this post
-          const postAvatarElement = newBlogPost.querySelector('.avatar');
-          postAvatarElement.style.backgroundImage = `url(${getRandomAvatar()})`;
         };
         reader.readAsDataURL(blogPostImage);
       } else {
@@ -664,18 +664,10 @@ document.getElementById('send-blog-post-button').addEventListener('click', () =>
       
         // Prepend the new post to the blogPosts element
         blogPosts.prepend(newBlogPost);
-      
-        // Create a new avatarElement for this post
-        const postAvatarElement = newBlogPost.querySelector('.avatar');
-        postAvatarElement.style.backgroundImage = `url(${getRandomAvatar()})`;
       }
 
-      // LINE  484: <h3>${blogPostTitle}</h3>
-  
       // Clear the input fields
       blogPostInput.value = '';
-      blogPostUsernameInput.value = '';
-      //blogPostTitleInput.value = '';
       blogPostImageInput.value = '';
       document.getElementById('file-names').innerHTML = '';
       document.getElementById('postContentCounter').innerHTML = '0/250';

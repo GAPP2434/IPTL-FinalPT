@@ -142,7 +142,7 @@ footer {
 }
 
 /*Main Blog Container*/
-.blog-container {
+.blog-container, .messages-main {
     /*
     background:
     radial-gradient(black 15%, transparent 16%) 0 0,
