@@ -117,12 +117,240 @@ router.get('/profile', isAuthenticated, async (req, res) => {
             email: user.email,
             profilePicture: user.profilePicture,
             bio: user.bio || '',
-            coverPhoto: user.coverPhoto || ''
+            coverPhoto: user.coverPhoto || '',
+            followersCount: user.followers ? user.followers.length : 0,
+            followingCount: user.following ? user.following.length : 0
         });
         
     } catch (error) {
         console.error('Error fetching profile:', error);
         res.status(500).json({ message: 'Server error during profile fetch' });
+    }
+});
+
+// Search users
+router.get('/search', isAuthenticated, async (req, res) => {
+    try {
+        const query = req.query.q || '';
+        const currentUserId = req.user._id;
+        
+        if (!query) {
+            return res.json([]);
+        }
+        
+        // Search for users by name or email
+        const users = await User.find({
+            $and: [
+                { _id: { $ne: currentUserId } }, // Exclude current user
+                {
+                    $or: [
+                        { name: { $regex: query, $options: 'i' } },
+                        { email: { $regex: query, $options: 'i' } }
+                    ]
+                }
+            ]
+        }).select('_id name email profilePicture bio');
+        
+        // Check if current user follows each of these users
+        const usersWithFollowStatus = await Promise.all(users.map(async (user) => {
+            const isFollowing = await User.findOne({
+                _id: currentUserId,
+                following: user._id
+            });
+            
+            return {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                profilePicture: user.profilePicture,
+                bio: user.bio,
+                youFollow: !!isFollowing
+            };
+        }));
+        
+        res.json(usersWithFollowStatus);
+        
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get followers
+router.get('/followers', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        
+        // Find current user with populated followers
+        const user = await User.findById(currentUserId).populate('followers', '_id name profilePicture bio');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if current user follows each of their followers
+        const followersWithStatus = await Promise.all(user.followers.map(async (follower) => {
+            const isFollowing = await User.findOne({
+                _id: currentUserId,
+                following: follower._id
+            });
+            
+            return {
+                _id: follower._id,
+                name: follower.name,
+                profilePicture: follower.profilePicture,
+                bio: follower.bio,
+                youFollow: !!isFollowing
+            };
+        }));
+        
+        res.json(followersWithStatus);
+        
+    } catch (error) {
+        console.error('Error getting followers:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get following
+router.get('/following', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        
+        // Find current user with populated following
+        const user = await User.findById(currentUserId).populate('following', '_id name profilePicture bio');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.json(user.following);
+        
+    } catch (error) {
+        console.error('Error getting following:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Follow user
+router.post('/follow', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const { userId } = req.body;
+        
+        // Validate that userId is provided
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        
+        // Check if userId is valid
+        const userToFollow = await User.findById(userId);
+        if (!userToFollow) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if already following
+        const alreadyFollowing = await User.findOne({
+            _id: currentUserId,
+            following: userId
+        });
+        
+        if (alreadyFollowing) {
+            return res.status(400).json({ message: 'Already following this user' });
+        }
+        
+        // Add to following for current user
+        await User.findByIdAndUpdate(currentUserId, {
+            $addToSet: { following: userId }
+        });
+        
+        // Add to followers for the other user
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { followers: currentUserId }
+        });
+        
+        res.json({ success: true });
+        
+    } catch (error) {
+        console.error('Error following user:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+//Recommended people
+router.get('/recommended', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        
+        // Find current user with populated following
+        const currentUser = await User.findById(currentUserId);
+        
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Get users that the current user is not already following
+        // Use $and to combine multiple conditions for the same field (_id)
+        const recommendedUsers = await User.find({
+            $and: [
+                { _id: { $ne: currentUserId } }, // Exclude current user
+                { _id: { $nin: currentUser.following } } // Exclude users already being followed
+            ]
+        })
+        .select('_id name profilePicture bio')
+        .limit(10);
+        
+        // Check if current user follows each of these users (should all be false)
+        const usersWithFollowStatus = recommendedUsers.map(user => {
+            return {
+                _id: user._id,
+                name: user.name,
+                profilePicture: user.profilePicture,
+                bio: user.bio,
+                youFollow: false
+            };
+        });
+        
+        res.json(usersWithFollowStatus);
+        
+    } catch (error) {
+        console.error('Error getting recommended users:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Unfollow user
+router.post('/unfollow', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const { userId } = req.body;
+        
+        // Validate that userId is provided
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        
+        // Check if userId is valid
+        const userToUnfollow = await User.findById(userId);
+        if (!userToUnfollow) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Remove from following for current user
+        await User.findByIdAndUpdate(currentUserId, {
+            $pull: { following: userId }
+        });
+        
+        // Remove from followers for the other user
+        await User.findByIdAndUpdate(userId, {
+            $pull: { followers: currentUserId }
+        });
+        
+        res.json({ success: true });
+        
+    } catch (error) {
+        console.error('Error unfollowing user:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

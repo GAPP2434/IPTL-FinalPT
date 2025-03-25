@@ -30,6 +30,14 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    followers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    following: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     password: {
         type: String,
         // Only require password for non-Google users

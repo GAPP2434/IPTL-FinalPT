@@ -517,30 +517,6 @@
     font-family: 'Markazi', serif;
 }
 
-.message-button {
-    padding: 5px 10px;
-    background-color: #000;
-    color: #aca06d;
-    border: 2px solid;
-    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
-    border-image-slice: 1;
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: 'Markazi', sans-serif;
-    font-size: 0.9rem;
-    transition: background-color 0.2s;
-}
-
-.message-button:hover {
-    background-color: #333;
-}
-
-/* Messages button (active state in header) */
-.messages-button.active {
-    background-position: 0% 100%;
-    box-shadow: 0 5px 5px rgba(255, 215, 0, 0.2);
-}
-
 /* Close button for modal */
 .close {
     position: absolute;

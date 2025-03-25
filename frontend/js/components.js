@@ -62,3 +62,202 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Failed to load footer:', error);
         });
 });
+
+function followUser(userId, button, callbacks = {}) {
+    fetch('/api/users/follow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ userId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to follow user');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Create unfollow button to replace the follow button
+        const unfollowButton = document.createElement('button');
+        unfollowButton.classList.add('follow-button', 'unfollow-button');
+        unfollowButton.dataset.userId = userId;
+        unfollowButton.textContent = 'Unfollow';
+        
+        unfollowButton.addEventListener('click', function() {
+            unfollowUser(userId, this, callbacks);
+        });
+        
+        button.replaceWith(unfollowButton);
+        
+        // Show success message
+        showMessage('You are now following this user', 'success');
+        
+        // Call the success callback if provided
+        if (callbacks.onSuccess) {
+            callbacks.onSuccess(data);
+        }
+    })
+    .catch(error => {
+        console.error('Error following user:', error);
+        showMessage('Failed to follow user. Please try again.', 'error');
+        
+        if (callbacks.onError) {
+            callbacks.onError(error);
+        }
+    });
+}
+
+// Function to unfollow a user
+function unfollowUser(userId, button, callbacks = {}) {
+    fetch('/api/users/unfollow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ userId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to unfollow user');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Create follow button
+        const followButton = document.createElement('button');
+        followButton.classList.add('follow-button');
+        followButton.dataset.userId = userId;
+        followButton.textContent = 'Follow';
+        
+        followButton.addEventListener('click', function() {
+            followUser(userId, this, callbacks);
+        });
+        
+        button.replaceWith(followButton);
+        
+        // Show success message
+        showMessage('You have unfollowed this user', 'success');
+        
+        // Call the success callback if provided
+        if (callbacks.onSuccess) {
+            callbacks.onSuccess(data);
+        }
+    })
+    .catch(error => {
+        console.error('Error unfollowing user:', error);
+        showMessage('Failed to unfollow user. Please try again.', 'error');
+        
+        if (callbacks.onError) {
+            callbacks.onError(error);
+        }
+    });
+}
+
+// Function to show messages
+function showMessage(message, type) {
+    const messageContainer = document.getElementById('message-container');
+    if (!messageContainer) {
+        console.log(message); // Fallback if no message container
+        return;
+    }
+    
+    const messageElement = document.getElementById('message');
+    messageElement.textContent = message;
+    messageElement.className = 'message ' + type;
+    messageContainer.style.display = 'block';
+    
+    setTimeout(() => {
+        messageContainer.style.display = 'none';
+    }, 5000);
+}
+
+// Make functions globally available
+window.userInteractions = {
+    followUser,
+    unfollowUser,
+    showMessage
+};
+
+// Reusable debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Reusable search function
+function setupSearch(options) {
+    const {
+        inputElement,       // Search input element
+        buttonElement,      // Search button element
+        endpoint,           // API endpoint to call
+        minChars = 2,       // Minimum characters to trigger search
+        debounceTime = 300, // Debounce time in ms
+        renderResults,      // Function to render results
+        clearResults        // Function to clear results
+    } = options;
+    
+    // Input event with debounce
+    inputElement.addEventListener('input', debounce(function() {
+        const query = inputElement.value.trim();
+        if (query.length >= minChars) {
+            searchUsers(query);
+        } else if (query.length === 0) {
+            clearResults();
+        }
+    }, debounceTime));
+    
+    // Button click
+    if (buttonElement) {
+        buttonElement.addEventListener('click', () => {
+            const query = inputElement.value.trim();
+            if (query) {
+                searchUsers(query);
+            }
+        });
+    }
+    
+    // Enter key press
+    inputElement.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const query = inputElement.value.trim();
+            if (query) {
+                searchUsers(query);
+            }
+        }
+    });
+    
+    // Search function
+    function searchUsers(query) {
+        if (!query.trim()) return;
+        
+        fetch(`${endpoint}?q=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+            return response.json();
+        })
+        .then(results => {
+            renderResults(results);
+        })
+        .catch(error => {
+            console.error('Error searching users:', error);
+            // Let the component handle the error display
+            renderResults([]);
+        });
+    }
+}
+
+// Make these available globally
+window.searchUtils = {
+    debounce,
+    setupSearch
+};
