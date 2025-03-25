@@ -13,16 +13,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create WebSocket connection
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const socket = new WebSocket(`${wsProtocol}//${window.location.host}`);
-        window.socket = socket;
+        window.socket = new WebSocket(`${wsProtocol}//${window.location.host}`);
         
         // Connection opened
-        socket.addEventListener('open', () => {
+        window.socket.addEventListener('open', () => {
             console.log('WebSocket connection established');
         });
         
         // Listen for messages
-        socket.addEventListener('message', (event) => {
+        window.socket.addEventListener('message', (event) => {
             try {
                 const data = JSON.parse(event.data);
                 
@@ -43,6 +42,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'new_comment':
                         handleNewComment(data.comment);
                         break;
+                    case 'group-added':
+                        handleGroupAdded(data);
+                        break;
                 }
             } catch (error) {
                 // Silent error handling
@@ -50,12 +52,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Handle WebSocket errors
-        socket.addEventListener('error', () => {
+        window.socket.addEventListener('error', () => {
             // Silent error handling
         });
         
         // Handle WebSocket closure and reconnect
-        socket.addEventListener('close', () => {
+        window.socket.addEventListener('close', () => {
             // Try to reconnect after 3 seconds
             setTimeout(connectWebSocket, 3000);
         });
@@ -71,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const data = JSON.parse(event.data);
             
-            // Debug line to ensure we're receiving messages (remove later)
+            // Debug line to ensure we're receiving messages
             console.log("WebSocket message received:", data.type);
             
             // Handle different message types
@@ -91,12 +93,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'new_comment':
                     handleNewComment(data.comment);
                     break;
+                case 'group-added':
+                    handleGroupAdded(data);
+                    break;
             }
         } catch (error) {
             console.error("Error handling WebSocket message:", error);
         }
     }
     
+    // Add this function to handle group-added events
+    function handleGroupAdded(data) {
+        console.log("Group notification received:", data);
+        
+        // Show notification to user
+        if (typeof window.showMessage === 'function') {
+            window.showMessage(`You were added to group "${data.groupName}" by ${data.addedBy}`, 'info');
+        }
+        
+        // If on messages page, refresh conversations to show the new group
+        if (window.location.pathname.includes('messages.html')) {
+            // Force clear out conversations cache
+            if (window.conversations) {
+                window.conversations = [];
+            }
+            
+            // Reload conversations with a slight delay to ensure backend data is updated
+            setTimeout(() => {
+                if (typeof window.loadConversations === 'function') {
+                    window.loadConversations();
+                }
+            }, 500);
+        }
+    }
+
     // Handle WebSocket errors
     function handleSocketError(error) {
         // Silent error handling - no console log
@@ -142,14 +172,24 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("Handling new message:", message);
         
         if (window.location.pathname.includes('messages.html')) {
-            // Get the sender ID as a string for comparison
-            const senderId = message.senderId.toString();
-            
-            // Always update the conversation preview (this part is key)
+            // Always update the conversation preview
             updateConversationLocally(message);
             
-            // If the conversation with this user is currently open, append the message to the chat
-            if (window.currentRecipient === senderId) {
+            // For group messages, the conversation ID is different than regular messages
+            const isGroupMessage = message.isGroupMessage || message.conversationId.startsWith('group:');
+            
+            // Determine which conversation this message belongs to
+            let relevantId;
+            if (isGroupMessage) {
+                // For group messages, the recipient ID is the group ID
+                relevantId = message.recipientId.toString();
+            } else {
+                // For direct messages, it's the sender's ID
+                relevantId = message.senderId.toString();
+            }
+            
+            // If the conversation is currently open, append the message to the chat
+            if (window.currentRecipient === relevantId) {
                 const messagesContainer = document.getElementById('messagesContainer');
                 if (messagesContainer) {
                     if (typeof window.appendMessage === 'function') {
@@ -175,7 +215,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     // Mark message as read since conversation is open
-                    markMessageAsRead(senderId);
+                    if (!isGroupMessage) {
+                        markMessageAsRead(relevantId);
+                    } else {
+                        // For group chats, we would need a separate endpoint to mark group messages as read
+                        // This would be implemented in a similar way to direct messages
+                    }
                 }
             }
         }
@@ -309,25 +354,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateConversationLocally(message) {
         console.log("Updating conversation locally:", message);
         
-        // Ensure we're working with strings for comparison
-        const senderId = message.senderId.toString();
+        // Determine if this is a group message
+        const isGroupMessage = message.isGroupMessage || message.conversationId.startsWith('group:');
+        
+        // Get the relevant ID (sender for direct messages, recipient/group for group messages)
+        const relevantId = isGroupMessage ? 
+            message.recipientId.toString() : 
+            message.senderId.toString();
         
         if (window.conversations) {
-            console.log("Current conversations:", window.conversations);
-            
-            // Check if this conversation exists with the sender's ID
+            // Find the conversation using the relevant ID
             const conversationIndex = window.conversations.findIndex(c => 
-                c.userId === senderId);
-            
-            console.log("Conversation index:", conversationIndex);
+                c.userId === relevantId);
             
             if (conversationIndex >= 0) {
                 // Update existing conversation's last message text
                 window.conversations[conversationIndex].lastMessage = message.content;
-                console.log("Updated conversation last message");
                 
                 // Increment unread count only if we're not currently viewing this conversation
-                if (window.currentRecipient !== senderId) {
+                if (window.currentRecipient !== relevantId) {
                     window.conversations[conversationIndex].unreadCount = 
                         (window.conversations[conversationIndex].unreadCount || 0) + 1;
                 }
@@ -336,20 +381,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const conversation = window.conversations.splice(conversationIndex, 1)[0];
                 window.conversations.unshift(conversation);
                 
-                // Force complete re-render of all conversations
+                // Render the updated conversations
                 if (typeof window.renderConversations === 'function') {
-                    console.log("Calling renderConversations");
                     window.renderConversations();
                 }
             } else {
-                // If the conversation isn't found by sender ID, try loading all conversations
-                // This ensures we're not unnecessarily creating duplicate conversations
+                // If the conversation isn't found, reload conversations from server
                 if (typeof window.loadConversations === 'function') {
                     window.loadConversations();
-                } else {
-                    console.log("Conversation not found locally, fetching user info");
-                    // Fetch user info and create new conversation
-                    fetchUserAndCreateConversation(senderId, message.content);
                 }
             }
         }
@@ -400,7 +439,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Start the initial connection
     connectWebSocket();
 });
+

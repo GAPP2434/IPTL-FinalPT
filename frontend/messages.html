@@ -35,9 +35,14 @@
                     <div id="conversationsList" class="conversations-list">
                         <div class="no-messages">No Recent Messages</div>
                     </div>
-                    <button id="newMessageButton" class="new-message-button">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                    <div class="messages-actions">
+                        <button id="newGroupButton" class="group-chat-button" title="Create Group Chat">
+                            <i class="fas fa-users"></i>
+                        </button>
+                        <button id="newMessageButton" class="new-message-button" title="New Message">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -54,7 +59,21 @@
                     <div class="chat-header">
                         <div class="chat-user">
                             <img id="chatUserImg" src="avatars/Avatar_Default_Anonymous.webp" alt="User">
-                            <h3 id="chatUsername">Username</h3>
+                            <div class="chat-user-info">
+                                <div class="chat-header-name-container">
+                                    <h3 id="chatUsername">Username</h3>
+                                    <span class="online-indicator offline" data-user-id=""></span>
+                                </div>
+                                <div class="chat-status">Offline</div>
+                            </div>
+                            <div id="groupMenuContainer" class="group-menu-container" style="display: none;">
+                                <button id="groupMenuButton" class="group-menu-button">
+                                    <i class="fas fa-bars"></i>
+                                </button>
+                                <div id="groupDropdown" class="group-dropdown">
+                                    <a href="#" id="viewMembersButton">See Members</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -84,6 +103,48 @@
             </div>
             <div id="searchResults" class="search-results">
                 <!-- Search results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Chat Modal -->
+    <div id="groupChatModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="closeGroupChatModal">&times;</span>
+            <h2>Create Group Chat</h2>
+            <div class="group-chat-form">
+                <div class="group-name-container">
+                    <label for="groupNameInput">Group Name:</label>
+                    <input type="text" id="groupNameInput" placeholder="Enter group name...">
+                </div>
+                <div class="group-members-container">
+                    <h3>Add Members</h3>
+                    <div class="modal-search-container">
+                        <input type="text" id="groupSearchInput" placeholder="Search users to add...">
+                        <button id="groupSearchButton"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div id="groupSearchResults" class="search-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                    <div class="selected-members">
+                        <h3>Selected Members (<span id="memberCount">0</span>)</h3>
+                        <div id="selectedMembersList" class="selected-members-list">
+                            <!-- Selected members will appear here -->
+                        </div>
+                    </div>
+                </div>
+                <button id="createGroupButton" class="create-group-button" disabled>Create Group Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Members Modal -->
+    <div id="groupMembersModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeGroupMembersModal">&times;</span>
+            <h2 id="groupMembersTitle">Group Members</h2>
+            <div id="groupMembersList" class="group-members-list">
+                <!-- Group members will be displayed here -->
             </div>
         </div>
     </div>

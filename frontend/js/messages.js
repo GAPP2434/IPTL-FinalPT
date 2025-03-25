@@ -16,6 +16,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const messagesContainer = document.getElementById('messagesContainer');
     const messageInput = document.getElementById('messageInput');
     const sendMessageButton = document.getElementById('sendMessageButton');
+    const newGroupButton = document.getElementById('newGroupButton');
+    const groupChatModal = document.getElementById('groupChatModal');
+    const closeGroupChatModal = document.getElementById('closeGroupChatModal');
+    const groupNameInput = document.getElementById('groupNameInput');
+    const groupSearchInput = document.getElementById('groupSearchInput');
+    const groupSearchButton = document.getElementById('groupSearchButton');
+    const groupSearchResults = document.getElementById('groupSearchResults');
+    const selectedMembersList = document.getElementById('selectedMembersList');
+    const memberCount = document.getElementById('memberCount');
+    const createGroupButton = document.getElementById('createGroupButton');
+    const groupMenuContainer = document.getElementById('groupMenuContainer');
+    const groupMenuButton = document.getElementById('groupMenuButton');
+    const groupDropdown = document.getElementById('groupDropdown');
+    const viewMembersButton = document.getElementById('viewMembersButton');
+    const groupMembersModal = document.getElementById('groupMembersModal');
+    const closeGroupMembersModal = document.getElementById('closeGroupMembersModal');
+    const groupMembersTitle = document.getElementById('groupMembersTitle');
+    const groupMembersList = document.getElementById('groupMembersList');
     
     // State
     let currentRecipient = null;
@@ -178,6 +196,49 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set current recipient
         currentRecipient = conversation.userId;
         window.currentRecipient = currentRecipient;
+
+         // Check if this is a group chat
+        if (conversation.isGroup) {
+            // Show group menu and hide online status for groups
+            groupMenuContainer.style.display = 'block';
+            
+            // For groups, don't show online status
+            const chatHeaderHTML = `
+                <div class="chat-user-info">
+                    <div class="chat-header-name-container">
+                        <h3>${conversation.name}</h3>
+                    </div>
+                </div>
+            `;
+            
+            // Replace the chat header
+            const chatUser = document.querySelector('.chat-user');
+            const userImage = chatUser.querySelector('img');
+            
+            chatUser.innerHTML = '';
+            chatUser.appendChild(userImage);
+            const chatUserInfo = document.createElement('div');
+            chatUserInfo.innerHTML = chatHeaderHTML;
+            chatUser.appendChild(chatUserInfo);
+            
+            // Add the group menu
+            chatUser.appendChild(groupMenuContainer);
+            
+            // Store group data for later use
+            currentGroup = {
+                id: conversation.userId,
+                name: conversation.name,
+                members: conversation.members || []
+            };
+        } else {
+            // For regular users, show online status and hide group menu
+            groupMenuContainer.style.display = 'none';
+            
+            // Check if user is online
+            const isOnline = onlineUsers.includes(conversation.userId);
+            
+            // Existing code for regular user chats...
+        }
         
         // Check if user is online
         const isOnline = onlineUsers.includes(conversation.userId);
@@ -240,10 +301,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Group consecutive messages from the same sender
+            let currentSenderId = null;
+            let messageGroup = [];
+            
             messages.forEach(message => {
-                // If senderId is the current user, then it's a sent message
-                const isSent = message.senderId === currentUser._id;
-                appendMessage(message.content, isSent, message.timestamp);
+                // For group messages, display differently
+                if (message.isGroup) {
+                    if (message.isSystemMessage) {
+                        // System messages (like "X created group" or "X added Y to group")
+                        appendSystemMessage(message.content, message.timestamp);
+                    } else {
+                        // Regular group message
+                        appendGroupMessage(
+                            message.content, 
+                            message.isCurrentUser, 
+                            message.senderName || 'Unknown',
+                            message.senderAvatar,
+                            message.timestamp
+                        );
+                    }
+                } else {
+                    // Regular direct message
+                    appendMessage(message.content, message.isCurrentUser, message.timestamp);
+                }
             });
             
             // Scroll to bottom
@@ -252,14 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error loading messages:', error);
             hideLoading();
-            
-            // Fallback for demo/testing
-            const conversation = conversations.find(c => c.userId === userId);
-            if (conversation && conversation.messages) {
-                conversation.messages.forEach(message => {
-                    appendMessage(message.text, message.sent);
-                });
-            }
+            messagesContainer.innerHTML = '<div class="error-message">Failed to load messages. Please try again.</div>';
         });
     }
     
@@ -283,6 +357,54 @@ document.addEventListener('DOMContentLoaded', function() {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
     
+    // Add a function to display system messages differently
+    function appendSystemMessage(text, timestamp = new Date()) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', 'system-message');
+        
+        // Format the timestamp
+        const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        messageElement.innerHTML = `
+            <div class="system-message-content">${text}</div>
+            <div class="message-time">${formattedTime}</div>
+        `;
+        
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Add a function to display group messages with sender name
+    function appendGroupMessage(text, isSent, senderName, senderAvatar, timestamp = new Date()) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+        messageElement.classList.add(isSent ? 'sent' : 'received');
+        
+        // Format the timestamp
+        const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        if (!isSent) {
+            // Only add sender info for messages from others
+            messageElement.innerHTML = `
+                <div class="group-message-header">
+                    <img src="${senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
+                    <span class="group-sender-name">${senderName}</span>
+                </div>
+                <div class="message-content">${text}</div>
+                <div class="message-time">${formattedTime}</div>
+            `;
+        } else {
+            // Own messages don't need sender info
+            messageElement.innerHTML = `
+                <div class="message-content">${text}</div>
+                <div class="message-time">${formattedTime}</div>
+            `;
+        }
+        
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
     // Send a message
     function sendMessage() {
         const text = messageInput.value.trim();
@@ -537,6 +659,73 @@ document.addEventListener('DOMContentLoaded', function() {
             messageInput.style.height = 'auto';
             messageInput.style.height = (messageInput.scrollHeight) + 'px';
         });
+
+        // Group chat modal
+        newGroupButton.addEventListener('click', openGroupChatModal);
+        
+        closeGroupChatModal.addEventListener('click', () => {
+            groupChatModal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === groupChatModal) {
+                groupChatModal.style.display = 'none';
+            }
+        });
+        
+        // Group search
+        groupSearchInput.addEventListener('input', window.searchUtils.debounce(function() {
+            const query = groupSearchInput.value.trim();
+            if (query.length >= 2) {
+                searchUsersForGroup(query);
+            } else if (query.length === 0) {
+                groupSearchResults.innerHTML = '';
+            }
+        }, 300));
+        
+        groupSearchButton.addEventListener('click', () => {
+            const query = groupSearchInput.value.trim();
+            if (query) {
+                searchUsersForGroup(query);
+            }
+        });
+
+        // Group menu button
+        groupMenuButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            groupDropdown.classList.toggle('show');
+        });
+        
+        // Close dropdown when clicking elsewhere
+        document.addEventListener('click', () => {
+            if (groupDropdown.classList.contains('show')) {
+                groupDropdown.classList.remove('show');
+            }
+        });
+        
+        // View group members
+        viewMembersButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showGroupMembers();
+        });
+        
+        // Close group members modal
+        closeGroupMembersModal.addEventListener('click', () => {
+            groupMembersModal.style.display = 'none';
+        });
+        
+        // Click outside group members modal to close
+        window.addEventListener('click', (e) => {
+            if (e.target === groupMembersModal) {
+                groupMembersModal.style.display = 'none';
+            }
+        });
+        
+        // Create group button
+        createGroupButton.addEventListener('click', createGroupChat);
+        
+        // Group name validation
+        groupNameInput.addEventListener('input', validateGroupForm);
     }
     
     // Get current user info
@@ -554,4 +743,257 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error fetching user info:', error);
         init(); // Initialize anyway
     });
+
+    // Open group chat modal
+function openGroupChatModal() {
+    // Reset the modal
+    groupNameInput.value = '';
+    groupSearchInput.value = '';
+    groupSearchResults.innerHTML = '';
+    selectedMembersList.innerHTML = '';
+    memberCount.textContent = '0';
+    createGroupButton.disabled = true;
+    
+    // Show the modal
+    groupChatModal.style.display = 'block';
+}
+
+// Search users for group
+function searchUsersForGroup(query) {
+    if (!query.trim()) return;
+    
+    groupSearchResults.innerHTML = '<div class="loading-message">Searching...</div>';
+    
+    fetch(`/api/messages/search?q=${encodeURIComponent(query)}`, {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        return response.json();
+    })
+    .then(results => {
+        renderGroupSearchResults(results);
+    })
+    .catch(error => {
+        console.error('Error searching users:', error);
+        groupSearchResults.innerHTML = '<div class="no-results">Error searching users. Please try again.</div>';
+    });
+}
+
+// Render group search results
+function renderGroupSearchResults(results) {
+    groupSearchResults.innerHTML = '';
+    
+    if (results.length === 0) {
+        groupSearchResults.innerHTML = '<div class="no-results">No users found</div>';
+        return;
+    }
+    
+    // Get already selected member IDs
+    const selectedMemberIds = Array.from(selectedMembersList.children).map(
+        member => member.dataset.userId
+    );
+    
+    results.forEach(user => {
+        // Skip if user is already selected
+        if (selectedMemberIds.includes(user._id)) {
+            return;
+        }
+        
+        const resultItem = document.createElement('div');
+        resultItem.classList.add('search-result-item');
+        
+        resultItem.innerHTML = `
+            <img src="${user.profilePicture}" alt="${user.name}" class="search-result-avatar">
+            <div class="search-result-name">${user.name}</div>
+            <button class="add-member-button" data-user-id="${user._id}" data-user-name="${user.name}" data-user-img="${user.profilePicture}">Add</button>
+        `;
+        
+        groupSearchResults.appendChild(resultItem);
+    });
+    
+    // Add event listeners to add buttons
+    document.querySelectorAll('.add-member-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const userId = button.dataset.userId;
+            const userName = button.dataset.userName;
+            const userImg = button.dataset.userImg;
+            
+            addMemberToGroup(userId, userName, userImg);
+            
+            // Remove this user from search results
+            button.closest('.search-result-item').remove();
+        });
+    });
+}
+
+// Add member to selected list
+function addMemberToGroup(userId, userName, userImg) {
+    const memberElement = document.createElement('div');
+    memberElement.classList.add('selected-member');
+    memberElement.dataset.userId = userId;
+    
+    memberElement.innerHTML = `
+        <img src="${userImg}" alt="${userName}">
+        <span>${userName}</span>
+        <button class="remove-member-button" title="Remove"><i class="fas fa-times"></i></button>
+    `;
+    
+    selectedMembersList.appendChild(memberElement);
+    
+    // Update member count
+    memberCount.textContent = selectedMembersList.children.length;
+    
+    // Add event listener to remove button
+    memberElement.querySelector('.remove-member-button').addEventListener('click', () => {
+        memberElement.remove();
+        memberCount.textContent = selectedMembersList.children.length;
+        validateGroupForm();
+    });
+    
+    // Validate the form
+    validateGroupForm();
+}
+
+// Validate group chat form
+function validateGroupForm() {
+    const groupName = groupNameInput.value.trim();
+    const memberCount = selectedMembersList.children.length;
+    
+    // Enable create button only if group name is provided and at least 2 members are selected
+    createGroupButton.disabled = !(groupName && memberCount >= 2);
+}
+
+    // Create group chat
+    function createGroupChat() {
+        const groupName = groupNameInput.value.trim();
+        
+        if (!groupName) {
+            alert('Please enter a group name');
+            return;
+        }
+        
+        const memberIds = Array.from(selectedMembersList.children).map(
+            member => member.dataset.userId
+        );
+        
+        if (memberIds.length < 2) {
+            alert('Please add at least 2 members to the group');
+            return;
+        }
+        
+        showLoading();
+        
+        fetch('/api/messages/create-group', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                name: groupName,
+                members: memberIds
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to create group chat');
+            }
+            return response.json();
+        })
+        .then(groupChat => {
+            hideLoading();
+            
+            // Close the modal
+            groupChatModal.style.display = 'none';
+            
+            // Add the new group chat to conversations and select it
+            const newConversation = {
+                userId: groupChat._id,
+                name: groupChat.name,
+                profilePicture: 'avatars/group-default.png',
+                lastMessage: `${currentUser.name} created group "${groupName}"`,
+                isGroup: true,
+                members: groupChat.members,
+                unreadCount: 0
+            };
+            
+            conversations.unshift(newConversation);
+            renderConversations();
+            selectConversation(newConversation);
+            
+            // Show success message
+            showMessage('Group chat created successfully', 'success');
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error creating group chat:', error);
+            showMessage('Failed to create group chat. Please try again.', 'error');
+        });
+    }
+
+    // Add this function to show group members
+    function showGroupMembers() {
+        // Close the dropdown
+        groupDropdown.classList.remove('show');
+        
+        // Set the modal title
+        groupMembersTitle.textContent = `Members of ${currentGroup.name}`;
+        
+        // Show loading state
+        groupMembersList.innerHTML = '<div class="loading-message">Loading members...</div>';
+        
+        // Show the modal
+        groupMembersModal.style.display = 'block';
+        
+        // Fetch group members
+        fetch(`/api/messages/group-members/${currentGroup.id}`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load group members');
+            }
+            return response.json();
+        })
+        .then(members => {
+            renderGroupMembers(members);
+        })
+        .catch(error => {
+            console.error('Error loading group members:', error);
+            groupMembersList.innerHTML = '<div class="error-message">Failed to load group members. Please try again.</div>';
+        });
+    }
+    // Function to render group members
+    function renderGroupMembers(members) {
+        if (!members || members.length === 0) {
+            groupMembersList.innerHTML = '<div class="no-results">No members found</div>';
+            return;
+        }
+        
+        groupMembersList.innerHTML = '';
+        
+        members.forEach(member => {
+            const memberItem = document.createElement('div');
+            memberItem.classList.add('group-member-item');
+            
+            // Determine if member is creator/admin
+            const isCreator = member.isCreator;
+            const roleText = isCreator ? 'Group Creator' : 'Member';
+            
+            memberItem.innerHTML = `
+                <img src="${member.profilePicture}" alt="${member.name}" class="group-member-avatar">
+                <div class="group-member-info">
+                    <div class="group-member-name">${member.name}</div>
+                    <div class="group-member-role">${roleText}</div>
+                </div>
+            `;
+            
+            groupMembersList.appendChild(memberItem);
+        });
+    }
 });
+
+

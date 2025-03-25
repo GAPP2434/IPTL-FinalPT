@@ -100,11 +100,6 @@
     align-items: center;
 }
 
-.chat-user-info {
-    display: flex;
-    flex-direction: column;
-}
-
 .chat-header-name-container {
     display: flex;
     align-items: center;
@@ -114,12 +109,6 @@
     font-size: 0.8rem;
     color: #666;
     margin-top: 2px;
-}
-
-/* Update chat user to include the status */
-.chat-user {
-    display: flex;
-    align-items: center;
 }
 
 /* Recent conversations section */
@@ -195,7 +184,6 @@
 
 .new-message-button {
     position: absolute;
-    bottom: 20px;
     right: 20px;
     width: 50px;
     height: 50px;
@@ -216,6 +204,140 @@
 
 .new-message-button:hover {
     transform: scale(1.1);
+}
+
+.messages-actions {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.group-chat-button {
+    /* Button styling remains the same */
+    width: 50px;
+    height: 50px;
+    background-color: #000;
+    color: #aca06d;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.group-chat-button:hover {
+    transform: scale(1.1);
+}
+
+/* Group chat modal styling */
+.group-chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.group-name-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.group-name-container label {
+    font-weight: bold;
+    font-family: 'Markazi', serif;
+}
+
+.group-name-container input {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-family: 'Markazi', serif;
+}
+
+.group-members-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.selected-members {
+    margin-top: 15px;
+}
+
+.selected-members-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    min-height: 50px;
+}
+
+.selected-member {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
+    padding: 5px 10px;
+    gap: 8px;
+}
+
+.selected-member img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.selected-member span {
+    font-family: 'Markazi', serif;
+}
+
+.selected-member button {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+}
+
+.selected-member button:hover {
+    color: #ff0000;
+}
+
+.create-group-button {
+    align-self: center;
+    padding: 10px 20px;
+    background-color: #000;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    color: #aca06d;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Markazi', serif;
+    transition: opacity 0.2s;
+}
+
+.create-group-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Right side - Section 4 */
@@ -265,6 +387,11 @@
 .chat-user {
     display: flex;
     align-items: center;
+    width: 100%;
+}
+
+.chat-user-info {
+    flex: 1;
 }
 
 .chat-user img {
@@ -531,4 +658,145 @@
 
 .close:hover {
     color: #333;
+}
+
+/* Group menu button and dropdown */
+.group-menu-container {
+    margin-left: auto;
+    position: relative;
+}
+
+.group-menu-button {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.group-menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.group-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 30px;
+    background-color: #fff;
+    min-width: 150px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    z-index: 10;
+}
+
+.group-dropdown a {
+    color: #333;
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    font-family: 'Markazi', serif;
+}
+
+.group-dropdown a:hover {
+    background-color: #f5f5f5;
+}
+
+/* Show dropdown when active */
+.group-dropdown.show {
+    display: block;
+}
+
+/* Group members list in modal */
+.group-members-list {
+    max-height: 300px;
+    overflow-y: auto;
+    width: 100%;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.group-member-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.group-member-item:last-child {
+    border-bottom: none;
+}
+
+.group-member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.group-member-info {
+    flex: 1;
+}
+
+.group-member-name {
+    font-family: 'Markazi', serif;
+    font-weight: bold;
+}
+
+.group-member-role {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 3px;
+}
+
+/* System messages */
+.system-message {
+    align-self: center;
+    margin: 15px 0;
+    max-width: 90%;
+    text-align: center;
+}
+
+.system-message-content {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #666;
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.system-message .message-time {
+    text-align: center;
+    margin-top: 3px;
+    font-size: 0.7rem;
+}
+
+/* Group message styling */
+.group-message-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.group-sender-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
+
+.group-sender-name {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #555;
+}
+
+.message.received .group-sender-name {
+    color: #444;
 }
