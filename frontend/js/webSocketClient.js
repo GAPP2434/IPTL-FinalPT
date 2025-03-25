@@ -392,9 +392,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 false, // Always false for received messages
                                 message.senderName || 'Unknown User',
                                 message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
-                                message.attachments || [], // Pass attachments
-                                message.attachmentTypes || [], // Pass attachment types
-                                message.timestamp
+                                message.attachments || [], 
+                                message.attachmentTypes || [],
+                                message.timestamp,
+                                [] // Add empty array for attachmentNames
                             );
                         } else {
                             // Fallback if appendGroupMessage not available
@@ -422,7 +423,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         // Regular direct messages use appendMessage
                         if (typeof window.appendMessage === 'function') {
-                            window.appendMessage(message.content, false, message.timestamp);
+                            let attachmentNames = [];
+                            if (message.attachments && message.attachments.length > 0) {
+                                attachmentNames = message.attachments.map(url => {
+                                    const fullFilename = url.split('/').pop();
+                                    const dashIndex = fullFilename.indexOf('-');
+                                    return dashIndex !== -1 ? 
+                                        fullFilename.substring(dashIndex + 1) : 
+                                        fullFilename;
+                                });
+                            }
+
+                            window.appendMessage(
+                                message.content, 
+                                false, 
+                                message.attachments || [],
+                                message.attachmentTypes || [],
+                                message.timestamp,
+                                attachmentNames
+                            );
                         } else {
                             // Existing fallback code for direct messages
                         }
@@ -447,28 +466,30 @@ document.addEventListener('DOMContentLoaded', function() {
         const conversationIndex = window.conversations.findIndex(c => 
             c.userId === senderId);
         
-            let previewText = message.content;
-            let hasAttachments = message.attachments && message.attachments.length > 0;
-            let attachmentType = hasAttachments && message.attachmentTypes && message.attachmentTypes[0];
-
-            if (hasAttachments) {
-                if (attachmentType === 'image') {
-                    previewText = message.content ? `📷 ${message.content}` : "📷 Sent a photo";
-                } else if (attachmentType === 'video') {
-                    previewText = message.content ? `🎥 ${message.content}` : "🎥 Sent a video";
-                } else {
-                    previewText = message.content ? `📎 ${message.content}` : "📎 Sent an attachment";
-                }
+        // Generate preview text based on attachments
+        let previewText = message.content;
+        let hasAttachments = message.attachments && message.attachments.length > 0;
+        let attachmentType = hasAttachments && message.attachmentTypes && message.attachmentTypes[0];
+        
+        if (hasAttachments) {
+            if (attachmentType === 'image') {
+                previewText = message.content ? `📷 ${message.content}` : "📷 Sent a photo";
+            } else if (attachmentType === 'video') {
+                previewText = message.content ? `🎥 ${message.content}` : "🎥 Sent a video";
+            } else {
+                previewText = message.content ? `📎 ${message.content}` : "📎 Sent an attachment";
+            }
         } else if (!previewText) {
             previewText = ""; // Fallback for empty messages
         }
-
+        
         if (conversationIndex >= 0) {
-             // Update existing conversation
+            // Update existing conversation
             window.conversations[conversationIndex].lastMessage = previewText;
             // Save attachment info for persistence
             window.conversations[conversationIndex].hasAttachments = hasAttachments;
             window.conversations[conversationIndex].lastAttachmentType = attachmentType;
+            
             // Only increment unread count if we're not viewing this conversation
             if (window.currentRecipient !== senderId) {
                 window.conversations[conversationIndex].unreadCount = 
@@ -480,12 +501,11 @@ document.addEventListener('DOMContentLoaded', function() {
             window.conversations.unshift(conversation);
             
             // Find the actual conversation item in the DOM and update its preview text directly
-            // This ensures the preview updates even if the conversation is currently active
             const conversationItem = document.querySelector(`.conversation-item[data-user-id="${senderId}"]`);
             if (conversationItem) {
                 const previewElement = conversationItem.querySelector('.conversation-preview');
                 if (previewElement) {
-                    previewElement.textContent = message.content;
+                    previewElement.textContent = previewText; // Use the formatted previewText
                 }
                 
                 // Update unread badge if needed
@@ -518,10 +538,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.renderConversations();
                 }
             }
-        localStorage.setItem('conversations', JSON.stringify(window.conversations));
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('conversations', JSON.stringify(window.conversations));
         } else {
             // If conversation doesn't exist yet, fetch user info and create it
-            fetchUserAndCreateConversation(senderId, message.content);
+            fetchUserAndCreateConversation(senderId, previewText); // Use the formatted previewText
         }
     }
 
@@ -587,6 +609,23 @@ document.addEventListener('DOMContentLoaded', function() {
             message.recipientId.toString() : 
             message.senderId.toString();
         
+        // Generate preview text based on attachments
+        let previewText = message.content;
+        let hasAttachments = message.attachments && message.attachments.length > 0;
+        let attachmentType = hasAttachments && message.attachmentTypes && message.attachmentTypes[0];
+        
+        if (hasAttachments) {
+            if (attachmentType === 'image') {
+                previewText = message.content ? `📷 ${message.content}` : "📷 Sent a photo";
+            } else if (attachmentType === 'video') {
+                previewText = message.content ? `🎥 ${message.content}` : "🎥 Sent a video";
+            } else {
+                previewText = message.content ? `📎 ${message.content}` : "📎 Sent an attachment";
+            }
+        } else if (!previewText) {
+            previewText = ""; // Fallback for empty messages
+        }
+        
         if (window.conversations) {
             // Find the conversation using the relevant ID
             const conversationIndex = window.conversations.findIndex(c => 
@@ -594,7 +633,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (conversationIndex >= 0) {
                 // Update existing conversation's last message text
-                window.conversations[conversationIndex].lastMessage = message.content;
+                window.conversations[conversationIndex].lastMessage = previewText;
+                window.conversations[conversationIndex].hasAttachments = hasAttachments;
+                window.conversations[conversationIndex].lastAttachmentType = attachmentType;
                 
                 // Increment unread count only if we're not currently viewing this conversation
                 if (window.currentRecipient !== relevantId) {
@@ -605,6 +646,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Move this conversation to the top (most recent)
                 const conversation = window.conversations.splice(conversationIndex, 1)[0];
                 window.conversations.unshift(conversation);
+                
+                // Save to localStorage for persistence
+                localStorage.setItem('conversations', JSON.stringify(window.conversations));
                 
                 // Render the updated conversations
                 if (typeof window.renderConversations === 'function') {

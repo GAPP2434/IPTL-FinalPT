@@ -300,6 +300,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     
+    function markConversationAsRead(conversationId) {
+        // Call the API to mark messages as read
+        fetch(`/api/messages/mark-read/${conversationId}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.error(`Failed to mark conversation as read: ${response.status}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error marking conversation as read:', error);
+        });
+    }
+
     // Update the selectConversation function
     function selectConversation(conversation) {
         // Update UI to show this conversation is selected
@@ -332,7 +351,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update chat header elements
         const chatUser = document.querySelector('.chat-user');
         const userImg = document.getElementById('chatUserImg');
-        userImg.src = conversation.profilePicture;
+        
+        // Check for cached group picture in localStorage
+        if (conversation.isGroup) {
+            const cachedPicture = localStorage.getItem(`group_${conversation.userId}_picture`);
+            if (cachedPicture) {
+                userImg.src = cachedPicture;
+            } else {
+                userImg.src = conversation.profilePicture;
+            }
+        } else {
+            userImg.src = conversation.profilePicture;
+        }
         
         // Check if this is a group chat
         if (conversation.isGroup) {
@@ -346,6 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
             currentGroup = {
                 id: conversation.userId,
                 name: conversation.name,
+                profilePicture: conversation.profilePicture,
                 members: conversation.members || []
             };
             
@@ -387,6 +418,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 chatStatus.style.display = 'block';
                 chatStatus.textContent = isOnline ? 'Online' : 'Offline';
             }
+        }
+        
+        // Mark any unread messages as read
+        if (conversation.unreadCount > 0) {
+            markConversationAsRead(conversation.conversationId);
+            // Update unread count in UI
+            conversation.unreadCount = 0;
+            renderConversations();
         }
         
         // Show chat area and hide empty state
@@ -439,7 +478,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             message.senderAvatar,
                             message.attachments || [],
                             message.attachmentTypes || [],
-                            message.timestamp
+                            message.timestamp,
+                            [] // Add empty array as a default for attachmentNames
                         );
                     }
                 } else {
@@ -449,7 +489,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         message.isCurrentUser, 
                         message.attachments || [], 
                         message.attachmentTypes || [],
-                        message.timestamp
+                        message.timestamp,
+                        []
                     );
                 }
             });
@@ -465,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Append a message to the chat
-    function appendMessage(text, sent, attachments = [], attachmentTypes = [], timestamp = new Date()) {
+    function appendMessage(text, sent, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = []) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(sent ? 'sent' : 'received');
@@ -478,17 +519,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (attachments && Array.isArray(attachments) && attachments.length > 0) {
             attachments.forEach((url, index) => {
                 const type = attachmentTypes && attachmentTypes[index] ? attachmentTypes[index] : 'file';
+                
+                // Get filename from attachmentNames if available, otherwise extract from URL
+                let filename;
+                if (attachmentNames && attachmentNames[index]) {
+                    filename = attachmentNames[index];
+                } else {
+                    // Extract from URL - only do this once
+                    const urlParts = url.split('/');
+                    const fullFilename = urlParts[urlParts.length - 1];
+                    const dashIndex = fullFilename.indexOf('-');
+                    filename = dashIndex !== -1 ? 
+                            fullFilename.substring(dashIndex + 1) : 
+                            fullFilename;
+                }
+                
+                // Then use filename in your HTML construction
                 if (type === 'image') {
                     attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
                 } else if (type === 'video') {
-                    attachmentsHTML += `<div class="message-media video-container">
-                                        <video controls width="100%" preload="metadata">
-                                            <source src="${url}" type="video/mp4">
-                                        </video>
-                                    </div>`;
+                    // Video HTML...
                 } else {
-                    // Extract filename from URL
-                    const filename = url.split('/').pop();
+                    // File HTML using the extracted filename
                     attachmentsHTML += `
                         <div class="message-file">
                             <div class="file-icon"><i class="fas fa-file"></i></div>
@@ -530,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add a function to display group messages with sender name
-    function appendGroupMessage(text, isSent, senderName, senderAvatar, attachments = [], attachmentTypes = [], timestamp = new Date()) {
+    function appendGroupMessage(text, isSent, senderName, senderAvatar, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = []) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(isSent ? 'sent' : 'received');
@@ -543,17 +595,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (attachments && Array.isArray(attachments) && attachments.length > 0) {
             attachments.forEach((url, index) => {
                 const type = attachmentTypes && attachmentTypes[index] ? attachmentTypes[index] : 'file';
-                if (type === 'image') {
-                    attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
-                } else if (type === 'video') {
-                attachmentsHTML += `<div class="message-media video-container">
-                                            <video controls width="100%" preload="metadata">
-                                                <source src="${url}" type="video/mp4">
-                                            </video>
-                                        </div>`;
-                } else {
-                    // Extract filename from URL
-                    const filename = url.split('/').pop();
+                // For file attachments
+                if (type !== 'image' && type !== 'video') {
+                    // Use provided attachment name if available, otherwise extract from URL
+                    let filename;
+                    if (attachmentNames && attachmentNames[index]) {
+                        filename = attachmentNames[index];
+                    } else {
+                        // Existing filename extraction logic for server URLs
+                        const fullFilename = url.split('/').pop();
+                        const dashIndex = fullFilename.indexOf('-');
+                        filename = dashIndex !== -1 ? 
+                                fullFilename.substring(dashIndex + 1) : 
+                                fullFilename;
+                    }
+                    
                     attachmentsHTML += `
                         <div class="message-file">
                             <div class="file-icon"><i class="fas fa-file"></i></div>
@@ -561,7 +617,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             <a href="${url}" target="_blank" class="file-download"><i class="fas fa-download"></i></a>
                         </div>
                     `;
-                }
+                } else if (type === 'image') {
+                    attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
+                } else if (type === 'video') {
+                attachmentsHTML += `<div class="message-media video-container">
+                                            <video controls width="100%" preload="metadata">
+                                                <source src="${url}" type="video/mp4">
+                                            </video>
+                                        </div>`;
+                } 
             });
         }
         
@@ -610,12 +674,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show a temporary version with the attachments in the UI immediately
         const tempAttachmentUrls = [];
         const tempAttachmentTypes = [];
+        const tempAttachmentNames = [];
         
         if (messageAttachments.length > 0) {
             messageAttachments.forEach(attachment => {
                 // Create temporary object URLs for immediate display
                 const tempUrl = URL.createObjectURL(attachment.file);
                 tempAttachmentUrls.push(tempUrl);
+                tempAttachmentNames.push(attachment.file.name); // Store the original filename
                 
                 if (attachment.file.type.startsWith('image/')) {
                     tempAttachmentTypes.push('image');
@@ -629,9 +695,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add to UI immediately (will be replaced when real message comes back from server)
         if (currentGroup) {
-            appendGroupMessage(text, true, null, null, tempAttachmentUrls, tempAttachmentTypes);
+            appendGroupMessage(text, true, null, null, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
         } else {
-            appendMessage(text, true, tempAttachmentUrls, tempAttachmentTypes);
+            appendMessage(text, true, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
         }
         
         // Clear the input and attachments
@@ -936,8 +1002,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Group menu button
         groupMenuButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            groupDropdown.classList.toggle('show');
+            e.stopPropagation(); // Prevent the click from closing the dropdown immediately
+            
+            if (groupDropdown) {
+                // Toggle dropdown display
+                groupDropdown.classList.toggle('show');
+                
+                // Add new options to the dropdown
+                groupDropdown.innerHTML = `
+                    <a href="#" id="viewMembersButton">See Members</a>
+                    <a href="#" id="changePictureButton">Change Group Picture</a>
+                    <a href="#" id="changeNameButton">Change Group Name</a>
+                `;
+                
+                // Now that the buttons exist, add event listeners to them
+                document.getElementById('viewMembersButton')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    groupDropdown.classList.remove('show');
+                    showGroupMembers();
+                });
+                
+                document.getElementById('changePictureButton')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    groupDropdown.classList.remove('show');
+                    changeGroupPicture();
+                });
+                
+                document.getElementById('changeNameButton')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    groupDropdown.classList.remove('show');
+                    changeGroupName();
+                });
+            }
         });
         
         // Close dropdown when clicking elsewhere
@@ -945,12 +1041,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (groupDropdown.classList.contains('show')) {
                 groupDropdown.classList.remove('show');
             }
-        });
-        
-        // View group members
-        viewMembersButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            showGroupMembers();
         });
         
         // Close group members modal
@@ -1178,38 +1268,424 @@ function validateGroupForm() {
         });
     }
 
+    // Toggle add members section
+    function toggleAddMembersSection() {
+        const addMembersSection = document.getElementById('addMembersSection');
+        if (addMembersSection) {
+            if (addMembersSection.style.display === 'none') {
+                addMembersSection.style.display = 'block';
+                document.getElementById('addMembersButton').innerHTML = '<i class="fas fa-times"></i> Cancel';
+            } else {
+                addMembersSection.style.display = 'none';
+                document.getElementById('addMembersButton').innerHTML = '<i class="fas fa-user-plus"></i> Add Members';
+            }
+        }
+    }
+
+    // Search users for existing group
+    function searchUsersForExistingGroup(query) {
+        if (!query.trim()) return;
+        
+        const resultsContainer = document.getElementById('addMembersResults');
+        
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '<div class="loading-message">Searching...</div>';
+            
+            fetch(`/api/messages/search?q=${encodeURIComponent(query)}`, {
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+                return response.json();
+            })
+            .then(results => {
+                // Filter out users who are already members
+                const existingMemberIds = currentGroup.members.map(id => id.toString());
+                const filteredResults = results.filter(user => !existingMemberIds.includes(user._id.toString()));
+                
+                renderAddMembersResults(filteredResults);
+            })
+            .catch(error => {
+                console.error('Error searching users:', error);
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = '<div class="no-results">Error searching users. Please try again.</div>';
+                }
+            });
+        }
+    }
+
+    // Render results for adding new members
+    function renderAddMembersResults(results) {
+        const resultsContainer = document.getElementById('addMembersResults');
+        
+        if (!resultsContainer) return;
+        
+        resultsContainer.innerHTML = '';
+        
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div class="no-results">No users found or all users already added</div>';
+            return;
+        }
+        
+        results.forEach(user => {
+            const resultItem = document.createElement('div');
+            resultItem.classList.add('search-result-item');
+            
+            resultItem.innerHTML = `
+                <img src="${user.profilePicture}" alt="${user.name}" class="search-result-avatar">
+                <div class="search-result-name">${user.name}</div>
+                <button class="add-to-group-button" data-user-id="${user._id}" data-user-name="${user.name}">Add</button>
+            `;
+            
+            resultsContainer.appendChild(resultItem);
+        });
+        
+        // Add event listeners to add buttons
+        document.querySelectorAll('.add-to-group-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.dataset.userId;
+                const userName = this.dataset.userName;
+                
+                addMemberToExistingGroup(userId, userName);
+            });
+        });
+    }
+
+    // Add member to existing group
+    function addMemberToExistingGroup(userId, userName) {
+        showLoading();
+        
+        fetch(`/api/messages/group/${currentGroup.id}/add-member`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                memberId: userId
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to add member');
+            }
+            return response.json();
+        })
+        .then(result => {
+            hideLoading();
+            
+            // Update the local group data
+            if (!currentGroup.members.includes(userId)) {
+                currentGroup.members.push(userId);
+            }
+            
+            // Show a success message
+            showMessage(`${userName} has been added to the group`, 'success');
+            
+            // Refresh the members list
+            fetchGroupMembers();
+            
+            // Hide the add members section
+            toggleAddMembersSection();
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error adding member:', error);
+            showMessage('Failed to add member. Please try again.', 'error');
+        });
+    }
+
+    // Function to fetch group members
+    function fetchGroupMembers() {
+        const groupMembersList = document.getElementById('groupMembersList');
+        
+        if (!groupMembersList) return;
+        
+        groupMembersList.innerHTML = '<div class="loading-message">Loading members...</div>';
+        
+        if (!currentGroup || !currentGroup.id) {
+            groupMembersList.innerHTML = '<div class="error-message">Error: Group information is missing</div>';
+            return;
+        }
+        
+        fetch(`/api/messages/group-members/${currentGroup.id}`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to load group members: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(members => {
+            console.log("Received group members:", members);
+            renderGroupMembers(members);
+        })
+        .catch(error => {
+            console.error('Error loading group members:', error);
+            if (groupMembersList) {
+                groupMembersList.innerHTML = `<div class="error-message">Failed to load group members: ${error.message}</div>`;
+            }
+        });
+    }
+
+    // Change group picture
+    function changeGroupPicture() {
+        // Create and open a file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        
+        fileInput.onchange = function(e) {
+            if (this.files && this.files[0]) {
+                const formData = new FormData();
+                formData.append('groupPicture', this.files[0]);
+                
+                showLoading();
+                
+                fetch(`/api/messages/group/${currentGroup.id}/update-picture`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update group picture');
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    hideLoading();
+                    console.log("Group picture update response:", result);
+                    
+                    // Update the currentGroup object
+                    if (currentGroup) {
+                        currentGroup.profilePicture = result.profilePicture;
+                    }
+                    
+                    // Update local UI with new picture - ensure the path is correct
+                    const chatUserImg = document.getElementById('chatUserImg');
+                    if (chatUserImg) {
+                        // Force browser to reload the image by adding a cache-busting parameter
+                        chatUserImg.src = result.profilePicture + '?t=' + new Date().getTime();
+                    }
+                    
+                    // Also update in the conversations list
+                    const conversationItem = document.querySelector(`.conversation-item[data-user-id="${currentGroup.id}"]`);
+                    if (conversationItem) {
+                        const avatar = conversationItem.querySelector('.conversation-avatar');
+                        if (avatar) {
+                            // Add cache-busting parameter here too
+                            avatar.src = result.profilePicture + '?t=' + new Date().getTime();
+                        }
+                    }
+                    
+                    // Update in the conversations array for persistence
+                    const conversationIndex = window.conversations.findIndex(c => c.userId === currentGroup.id);
+                    if (conversationIndex >= 0) {
+                        window.conversations[conversationIndex].profilePicture = result.profilePicture;
+                        // Save to localStorage for persistence
+                        localStorage.setItem('conversations', JSON.stringify(window.conversations));
+                    }
+                    
+                    // Add this picture to localStorage with a separate key for better persistence
+                    localStorage.setItem(`group_${currentGroup.id}_picture`, result.profilePicture);
+    
+                    showMessage('Group picture updated successfully', 'success');
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error updating group picture:', error);
+                    showMessage('Failed to update group picture. Please try again.', 'error');
+                });
+            }
+        };
+        
+        fileInput.click();
+    }
+
+    // Change group name
+    function changeGroupName() {
+        // Prompt the user for a new name
+        const newName = prompt('Enter new group name:', currentGroup.name);
+        
+        if (newName && newName.trim() && newName !== currentGroup.name) {
+            showLoading();
+            
+            fetch(`/api/messages/group/${currentGroup.id}/update-name`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: newName.trim()
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update group name');
+                }
+                return response.json();
+            })
+            .then(result => {
+                hideLoading();
+                
+                // Update local data
+                currentGroup.name = result.name;
+                
+                // Update UI
+                document.getElementById('chatUsername').textContent = result.name;
+                
+                // Update in the conversations list
+                const conversationIndex = conversations.findIndex(c => c.userId === currentGroup.id);
+                if (conversationIndex >= 0) {
+                    conversations[conversationIndex].name = result.name;
+                    renderConversations();
+                }
+                
+                showMessage('Group name updated successfully', 'success');
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error updating group name:', error);
+                showMessage('Failed to update group name. Please try again.', 'error');
+            });
+        }
+    }
+
+    // Function to remove a member from the group
+    function removeMemberFromGroup(memberId, memberName) {
+        if (confirm(`Are you sure you want to remove ${memberName} from this group?`)) {
+            showLoading();
+            
+            fetch(`/api/messages/group/${currentGroup.id}/remove-member`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    memberId: memberId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to remove member');
+                }
+                return response.json();
+            })
+            .then(result => {
+                hideLoading();
+                
+                // Update local group data
+                currentGroup.members = currentGroup.members.filter(id => id.toString() !== memberId.toString());
+                
+                // Show success message
+                showMessage(`${memberName} has been removed from the group`, 'success');
+                
+                // Refresh the members list
+                fetchGroupMembers();
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error removing member:', error);
+                showMessage('Failed to remove member. Please try again.', 'error');
+            });
+        }
+    }
+
+
     // Add this function to show group members
     function showGroupMembers() {
         // Close the dropdown
         groupDropdown.classList.remove('show');
         
         // Set the modal title
-        groupMembersTitle.textContent = `Members of ${currentGroup.name}`;
+        const modalTitle = document.getElementById('groupMembersTitle');
+        if (modalTitle) {
+            modalTitle.textContent = `Members of ${currentGroup.name}`;
+        }
         
-        // Show loading state
-        groupMembersList.innerHTML = '<div class="loading-message">Loading members...</div>';
+        // Add a search bar and buttons to the modal
+        const modalContent = groupMembersModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <span class="close" id="closeGroupMembersModal">&times;</span>
+                <h2 id="groupMembersTitle">Members of ${currentGroup.name}</h2>
+                
+                <div class="group-management-controls">
+                    <button id="addMembersButton" class="modal-action-button">
+                        <i class="fas fa-user-plus"></i> Add Members
+                    </button>
+                </div>
+                
+                <div id="groupMembersList" class="group-members-list">
+                    <!-- Group members will be displayed here -->
+                    <div class="loading-message">Loading members...</div>
+                </div>
+                
+                <div id="addMembersSection" class="add-members-section" style="display: none;">
+                    <h3>Add New Members</h3>
+                    <div class="modal-search-container">
+                        <input type="text" id="addMembersSearchInput" placeholder="Search users to add...">
+                        <button id="addMembersSearchButton"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div id="addMembersResults" class="search-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+            `;
+            
+            // Re-bind the close button event since we replaced the HTML
+            const closeButton = document.getElementById('closeGroupMembersModal');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    groupMembersModal.style.display = 'none';
+                });
+            }
+            
+            // Add event listener for the add members button
+            const addMembersButton = document.getElementById('addMembersButton');
+            if (addMembersButton) {
+                addMembersButton.addEventListener('click', toggleAddMembersSection);
+            }
+            
+            // Add event listeners for the search functionality
+            const searchInput = document.getElementById('addMembersSearchInput');
+            const searchButton = document.getElementById('addMembersSearchButton');
+            
+            if (searchInput && searchButton) {
+                searchInput.addEventListener('input', window.searchUtils.debounce(function() {
+                    const query = searchInput.value.trim();
+                    if (query.length >= 2) {
+                        searchUsersForExistingGroup(query);
+                    } else if (query.length === 0) {
+                        const resultsElement = document.getElementById('addMembersResults');
+                        if (resultsElement) {
+                            resultsElement.innerHTML = '';
+                        }
+                    }
+                }, 300));
+                
+                searchButton.addEventListener('click', () => {
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        searchUsersForExistingGroup(query);
+                    }
+                });
+            }
+        }
         
         // Show the modal
         groupMembersModal.style.display = 'block';
         
-        // Fetch group members
-        fetch(`/api/messages/group-members/${currentGroup.id}`, {
-            credentials: 'include'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to load group members');
-            }
-            return response.json();
-        })
-        .then(members => {
-            renderGroupMembers(members);
-        })
-        .catch(error => {
-            console.error('Error loading group members:', error);
-            groupMembersList.innerHTML = '<div class="error-message">Failed to load group members. Please try again.</div>';
-        });
+        // Fetch and render group members
+        fetchGroupMembers();
     }
+
     // Function to render group members
     function renderGroupMembers(members) {
         if (!members || members.length === 0) {
@@ -1230,6 +1706,12 @@ function validateGroupForm() {
             // Check if member is online - use the global onlineUsers array
             const isOnline = window.onlineUsers && window.onlineUsers.includes(member._id.toString());
             
+            // Add remove button if the user is not the creator
+            const removeButton = !isCreator ? 
+                `<button class="remove-member-button" data-user-id="${member._id}" data-user-name="${member.name}">
+                    <i class="fas fa-user-minus"></i>
+                </button>` : '';
+            
             memberItem.innerHTML = `
                 <img src="${member.profilePicture}" alt="${member.name}" class="group-member-avatar">
                 <div class="group-member-info">
@@ -1241,9 +1723,20 @@ function validateGroupForm() {
                     <div class="group-member-role">${roleText}</div>
                     <div class="member-status">${isOnline ? 'Online' : 'Offline'}</div>
                 </div>
+                ${removeButton}
             `;
             
             groupMembersList.appendChild(memberItem);
+        });
+        
+        // Add event listeners for remove buttons
+        document.querySelectorAll('.remove-member-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.dataset.userId;
+                const userName = this.dataset.userName;
+                
+                removeMemberFromGroup(userId, userName);
+            });
         });
     }
 

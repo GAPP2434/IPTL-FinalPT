@@ -21,6 +21,10 @@ const GroupChatSchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         default: Date.now
+    },
+    profilePicture: {
+        type: String,
+        default: 'avatars/group-default.png'
     }
 });
 

@@ -21,10 +21,11 @@ const storage = multer.diskStorage({
         cb(null, uploadsDir);
     },
     filename: function(req, file, cb) {
-        // Create a safe filename
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, uniqueSuffix + ext);
+        // Keep original filename but ensure uniqueness with timestamp prefix
+        // Clean the original filename to remove invalid characters
+        const originalName = file.originalname.replace(/[^a-zA-Z0-9-_\.]/g, '_');
+        const uniquePrefix = Date.now() + '-';
+        cb(null, uniquePrefix + originalName);
     }
 });
 
@@ -85,8 +86,8 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     senderId: { $first: "$senderId" },
                     recipientId: { $first: "$recipientId" },
                     isGroupMessage: { $first: "$isGroupMessage" },
-                    lastMessageAttachments: { $first: "$attachments" },        // Add this line
-                    lastMessageAttachmentTypes: { $first: "$attachmentTypes" }, // Add this line
+                    lastMessageAttachments: { $first: "$attachments" },
+                    lastMessageAttachmentTypes: { $first: "$attachmentTypes" },
                     unreadCount: {
                         $sum: {
                             $cond: [
@@ -123,7 +124,7 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     conversationId: msg._id,
                     userId: groupId,
                     name: group.name,
-                    profilePicture: 'avatars/group-default.png',
+                    profilePicture: group.profilePicture || 'avatars/group-default.png',
                     lastMessage: formatLastMessageWithAttachments(msg.lastMessage, msg.lastMessageAttachments, msg.lastMessageAttachmentTypes),
                     timestamp: msg.timestamp,
                     unreadCount: msg.unreadCount,
@@ -177,17 +178,28 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     conversationId
                 }).sort({ timestamp: -1 });
                 
-                return {
-                    conversationId: conversationId,
-                    userId: group._id.toString(),
-                    name: group.name,
-                    profilePicture: 'avatars/group-default.png',
-                    lastMessage: latestMessage ? latestMessage.content : 'New group created',
-                    timestamp: latestMessage ? latestMessage.timestamp : group.timestamp,
-                    unreadCount: 0,
-                    isGroup: true,
-                    members: group.members
-                };
+                // Add this check for attachments in latestMessage
+                const hasAttachments = latestMessage && latestMessage.attachments && latestMessage.attachments.length > 0;
+                const formattedLastMessage = latestMessage ? 
+                    formatLastMessageWithAttachments(
+                        latestMessage.content, 
+                        latestMessage.attachments, 
+                        latestMessage.attachmentTypes
+                    ) : 'New group created';
+                    
+                    return {
+                        conversationId: conversationId,
+                        userId: group._id.toString(),
+                        name: group.name,
+                        profilePicture: group.profilePicture || 'avatars/group-default.png',
+                        lastMessage: formattedLastMessage,
+                        timestamp: latestMessage ? latestMessage.timestamp : group.timestamp,
+                        unreadCount: 0,
+                        isGroup: true,
+                        members: group.members,
+                        hasAttachments: hasAttachments,
+                        lastAttachmentType: hasAttachments ? latestMessage.attachmentTypes[0] : null
+                    };
             })
         );
         
@@ -589,6 +601,372 @@ router.get('/group-members/:groupId', isAuthenticated, async (req, res) => {
         
     } catch (error) {
         console.error('Error fetching group members:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update group picture route
+router.post('/group/:groupId/update-picture', isAuthenticated, (req, res) => {
+    // Use the same upload middleware as the other routes, but configured for a single file
+    const upload = multer({
+        storage: storage,
+        limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    }).single('groupPicture');
+
+    upload(req, res, async function(err) {
+        if (err) {
+            console.error('Error uploading group picture:', err);
+            return res.status(400).json({ message: 'File upload error: ' + err.message });
+        }
+
+        try {
+            const groupId = req.params.groupId;
+            const currentUserId = req.user._id;
+            
+            // Check if group exists
+            const group = await GroupChat.findById(groupId);
+            if (!group) {
+                return res.status(404).json({ message: 'Group not found' });
+            }
+            
+            // Check if user is a member of the group
+            if (!group.members.includes(currentUserId)) {
+                return res.status(403).json({ message: 'You are not a member of this group' });
+            }
+            
+            // If no file was uploaded
+            if (!req.file) {
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+            
+            // Update the group's profile picture - use absolute URL path from root
+            const profilePicture = `/uploads/messages/${req.file.filename}`;
+            group.profilePicture = profilePicture;
+            
+            await group.save();
+            
+            // Create a system message about the picture update
+            const sender = await User.findById(currentUserId).select('name');
+            const systemMessage = new Message({
+                senderId: currentUserId,
+                recipientId: groupId,
+                content: `${sender.name} changed the group picture`,
+                conversationId: `group:${groupId}`,
+                isGroupMessage: true,
+                isSystemMessage: true,
+                timestamp: new Date(),
+                read: false
+            });
+            
+            await systemMessage.save();
+            
+            // Notify group members via WebSocket
+            if (global.wss) {
+                group.members.forEach(memberId => {
+                    if (memberId.toString() !== currentUserId.toString()) {
+                        const message = {
+                            type: 'group_updated',
+                            groupId: groupId,
+                            message: `${sender.name} changed the group picture`,
+                            updatedField: 'profilePicture',
+                            newValue: profilePicture
+                        };
+                        
+                        global.wss.clients.forEach(client => {
+                            if (client.userId === memberId.toString()) {
+                                client.send(JSON.stringify(message));
+                            }
+                        });
+                    }
+                });
+            }
+            
+            res.json({
+                message: 'Group picture updated successfully',
+                profilePicture: profilePicture
+            });
+            
+        } catch (error) {
+            console.error('Error updating group picture:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    });
+});
+
+// Update group name route
+router.post('/group/:groupId/update-name', isAuthenticated, async (req, res) => {
+    try {
+        const groupId = req.params.groupId;
+        const { name } = req.body;
+        const currentUserId = req.user._id;
+        
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: 'Group name is required' });
+        }
+        
+        // Check if group exists
+        const group = await GroupChat.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Check if user is a member of the group
+        if (!group.members.includes(currentUserId)) {
+            return res.status(403).json({ message: 'You are not a member of this group' });
+        }
+        
+        // Update group name
+        const oldName = group.name;
+        group.name = name.trim();
+        
+        await group.save();
+        
+        // Create a system message about the name change
+        const sender = await User.findById(currentUserId).select('name');
+        const systemMessage = new Message({
+            senderId: currentUserId,
+            recipientId: groupId,
+            content: `${sender.name} changed the group name from "${oldName}" to "${name}"`,
+            conversationId: `group:${groupId}`,
+            isGroupMessage: true,
+            isSystemMessage: true,
+            timestamp: new Date(),
+            read: false
+        });
+        
+        await systemMessage.save();
+        
+        // Notify group members via WebSocket
+        if (global.wss) {
+            group.members.forEach(memberId => {
+                if (memberId.toString() !== currentUserId.toString()) {
+                    const message = {
+                        type: 'group_updated',
+                        groupId: groupId,
+                        message: `${sender.name} changed the group name to "${name}"`,
+                        updatedField: 'name',
+                        newValue: name
+                    };
+                    
+                    global.wss.clients.forEach(client => {
+                        if (client.userId === memberId.toString()) {
+                            client.send(JSON.stringify(message));
+                        }
+                    });
+                }
+            });
+        }
+        
+        res.json({
+            message: 'Group name updated successfully',
+            name: name
+        });
+        
+    } catch (error) {
+        console.error('Error updating group name:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Add member to group route
+router.post('/group/:groupId/add-member', isAuthenticated, async (req, res) => {
+    try {
+        const groupId = req.params.groupId;
+        const { memberId } = req.body;
+        const currentUserId = req.user._id;
+        
+        if (!memberId) {
+            return res.status(400).json({ message: 'Member ID is required' });
+        }
+        
+        // Check if group exists
+        const group = await GroupChat.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Check if user is a member of the group
+        if (!group.members.includes(currentUserId)) {
+            return res.status(403).json({ message: 'You are not a member of this group' });
+        }
+        
+        // Check if new member already exists in the group
+        if (group.members.includes(memberId)) {
+            return res.status(400).json({ message: 'User is already a member of this group' });
+        }
+        
+        // Check if new member exists
+        const newMember = await User.findById(memberId);
+        if (!newMember) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Add member to group
+        group.members.push(memberId);
+        await group.save();
+        
+        // Create a system message about the new member
+        const sender = await User.findById(currentUserId).select('name');
+        const systemMessage = new Message({
+            senderId: currentUserId,
+            recipientId: groupId,
+            content: `${sender.name} added ${newMember.name} to the group`,
+            conversationId: `group:${groupId}`,
+            isGroupMessage: true,
+            isSystemMessage: true,
+            timestamp: new Date(),
+            read: false
+        });
+        
+        await systemMessage.save();
+        
+        // Notify group members via WebSocket
+        if (global.wss) {
+            // Notify existing members
+            group.members.forEach(gMemberId => {
+                if (gMemberId.toString() !== currentUserId.toString() && 
+                    gMemberId.toString() !== memberId) {
+                    const message = {
+                        type: 'group_member_added',
+                        groupId: groupId,
+                        message: `${sender.name} added ${newMember.name} to the group`,
+                        newMemberId: memberId,
+                        newMemberName: newMember.name
+                    };
+                    
+                    global.wss.clients.forEach(client => {
+                        if (client.userId === gMemberId.toString()) {
+                            client.send(JSON.stringify(message));
+                        }
+                    });
+                }
+            });
+            
+            // Notify new member that they've been added
+            const addedMessage = {
+                type: 'added_to_group',
+                groupId: groupId,
+                groupName: group.name,
+                addedBy: sender.name
+            };
+            
+            global.wss.clients.forEach(client => {
+                if (client.userId === memberId.toString()) {
+                    client.send(JSON.stringify(addedMessage));
+                }
+            });
+        }
+        
+        res.json({
+            message: 'Member added successfully',
+            member: {
+                _id: newMember._id,
+                name: newMember.name,
+                profilePicture: newMember.profilePicture
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error adding member to group:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Remove member from group route
+router.post('/group/:groupId/remove-member', isAuthenticated, async (req, res) => {
+    try {
+        const groupId = req.params.groupId;
+        const { memberId } = req.body;
+        const currentUserId = req.user._id;
+        
+        if (!memberId) {
+            return res.status(400).json({ message: 'Member ID is required' });
+        }
+        
+        // Check if group exists
+        const group = await GroupChat.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Check if user is a member of the group
+        if (!group.members.includes(currentUserId)) {
+            return res.status(403).json({ message: 'You are not a member of this group' });
+        }
+        
+        // Can't remove the group creator
+        if (group.createdBy.toString() === memberId) {
+            return res.status(403).json({ message: 'Cannot remove the group creator' });
+        }
+        
+        // Check if member is in the group
+        if (!group.members.includes(memberId)) {
+            return res.status(400).json({ message: 'User is not a member of this group' });
+        }
+        
+        // Remove member from group
+        group.members = group.members.filter(id => id.toString() !== memberId.toString());
+        await group.save();
+        
+        // Get names for the message
+        const sender = await User.findById(currentUserId).select('name');
+        const removedUser = await User.findById(memberId).select('name');
+        
+        // Create a system message about the removed member
+        const systemMessage = new Message({
+            senderId: currentUserId,
+            recipientId: groupId,
+            content: `${sender.name} removed ${removedUser.name} from the group`,
+            conversationId: `group:${groupId}`,
+            isGroupMessage: true,
+            isSystemMessage: true,
+            timestamp: new Date(),
+            read: false
+        });
+        
+        await systemMessage.save();
+        
+        // Notify remaining members via WebSocket
+        if (global.wss) {
+            group.members.forEach(gMemberId => {
+                if (gMemberId.toString() !== currentUserId.toString()) {
+                    const message = {
+                        type: 'group_member_removed',
+                        groupId: groupId,
+                        message: `${sender.name} removed ${removedUser.name} from the group`,
+                        removedMemberId: memberId,
+                        removedMemberName: removedUser.name
+                    };
+                    
+                    global.wss.clients.forEach(client => {
+                        if (client.userId === gMemberId.toString()) {
+                            client.send(JSON.stringify(message));
+                        }
+                    });
+                }
+            });
+            
+            // Notify removed user
+            const removedMessage = {
+                type: 'removed_from_group',
+                groupId: groupId,
+                groupName: group.name,
+                removedBy: sender.name
+            };
+            
+            global.wss.clients.forEach(client => {
+                if (client.userId === memberId.toString()) {
+                    client.send(JSON.stringify(removedMessage));
+                }
+            });
+        }
+        
+        res.json({
+            message: 'Member removed successfully'
+        });
+        
+    } catch (error) {
+        console.error('Error removing member from group:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -916,6 +916,74 @@
     margin-top: 3px;
 }
 
+/* Add new styles for group management */
+
+.group-management-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 15px;
+}
+
+.modal-action-button {
+    background-color: #000;
+    color: #aca06d;
+    border: 2px solid;
+    border-image-source: linear-gradient(to bottom, #ffd700, #ffd700);
+    border-image-slice: 1;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Markazi', serif;
+    transition: background-position 0.3s;
+    background-image: linear-gradient(to top, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0));
+    background-size: 100% 200%;
+    background-position: 0% 0%;
+}
+
+.modal-action-button:hover {
+    background-position: 0% 100%;
+}
+
+.add-members-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.remove-member-button {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 5px;
+    font-size: 16px;
+    transition: color 0.2s;
+}
+
+.remove-member-button:hover {
+    color: #ff3333;
+}
+
+.group-member-item {
+    display: flex;
+    align-items: center;
+}
+
+.add-to-group-button {
+    background-color: #a49884;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.add-to-group-button:hover {
+    background-color: #8c7a68;
+}
+
 /* System messages */
 .system-message {
     align-self: center;
