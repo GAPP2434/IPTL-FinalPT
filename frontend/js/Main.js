@@ -1,5 +1,6 @@
 import {initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
 import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal.js';
+
 //Variables
     export const storiesContainer = document.getElementById('storiesContainer');
     export const storyViewer = document.getElementById('storyViewer');
@@ -46,101 +47,45 @@ import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal
         }
     
         files.forEach((file, index) => {
-            const storyElement = document.createElement('div');
-            storyElement.classList.add('story');
-            const url = editedImageDataUrl || (editedVideoBlob ? URL.createObjectURL(editedVideoBlob) : URL.createObjectURL(file));
-            const title = storyTitle || "Untitled Story";
-            const description = storyDescription || "No description";
-            const username = storyUsername || "Anonymous";
-            const audioUrl = editedAudioBlob ? URL.createObjectURL(editedAudioBlob) : null;
-            const uniqueId = `${Date.now()}-${index}`; // Generate a unique ID
+            const formData = new FormData();
+            formData.append('title', storyTitle);
+            formData.append('description', storyDescription);
+            formData.append('username', storyUsername);
+            formData.append('media', file);
+            formData.append('audioStartTime', audioStartTime);
     
-            if (file.type.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = title; // Set the alt text to the title
-                img.loading = 'lazy';
-                storyElement.appendChild(img);
-                if (audioUrl) {
-                    storyElement.classList.add('story-with-audio');
-                    const audio = new Audio(audioUrl);
-                    audio.id = `audio-${uniqueId}`;
-                    audio.volume = 0.5;
-                    audio.preload = 'auto';
-                    audio.dataset.startTime = audioStartTime; // Store the start time in a data attribute
-                    storyElement.appendChild(audio);
-                    console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
-                } else {
-                    storyElement.classList.add('story-without-audio');
+            fetch('/api/stories', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
                 }
-                console.log('Image: ', file);
-            } else if (file.type.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.src = url;
-                video.controls = false;
-                video.alt = title; // Set the alt text to the title
-                video.loading = 'lazy';
-                video.muted = !!audioUrl; // Mute the original audio of the video if integrated audio is present
-                storyElement.appendChild(video);
-                console.log(`Video element created with src: ${url}, muted: ${video.muted}`);
-                if (audioUrl) {
-                    storyElement.classList.add('story-with-audio');
-                    const audio = new Audio(audioUrl);
-                    audio.id = `audio-${uniqueId}`;
-                    audio.volume = 0.5;
-                    audio.preload = 'auto';
-                    audio.dataset.startTime = audioStartTime; // Store the start time in a data attribute
-                    storyElement.appendChild(audio);
-                    console.log(`Audio element created with ID: audio-${uniqueId} and src: ${audioUrl}`);
-                } else {
-                    storyElement.classList.add('story-with-original-sound');
-                }
-            } else {
-                alert('Unsupported file type.');
-                return;
-            }
-    
-            storyElement.addEventListener('click', () => {
-                storyQueue = Array.from(storiesContainer.children)
-                    .filter(child => child !== storiesContainer.children[0])
-                    .map((child, idx) => ({
-                        src: child.querySelector('img, video').src,
-                        type: child.querySelector('img') ? 'image' : 'video',
-                        title: child.querySelector('img, video').alt || title,
-                        description: child.querySelector('.story-description') ? child.querySelector('.story-description').textContent : description,
-                        username: child.querySelector('.story-username').textContent,
-                        uploadDate: uploadDate,
-                        audioUrl: child.querySelector('audio') ? child.querySelector('audio').src : null,
-                        hasAudio: child.classList.contains('story-with-audio'),
-                        hasOriginalSound: child.classList.contains('story-with-original-sound'),
-                        audioId: child.querySelector('audio') ? child.querySelector('audio').id : null,
-                        audioStartTime: child.querySelector('audio') ? parseInt(child.querySelector('audio').dataset.startTime) : 0 // Retrieve the start time from the data attribute
-                    }));
-    
-                currentStoryIndex = storyQueue.findIndex(item => item.src === url);
-                showStory(currentStoryIndex);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Story added:', data);
+                // Update the DOM with the new story
+                const storyElement = document.createElement('div');
+                storyElement.classList.add('story');
+                storyElement.innerHTML = `
+                    <div class="story-header">
+                        <span class="story-username">${data.username}</span>
+                        <span class="story-date">${new Date(data.uploadDate).toLocaleString()}</span>
+                    </div>
+                    <div class="story-content">
+                        <img src="${data.mediaUrl}" alt="Story Media">
+                        <p>${data.title}</p>
+                        <p>${data.description}</p>
+                    </div>
+                `;
+                storiesContainer.appendChild(storyElement);
+            })
+            .catch(error => {
+                console.error('Error adding story:', error);
             });
-    
-            const usernameElement = document.createElement('div');
-            usernameElement.classList.add('story-username');
-            usernameElement.textContent = username;
-            storyElement.appendChild(usernameElement);
-    
-            const descriptionElement = document.createElement('div');
-            descriptionElement.classList.add('story-description');
-            descriptionElement.textContent = description;
-            storyElement.appendChild(descriptionElement);
-    
-            storiesContainer.appendChild(storyElement);
-            console.log('Story posted with title:', title);
         });
-    
-        storyTitleInput.value = '';
-        storyDescriptionInput.value = '';
-        storyUsernameInput.value = '';
-        mediaInput.value = '';
-        audioInput.value = '';
-        updateStoryIndicators();
     }
     
     export function preloadAudio() {

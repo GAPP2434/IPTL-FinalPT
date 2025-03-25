@@ -12,6 +12,7 @@ export let originalVideoFile = null; // Add this line
 export function openUploadModal() {
     document.getElementById('uploadModal').style.display = 'block';
     clearPreview();
+    clearInputs();
 }
 
 window.openUploadModal = openUploadModal;
@@ -25,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     postsHeading.textContent = 'Hunter Posts';
     postsHeading.classList.add('section-heading');
     blogContainer.insertBefore(postsHeading, blogContainer.firstChild);
+
+    // Add event listener for the upload button
+    document.getElementById('addButton').addEventListener('click', openUploadModal);
 });
 
 document.getElementById('closeUploadModal').addEventListener('click', () => {

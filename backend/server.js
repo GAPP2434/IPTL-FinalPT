@@ -31,33 +31,33 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB Connected'))
     .catch(err => console.log('MongoDB Connection Error:', err));
 
-    app.use(
-        cookieSession({
-            name: "session",
-            keys: [process.env.SESSION_SECRET],
-            maxAge: 24 * 60 * 60 * 1000,
-        })
-    );
-    
-    // Add this compatibility middleware for Passport 0.6+ with cookie-session
-    app.use(function(req, res, next) {
-        if (req.session && !req.session.regenerate) {
-            req.session.regenerate = (callback) => {
-                callback();
-            };
-        }
-        if (req.session && !req.session.save) {
-            req.session.save = (callback) => {
-                callback();
-            };
-        }
-        next();
-    });    
-     
+app.use(
+    cookieSession({
+        name: "session",
+        keys: [process.env.SESSION_SECRET],
+        maxAge: 24 * 60 * 60 * 1000,
+    })
+);
+
+// Add this compatibility middleware for Passport 0.6+ with cookie-session
+app.use(function(req, res, next) {
+    if (req.session && !req.session.regenerate) {
+        req.session.regenerate = (callback) => {
+            callback();
+        };
+    }
+    if (req.session && !req.session.save) {
+        req.session.save = (callback) => {
+            callback();
+        };
+    }
+    next();
+});
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -172,6 +172,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
+app.use('/api/stories', require('./routes/storiesRoutes'));
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
