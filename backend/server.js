@@ -65,30 +65,43 @@ app.use(passport.session());
 wss.on('connection', (ws, req) => {  // Add 'req' parameter here
     console.log('Client connected');
     
+    if (ws.userId) {
+        // Send the list of currently online users to the new connection
+        ws.send(JSON.stringify({
+            type: 'online_users_list',
+            users: Array.from(onlineUsers)
+        }));
+    }
+
     // Extract user ID from session cookie
     const cookies = req.headers.cookie;
     if (cookies) {
         const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
         if (sessionCookie) {
             try {
-                // Parse session cookie to extract user ID
-                const session = JSON.parse(Buffer.from(sessionCookie.split('=')[1], 'base64').toString());
-                if (session.passport && session.passport.user) {
-                    ws.userId = session.passport.user;
-                    console.log('WebSocket authenticated for user:', ws.userId);
+                // Extract user ID from session
+                const sessionData = Buffer.from(sessionCookie.split('=')[1], 'base64').toString('utf-8');
+                const sessionJson = JSON.parse(sessionData.split('.')[0]);
+                const userId = sessionJson.passport.user;
+                
+                if (userId) {
+                    console.log(`WebSocket connection authenticated for user ${userId}`);
+                    ws.userId = userId;
+                    onlineUsers.add(userId);
                     
-                    // Add user to online users set
-                    onlineUsers.add(ws.userId);
-                    
-                    // Broadcast online status update
-                    broadcastToAll({
-                        type: 'user_status_update',
-                        userId: ws.userId,
-                        status: 'online'
+                    // Broadcast online status to all connected clients
+                    wss.clients.forEach(client => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: 'user_status_update',
+                                userId: userId,
+                                status: 'online'
+                            }));
+                        }
                     });
                 }
-            } catch (err) {
-                console.error('Error parsing session:', err);
+            } catch (error) {
+                console.error('Error parsing session data:', error);
             }
         }
     }

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Message = require('../models/Messages');
+const GroupChat = require('../models/GroupChat');
 const User = require('../models/Users');
 const mongoose = require('mongoose');
 const WebSocket = require('ws');
@@ -38,6 +39,7 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     timestamp: { $first: "$timestamp" },
                     senderId: { $first: "$senderId" },
                     recipientId: { $first: "$recipientId" },
+                    isGroupMessage: { $first: "$isGroupMessage" },
                     unreadCount: {
                         $sum: {
                             $cond: [
@@ -56,26 +58,98 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
         
         // Get user details for each conversation
         const conversations = await Promise.all(messages.map(async (msg) => {
-            // Determine the other user in the conversation
-            const otherUserId = msg.senderId.equals(new mongoose.Types.ObjectId(userId)) 
-                ? msg.recipientId 
-                : msg.senderId;
+            // Check if this is a group conversation
+            const isGroupChat = msg._id.startsWith('group:');
             
-            // Get user data
-            const otherUser = await User.findById(otherUserId);
-            
-            return {
-                conversationId: msg._id,
-                userId: otherUserId,
-                name: otherUser ? otherUser.name : 'Unknown User',
-                profilePicture: otherUser ? otherUser.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
-                lastMessage: msg.lastMessage,
-                timestamp: msg.timestamp,
-                unreadCount: msg.unreadCount
-            };
+            if (isGroupChat) {
+                // Extract group ID from the conversation ID
+                const groupId = msg._id.replace('group:', '');
+                
+                // Fetch group details
+                const group = await GroupChat.findById(groupId);
+                
+                if (!group) {
+                    return null; // Skip if group doesn't exist
+                }
+                
+                return {
+                    conversationId: msg._id,
+                    userId: groupId,
+                    name: group.name,
+                    profilePicture: 'avatars/group-default.png',
+                    lastMessage: msg.lastMessage,
+                    timestamp: msg.timestamp,
+                    unreadCount: msg.unreadCount,
+                    isGroup: true,
+                    members: group.members
+                };
+            } else {
+                // Regular user-to-user conversation
+                // Determine the other user in the conversation
+                const otherUserId = msg.senderId.equals(new mongoose.Types.ObjectId(userId)) 
+                    ? msg.recipientId 
+                    : msg.senderId;
+                
+                // Get user data
+                const otherUser = await User.findById(otherUserId);
+                
+                return {
+                    conversationId: msg._id,
+                    userId: otherUserId,
+                    name: otherUser ? otherUser.name : 'Unknown User',
+                    profilePicture: otherUser ? otherUser.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
+                    lastMessage: msg.lastMessage,
+                    timestamp: msg.timestamp,
+                    unreadCount: msg.unreadCount,
+                    isGroup: false
+                };
+            }
         }));
         
-        res.json(conversations);
+        // IMPORTANT ADDITION: Find all groups the user is a member of but might not have messages yet
+        const userGroups = await GroupChat.find({
+            members: userId
+        });
+        
+        // For each group, check if it's already in conversations list
+        const additionalGroupConversations = await Promise.all(
+            userGroups.map(async (group) => {
+                const conversationId = `group:${group._id}`;
+                
+                // Skip if this group is already in the conversations list
+                if (conversations.some(conv => conv && conv.conversationId === conversationId)) {
+                    return null;
+                }
+                
+                // Find the latest message for this group if any
+                const latestMessage = await Message.findOne({
+                    conversationId
+                }).sort({ timestamp: -1 });
+                
+                return {
+                    conversationId: conversationId,
+                    userId: group._id.toString(),
+                    name: group.name,
+                    profilePicture: 'avatars/group-default.png',
+                    lastMessage: latestMessage ? latestMessage.content : 'New group created',
+                    timestamp: latestMessage ? latestMessage.timestamp : group.timestamp,
+                    unreadCount: 0,
+                    isGroup: true,
+                    members: group.members
+                };
+            })
+        );
+        
+        // Filter out null entries and combine with regular conversations
+        const allConversations = [
+            ...conversations.filter(conv => conv !== null),
+            ...additionalGroupConversations.filter(conv => conv !== null)
+        ];
+        
+        // Sort by timestamp (newest first)
+        allConversations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        res.json(allConversations);
         
     } catch (error) {
         console.error('Error fetching conversations:', error);
@@ -89,12 +163,51 @@ router.get('/conversation/:userId', isAuthenticated, async (req, res) => {
         const currentUserId = req.user._id;
         const otherUserId = req.params.userId;
         
+        // Check if this is a group chat
+        const isGroupChat = await GroupChat.findById(otherUserId);
+        
         // Generate conversation ID
-        const conversationId = Message.generateConversationId(currentUserId.toString(), otherUserId);
+        let conversationId;
+        let isGroup = false;
+        
+        if (isGroupChat) {
+            // For group chats, use group:{groupId} format
+            conversationId = `group:${otherUserId}`;
+            isGroup = true;
+            
+            // Check if the current user is a member of this group - convert to string for proper comparison
+            const memberIds = isGroupChat.members.map(id => id.toString());
+            if (!memberIds.includes(currentUserId.toString())) {
+                return res.status(403).json({ message: 'You are not a member of this group' });
+            }
+        } else {
+            // For direct messages, use the regular pattern
+            conversationId = Message.generateConversationId(currentUserId.toString(), otherUserId);
+        }
         
         // Get messages for this conversation
         const messages = await Message.find({ conversationId })
             .sort({ timestamp: 1 });
+            
+        // Add sender information to each message for better display
+        const enhancedMessages = await Promise.all(messages.map(async (message) => {
+            const messageObj = message.toObject();
+            
+            // Add isCurrentUser flag for easier client-side rendering
+            messageObj.isCurrentUser = message.senderId.toString() === currentUserId.toString();
+            messageObj.isGroup = isGroup;
+            
+            if (isGroup && !message.isSystemMessage) {
+                // For group messages, add sender name
+                const sender = await User.findById(message.senderId).select('name profilePicture');
+                if (sender) {
+                    messageObj.senderName = sender.name;
+                    messageObj.senderAvatar = sender.profilePicture;
+                }
+            }
+            
+            return messageObj;
+        }));
         
         // Update read status for messages
         await Message.updateMany(
@@ -106,7 +219,7 @@ router.get('/conversation/:userId', isAuthenticated, async (req, res) => {
             { $set: { read: true } }
         );
         
-        res.json(messages);
+        res.json(enhancedMessages);
         
     } catch (error) {
         console.error('Error fetching messages:', error);
@@ -125,14 +238,28 @@ router.post('/send', isAuthenticated, async (req, res) => {
         
         const senderId = req.user._id;
         
-        // Check if recipient exists
-        const recipient = await User.findById(recipientId);
-        if (!recipient) {
-            return res.status(404).json({ message: 'Recipient not found' });
+        // Check if this is a group chat
+        const isGroupChat = await GroupChat.findById(recipientId);
+        const isGroup = !!isGroupChat;
+        
+        if (!isGroup) {
+            // Regular user-to-user message
+            // Check if recipient exists
+            const recipient = await User.findById(recipientId);
+            if (!recipient) {
+                return res.status(404).json({ message: 'Recipient not found' });
+            }
+        } else {
+            // Group chat - check if sender is a member
+            if (!isGroupChat.members.includes(senderId)) {
+                return res.status(403).json({ message: 'You are not a member of this group' });
+            }
         }
         
         // Generate conversation ID
-        const conversationId = Message.generateConversationId(senderId.toString(), recipientId);
+        const conversationId = isGroup ? 
+            `group:${recipientId}` : 
+            Message.generateConversationId(senderId.toString(), recipientId);
         
         // Create new message
         const newMessage = new Message({
@@ -141,30 +268,55 @@ router.post('/send', isAuthenticated, async (req, res) => {
             content,
             conversationId,
             timestamp: new Date(),
-            read: false
+            read: false,
+            isGroupMessage: isGroup
         });
         
         await newMessage.save();
         
-        // Broadcast using WebSocket - REPLACE THIS SECTION with your new code
+        // Broadcast using WebSocket
         if (global.wss) {
-            global.wss.clients.forEach((client) => {
-                if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({
-                        type: 'new_message',
-                        message: {
-                            _id: newMessage._id,
-                            senderId: senderId.toString(),
-                            recipientId: recipientId.toString(),
-                            content: content,
-                            timestamp: new Date(),
-                            conversationId: conversationId,
-                            read: false
-                        },
-                        recipientId: recipientId.toString()
-                    }));
+            // Create the message data to send
+            const messageData = {
+                type: 'new_message',
+                message: {
+                    _id: newMessage._id,
+                    senderId: senderId.toString(),
+                    recipientId: recipientId.toString(),
+                    content: content,
+                    timestamp: newMessage.timestamp,
+                    conversationId: conversationId,
+                    read: false,
+                    isGroupMessage: isGroup
                 }
-            });
+            };
+            
+            if (isGroup) {
+                const sender = await User.findById(senderId).select('name profilePicture');
+                if (sender) {
+                    messageData.message.senderName = sender.name;
+                    messageData.message.senderAvatar = sender.profilePicture;
+                }
+                // For group chats, send to all group members except the sender
+                isGroupChat.members.forEach(memberId => {
+                    const memberIdStr = memberId.toString();
+                    // Don't send to the sender
+                    if (memberIdStr !== senderId.toString()) {
+                        global.wss.clients.forEach(client => {
+                            if (client.userId === memberIdStr && client.readyState === WebSocket.OPEN) {
+                                client.send(JSON.stringify(messageData));
+                            }
+                        });
+                    }
+                });
+            } else {
+                // For direct messages, just send to the recipient
+                global.wss.clients.forEach(client => {
+                    if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify(messageData));
+                    }
+                });
+            }
         }
         
         res.status(201).json(newMessage);
@@ -241,6 +393,130 @@ router.put('/mark-read/:senderId', isAuthenticated, async (req, res) => {
         
     } catch (error) {
         console.error('Error marking messages as read:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Create group chat
+router.post('/create-group', isAuthenticated, async (req, res) => {
+    try {
+        const { name, members } = req.body;
+        const currentUserId = req.user._id;
+        
+        if (!name || !members || !Array.isArray(members) || members.length < 2) {
+            return res.status(400).json({ message: 'Group name and at least 2 members are required' });
+        }
+        
+        // Create group chat
+        const newGroupChat = new GroupChat({
+            name,
+            createdBy: currentUserId,
+            members: [...members, currentUserId], // Include current user in the group
+            timestamp: new Date()
+        });
+        
+        await newGroupChat.save();
+        
+        // Get creator's name for the message
+        const creator = await User.findById(currentUserId).select('name');
+        
+        // Create welcome message
+        const welcomeMessage = `${creator.name} created the group "${name}"`;
+
+        // Send confirmation message in the group
+        const message = new Message({
+            senderId: currentUserId,
+            recipientId: newGroupChat._id,
+            content: welcomeMessage,
+            conversationId: `group:${newGroupChat._id}`,
+            isGroupMessage: true,
+            isSystemMessage: true,
+            timestamp: new Date(),
+            read: false
+        });
+        
+        await message.save();
+        
+        // Get list of user names to include in the added message
+        const addedUsers = await User.find({ _id: { $in: members } }).select('name');
+        const memberNames = addedUsers.map(user => user.name).join(', ');
+        
+        // Create "users added" message
+        const addedMessage = `${creator.name} added ${memberNames} to the group`;
+        
+        const addedNotification = new Message({
+            senderId: currentUserId,
+            recipientId: newGroupChat._id,
+            content: addedMessage,
+            conversationId: `group:${newGroupChat._id}`,
+            isGroupMessage: true,
+            isSystemMessage: true,
+            timestamp: new Date(),
+            read: false
+        });
+        
+        await addedNotification.save();
+        
+        // Notify all users that they've been added to the group (via WebSocket)
+        // *** FIX: Use global.wss instead of req.app.get('wss') ***
+        if (global.wss) {
+            members.forEach(memberId => {
+                const message = {
+                    type: 'group-added',
+                    groupId: newGroupChat._id.toString(),
+                    groupName: name,
+                    addedBy: creator.name
+                };
+                
+                global.wss.clients.forEach(client => {
+                    if (client.userId === memberId.toString()) {
+                        client.send(JSON.stringify(message));
+                    }
+                });
+            });
+        }
+        
+        res.status(201).json(newGroupChat);
+        
+    } catch (error) {
+        console.error('Error creating group chat:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Add a new route to get group members
+router.get('/group-members/:groupId', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        const groupId = req.params.groupId;
+        
+        // Check if group exists
+        const group = await GroupChat.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+        
+        // Check if user is a member of the group
+        if (!group.members.includes(currentUserId)) {
+            return res.status(403).json({ message: 'You are not a member of this group' });
+        }
+        
+        // Get member details
+        const members = await User.find({
+            _id: { $in: group.members }
+        }).select('_id name profilePicture');
+        
+        // Mark the creator
+        const membersWithRole = members.map(member => {
+            const memberObj = member.toObject();
+            memberObj.isCreator = group.createdBy.equals(member._id);
+            return memberObj;
+        });
+        
+        res.json(membersWithRole);
+        
+    } catch (error) {
+        console.error('Error fetching group members:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

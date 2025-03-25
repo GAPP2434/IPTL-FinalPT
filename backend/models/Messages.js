@@ -30,6 +30,15 @@ const MessageSchema = new mongoose.Schema({
     conversationId: {
         type: String,
         required: true
+    },
+    // Add these fields for group messages
+    isGroupMessage: {
+        type: Boolean,
+        default: false
+    },
+    isSystemMessage: {
+        type: Boolean,
+        default: false
     }
 });
 
