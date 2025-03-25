@@ -5,14 +5,16 @@ export let cropper;
 export let editedImageDataUrl = null;
 export let editedVideoBlob = null;
 export let editedAudioBlob = null;
-export let originalImageFile = null; // Add this line
-export let originalVideoFile = null; // Add this line
+export let originalImageFile = null;
+export let originalVideoFile = null;
+export let loggedInUsername = ''; // Export this variable
 
 /*Modal For Uploading*/
 export function openUploadModal() {
     document.getElementById('uploadModal').style.display = 'block';
     clearPreview();
     clearInputs();
+    fetchLoggedInUser(); // Fetch the logged-in user's information
 }
 
 window.openUploadModal = openUploadModal;
@@ -42,12 +44,25 @@ function clearInputs() {
     document.getElementById('mediaInput').value = ''; // Clear the file input
     document.getElementById('storyTitle').value = ''; // Clear the title input
     document.getElementById('storyDescription').value = ''; // Clear the description input
-    document.getElementById('storyUsername').value = ''; // Clear the username input
     document.getElementById('audioInput').value = ''; // Clear the audio input
     document.getElementById('audioPreviewContainer').innerHTML = ''; // Clear the audio preview container
     document.getElementById('audioStartMinutes').value = ''; // Clear the audio start minutes input
     document.getElementById('audioStartSeconds').value = ''; // Clear the audio start seconds input
     editedAudioBlob = null;
+}
+
+function fetchLoggedInUser() {
+    fetch('/api/auth/user', {
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(user => {
+        loggedInUsername = user.name; // Store the logged-in user's name
+        console.log('Logged-in user:', loggedInUsername);
+    })
+    .catch(error => {
+        console.error('Error fetching logged-in user:', error);
+    });
 }
 
 window.addEventListener('click', (event) => {
@@ -61,7 +76,6 @@ window.addEventListener('click', (event) => {
 document.getElementById('postButton').addEventListener('click', async () => {
     const mediaInput = document.getElementById('mediaInput');
     const storyTitleInput = document.getElementById('storyTitle');
-    const storyUsernameInput = document.getElementById('storyUsername');
     const audioStartMinutes = parseInt(document.getElementById('audioStartMinutes').value) || 0;
     const audioStartSeconds = parseInt(document.getElementById('audioStartSeconds').value) || 0;
     const audioStartTime = audioStartMinutes * 60 + audioStartSeconds;
@@ -73,11 +87,6 @@ document.getElementById('postButton').addEventListener('click', async () => {
 
     if (!storyTitleInput.value.trim()) {
         alert('Please enter a story title.');
-        return;
-    }
-
-    if (!storyUsernameInput.value.trim()) {
-        alert('Please enter your username.');
         return;
     }
 
@@ -877,8 +886,4 @@ storyTitleInput.addEventListener('input', () => {
 
 storyDescriptionInput.addEventListener('input', () => {
     descriptionCounter.textContent = `${storyDescriptionInput.value.length}/250`;
-});
-
-storyUsernameInput.addEventListener('input', () => {
-    userCounter.textContent = `${storyUsernameInput.value.length}/15`;
 });
