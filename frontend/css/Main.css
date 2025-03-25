@@ -200,7 +200,8 @@ footer {
 
   .post-username {
     font-weight: bold;
-    text-shadow: -1px 0px 1px rgba(0, 0, 0, 0.2), 0px 1px 1px rgba(0, 0, 0, 0.2), 1px 0px 1px rgba(0, 0, 0, 0.2), 0px -1px 1px rgba(0, 0, 0, 0.2);
+    text-shadow: -1px 0px #000, 0px 1px #000, 1px 0px #000, 0px -1px #000;
+
   }
 
   .blog-post p {

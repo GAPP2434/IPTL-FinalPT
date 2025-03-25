@@ -804,34 +804,39 @@ function createPostElement(post) {
     // Format the timestamp
     const postDate = new Date(post.timestamp);
     const formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    
+
     // Get user data
     const userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
-    const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
-    const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
     
+    // Determine the color based on whether displayName exists
+    const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
+
+    // Get user avatar
+    const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
+
     // Create post HTML
     let postContent = `
-    <div class="post-header">
-        <span class="avatar" style="background-image: url(${userAvatar})"></span>
-        <div class="post-info">
-            <div class="post-username">${userName}</div>
-            <div class="timestamp">on ${formattedDate}</div>
+        <div class="post-header">
+            <span class="avatar" style="background-image: url(${userAvatar})"></span>
+            <div class="post-info">
+                <div class="username" style="color: ${usernameColor}">${userName}</div>
+                <div class="timestamp">on ${formattedDate}</div>
+            </div>
         </div>
-    </div>
     `;
-    
+
     if (post.content) {
         postContent += `<p>${post.content}</p>`;
     }
-    
+
     if (post.media) {
         postContent += `<img src="${post.media}" alt="Post image">`;
     }
-    
+
     postElement.innerHTML = postContent;
     return postElement;
 }
+
 
 // Get the floating post button and modal elements
 const floatingPostButton = document.getElementById('floatingPostButton');
