@@ -198,6 +198,11 @@ footer {
     font-weight: bold;
   }
 
+  .post-username {
+    font-weight: bold;
+    text-shadow: -1px 0px 1px rgba(0, 0, 0, 0.2), 0px 1px 1px rgba(0, 0, 0, 0.2), 1px 0px 1px rgba(0, 0, 0, 0.2), 0px -1px 1px rgba(0, 0, 0, 0.2);
+  }
+
   .blog-post p {
     font-size: 0.8em;
     margin-bottom: 10px;

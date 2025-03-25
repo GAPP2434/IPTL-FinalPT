@@ -700,13 +700,15 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         // Get username and avatar from the user data
         const avatarUrl = user.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
         const displayName = blogPostUsername || user.name;
+        const usernameColor = blogPostUsername ? '#e37f8a' : '#a7c957';
+
         
         // Inner HTML
         let postContent = `
         <div class="post-header">
             <span class="avatar" style="background-image: url(${avatarUrl})"></span>
             <div class="post-info">
-                <div class="username">${displayName}</div>
+                <div class="post-username" style="color: ${usernameColor}">${displayName}</div>
                 <div class="timestamp">on ${blogPostTimestamp}</div>
             </div>
         </div>
@@ -805,6 +807,7 @@ function createPostElement(post) {
     
     // Get user data
     const userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
+    const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
     const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
     
     // Create post HTML
@@ -812,7 +815,7 @@ function createPostElement(post) {
     <div class="post-header">
         <span class="avatar" style="background-image: url(${userAvatar})"></span>
         <div class="post-info">
-            <div class="username">${userName}</div>
+            <div class="post-username">${userName}</div>
             <div class="timestamp">on ${formattedDate}</div>
         </div>
     </div>
