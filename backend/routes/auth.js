@@ -209,13 +209,18 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // Get UID of Logged-in User
+// Get UID of Logged-in User
 router.get('/current-user-id', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json({ userId: req.user.id });
-  } else {
-    res.status(401).json({ message: 'You are not logged in' });
-  }
-});
+    console.log('Reached /current-user-id endpoint');
+    console.log('req.isAuthenticated():', req.isAuthenticated());
+    console.log('req.user:', req.user);
+    if (req.isAuthenticated()) {
+      res.set("Content-Type", "application/json");
+      res.json({ userId: req.user.id });
+    } else {
+      res.status(401).json({ message: 'You are not logged in' });
+    }
+  });
 
 // Reset password - process new password
 router.post('/reset-password', async (req, res) => {

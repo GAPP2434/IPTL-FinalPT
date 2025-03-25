@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to fetch user profile data
 function fetchUserProfile() {
-    fetch('/api/user/profile', {
+    fetch('/api/users/profile', {
         credentials: 'include' // Important for sending cookies
     })
     .then(response => {

@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Check if the user is authenticated
 function checkAuthentication() {
-    fetch('/api/auth/user', {
+    console.log('checkAuthentication function called');
+    //fetch('/api/auth/user', {
+    fetch('/api/auth/user?_=' + new Date().getTime(), {
         credentials: 'include' // Important! This sends cookies with the request
     })
     .then(response => {
