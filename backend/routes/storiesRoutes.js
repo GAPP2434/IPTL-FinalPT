@@ -23,7 +23,7 @@ const upload = multer({ storage: storage });
 // Get all stories
 router.get('/', async (req, res) => {
     try {
-        const stories = await Story.find();
+        const stories = await Story.find().sort({ uploadDate: -1 });
         res.json(stories);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -33,9 +33,9 @@ router.get('/', async (req, res) => {
 // Create a new story
 router.post('/', upload.single('media'), async (req, res) => {
     const story = new Story({
+        username: req.body.username,
         title: req.body.title,
         description: req.body.description,
-        username: req.body.username,
         mediaUrl: `/uploads/${req.file.filename}`,
         audioStartTime: req.body.audioStartTime
     });

@@ -28,37 +28,43 @@ window.addEventListener('message', (event) => {
 
 // Fetch and display stories
 export function fetchAndDisplayStories() {
-    fetch('/api/stories')
-        .then(response => response.json())
-        .then(stories => {
-            const storiesContainer = document.getElementById('storiesContainer');
-            storiesContainer.innerHTML = ''; // Clear existing stories
-            stories.forEach(story => {
-                storyElement.classList.add('story');
-                storyElement.innerHTML = `
-                    <div class="story-header">
-                        <span class="story-username">${story.username}</span>
-                        <span class="story-date">${new Date(story.uploadDate).toLocaleString()}</span>
-                    </div>
-                    <div class="story-content">
-                        <img src="${story.mediaUrl}" alt="Story Media">
-                        <p>${story.title}</p>
-                        <p>${story.description}</p>
-                    </div>
-                `;
-                storiesContainer.appendChild(storyElement);
-                storyQueue.push({
-                    ...story,
-                    type: story.mediaUrl.endsWith('.mp4') ? 'video' : 'image',
-                    src: story.mediaUrl,
-                    hasAudio: !!story.audioStartTime
-                });
+    fetch('/api/stories', {
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(stories => {
+        const storiesContainer = document.getElementById('storiesContainer');
+        const addStoryButton = document.getElementById('addButton'); // Get the Add Story button
+
+        storiesContainer.innerHTML = ''; // Clear existing stories
+        storiesContainer.appendChild(addStoryButton); // Re-add the Add Story button
+
+        stories.forEach((story, index) => {
+            const storyElement = document.createElement('div');
+            storyElement.classList.add('story');
+            storyElement.innerHTML = `
+                <div class="story-content">
+                    <img src="${story.mediaUrl}" alt="Story Media" style="width: 100%; height: auto;">
+                </div>
+            `;
+            storyElement.addEventListener('click', () => showStory(index)); // Add click event listener
+            storiesContainer.appendChild(storyElement);
+            storyQueue.push({
+                ...story,
+                type: story.mediaUrl.endsWith('.mp4') ? 'video' : 'image',
+                src: story.mediaUrl,
+                hasAudio: !!story.audioStartTime
             });
-        })
-        .catch(error => {
-            console.error('Error fetching stories:', error);
         });
+    })
+    .catch(error => {
+        console.error('Error fetching stories:', error);
+    });
 }
+
+// Call fetchAndDisplayStories on page load
+document.addEventListener('DOMContentLoaded', fetchAndDisplayStories);
+
 
 // Add Story Function
 export function addStories(audioStartTime) {
