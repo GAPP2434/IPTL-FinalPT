@@ -65,6 +65,14 @@ app.use(passport.session());
 wss.on('connection', (ws, req) => {  // Add 'req' parameter here
     console.log('Client connected');
     
+    if (ws.userId) {
+        // Send the list of currently online users to the new connection
+        ws.send(JSON.stringify({
+            type: 'online_users_list',
+            users: Array.from(onlineUsers)
+        }));
+    }
+
     // Extract user ID from session cookie
     const cookies = req.headers.cookie;
     if (cookies) {

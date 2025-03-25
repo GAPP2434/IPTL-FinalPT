@@ -670,9 +670,9 @@
     background: none;
     border: none;
     color: #555;
-    font-size: 18px;
+    font-size: 22px;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 8px 12px;
     border-radius: 5px;
     transition: background-color 0.2s;
 }
@@ -681,21 +681,26 @@
     background-color: rgba(0, 0, 0, 0.1);
 }
 
+.group-menu-button i {
+    display: inline-block;
+}
+
 .group-dropdown {
     display: none;
     position: absolute;
     right: 0;
-    top: 30px;
+    top: 38px;
     background-color: #fff;
     min-width: 150px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    border-radius: 5px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     z-index: 10;
+    border-radius: 5px;
+    overflow: hidden;
 }
 
 .group-dropdown a {
     color: #333;
-    padding: 10px 15px;
+    padding: 12px 16px;
     text-decoration: none;
     display: block;
     font-family: 'Markazi', serif;
@@ -799,4 +804,33 @@
 
 .message.received .group-sender-name {
     color: #444;
+}
+
+/* Group member online indicators */
+.group-member-name-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.member-status {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 3px;
+}
+
+.group-member-item .online-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.group-member-item .online-indicator.online {
+    background-color: #4CAF50;
+    box-shadow: 0 0 5px #4CAF50;
+}
+
+.group-member-item .online-indicator.offline {
+    background-color: #8a8a8a;
 }

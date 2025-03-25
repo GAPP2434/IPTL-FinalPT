@@ -292,10 +292,14 @@ router.post('/send', isAuthenticated, async (req, res) => {
             };
             
             if (isGroup) {
+                const sender = await User.findById(senderId).select('name profilePicture');
+                if (sender) {
+                    messageData.message.senderName = sender.name;
+                    messageData.message.senderAvatar = sender.profilePicture;
+                }
                 // For group chats, send to all group members except the sender
                 isGroupChat.members.forEach(memberId => {
                     const memberIdStr = memberId.toString();
-                    
                     // Don't send to the sender
                     if (memberIdStr !== senderId.toString()) {
                         global.wss.clients.forEach(client => {
@@ -483,35 +487,36 @@ router.post('/create-group', isAuthenticated, async (req, res) => {
 // Add a new route to get group members
 router.get('/group-members/:groupId', isAuthenticated, async (req, res) => {
     try {
-        const { groupId } = req.params;
         const currentUserId = req.user._id;
+        const groupId = req.params.groupId;
         
-        // Find the group
+        // Check if group exists
         const group = await GroupChat.findById(groupId);
         if (!group) {
             return res.status(404).json({ message: 'Group not found' });
         }
         
-        // Check if current user is a member
+        // Check if user is a member of the group
         if (!group.members.includes(currentUserId)) {
             return res.status(403).json({ message: 'You are not a member of this group' });
         }
         
-        // Get all members with their details
-        const members = await User.find({ _id: { $in: group.members } })
-            .select('_id name profilePicture');
+        // Get member details
+        const members = await User.find({
+            _id: { $in: group.members }
+        }).select('_id name profilePicture');
         
-        // Add isCreator flag to each member
-        const membersWithRoles = members.map(member => ({
-            _id: member._id,
-            name: member.name,
-            profilePicture: member.profilePicture,
-            isCreator: member._id.toString() === group.createdBy.toString()
-        }));
+        // Mark the creator
+        const membersWithRole = members.map(member => {
+            const memberObj = member.toObject();
+            memberObj.isCreator = group.createdBy.equals(member._id);
+            return memberObj;
+        });
         
-        res.json(membersWithRoles);
+        res.json(membersWithRole);
+        
     } catch (error) {
-        console.error('Error getting group members:', error);
+        console.error('Error fetching group members:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

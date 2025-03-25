@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Prevent multiple initializations
     if (window.wsInitialized) return;
     window.wsInitialized = true;
-    
+    window.onlineUsers = window.onlineUsers || [];
     let socket = null;
     
     function connectWebSocket() {
@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'group-added':
                         handleGroupAdded(data);
                         break;
+                    case 'online_users_list':
+                        handleOnlineUsersList(data);
+                        break;
                 }
             } catch (error) {
                 // Silent error handling
@@ -63,6 +66,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Add this function to handle the list of online users
+    function handleOnlineUsersList(data) {
+        console.log("Received list of online users:", data.users);
+        window.onlineUsers = data.users || [];
+        
+        // Update all individual user indicators
+        updateAllOnlineIndicators();
+        
+        // Update all group conversations
+        if (window.conversations) {
+            window.conversations.forEach(conversation => {
+                if (conversation.isGroup && conversation.members) {
+                    updateGroupOnlineStatus(conversation);
+                }
+            });
+        }
+    }
+
+    // Add a new function to update all group indicators
+    function updateAllGroupIndicators() {
+        if (window.conversations) {
+            window.conversations.forEach(conversation => {
+                if (conversation.isGroup && conversation.members) {
+                    updateGroupOnlineStatus(conversation);
+                }
+            });
+        }
+    }
+
+    // Add this function if it doesn't exist
+    function updateAllOnlineIndicators() {
+        // Update online indicators for all users
+        document.querySelectorAll('.online-indicator[data-user-id]').forEach(indicator => {
+            const userId = indicator.dataset.userId;
+            const isOnline = window.onlineUsers.includes(userId);
+            
+            // Update the class based on online status
+            indicator.classList.remove('online', 'offline');
+            indicator.classList.add(isOnline ? 'online' : 'offline');
+            
+            // Update text status if present
+            const statusElement = indicator.closest('.conversation-item')?.querySelector('.chat-status') ||
+                                indicator.closest('.chat-user-info')?.querySelector('.chat-status');
+            
+            if (statusElement) {
+                statusElement.textContent = isOnline ? 'Online' : 'Offline';
+            }
+        });
+    }
+
     // Connection opened
     function handleSocketOpen(event) {
         // Connection established - no need to log
@@ -142,31 +195,170 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add a new handler function for user status updates
     function handleUserStatusUpdate(data) {
-        const { userId, status } = data;
+        console.log("User status update received:", data);
         
-        // Update status indicators for this user
-        document.querySelectorAll(`.online-indicator[data-user-id="${userId}"]`).forEach(indicator => {
-            indicator.className = `online-indicator ${status === 'online' ? 'online' : 'offline'}`;
-        });
+        const userId = data.userId;
+        const isOnline = data.status === 'online';
         
-        // Update status text if in an active conversation with this user
-        if (window.currentRecipient === userId) {
-            const chatStatus = document.querySelector('.chat-status');
-            if (chatStatus) {
-                chatStatus.textContent = status === 'online' ? 'Online' : 'Offline';
+        // Update the global onlineUsers array
+        if (isOnline) {
+            if (!window.onlineUsers.includes(userId)) {
+                window.onlineUsers.push(userId);
             }
+        } else {
+            window.onlineUsers = window.onlineUsers.filter(id => id !== userId);
         }
         
-        // Update onlineUsers array in the messages page
-        if (window.onlineUsers) {
-            if (status === 'online' && !window.onlineUsers.includes(userId)) {
-                window.onlineUsers.push(userId);
-            } else if (status === 'offline') {
-                window.onlineUsers = window.onlineUsers.filter(id => id !== userId);
+        // Update individual user indicators
+        document.querySelectorAll(`.online-indicator[data-user-id="${userId}"]`).forEach(indicator => {
+            indicator.classList.remove('online', 'offline');
+            indicator.classList.add(isOnline ? 'online' : 'offline');
+            
+            // Update text status if present
+            const statusElement = indicator.closest('.conversation-item')?.querySelector('.chat-status') ||
+                              indicator.closest('.chat-user-info')?.querySelector('.chat-status');
+            
+            if (statusElement) {
+                statusElement.textContent = isOnline ? 'Online' : 'Offline';
             }
+        });
+        
+        // Update all group conversations that include this user
+        if (window.conversations) {
+            window.conversations.forEach(conversation => {
+                if (conversation.isGroup && conversation.members) {
+                    const memberIds = conversation.members.map(id => 
+                        typeof id === 'string' ? id : id.toString()
+                    );
+                    
+                    // Only update groups where this user is a member
+                    if (memberIds.includes(userId.toString())) {
+                        updateGroupOnlineStatus(conversation);
+                    }
+                }
+            });
         }
     }
     
+    function updateOnlineStatus(userId, isOnline) {
+        // Update individual user indicators
+        document.querySelectorAll(`.online-indicator[data-user-id="${userId}"]`).forEach(indicator => {
+            indicator.classList.remove('online', 'offline');
+            indicator.classList.add(isOnline ? 'online' : 'offline');
+            
+            // Update text status if present
+            const statusElement = indicator.closest('.conversation-item')?.querySelector('.chat-status') ||
+                              indicator.closest('.chat-user-info')?.querySelector('.chat-status');
+            
+            if (statusElement) {
+                statusElement.textContent = isOnline ? 'Online' : 'Offline';
+            }
+        });
+        
+        // Update all group conversations that contain this user
+        if (window.conversations) {
+            window.conversations.forEach(conversation => {
+                if (conversation.isGroup && conversation.members) {
+                    // Ensure we're working with string IDs for consistent comparison
+                    const memberIds = conversation.members.map(id => 
+                        typeof id === 'string' ? id : id.toString()
+                    );
+                    const userIdStr = typeof userId === 'string' ? userId : userId.toString();
+                    
+                    // Only process groups where this user is a member
+                    if (memberIds.includes(userIdStr)) {
+                        const onlineUserIds = window.onlineUsers.map(id => id.toString());
+                        
+                        // Check if any member of this group is online
+                        const hasOnlineMembers = memberIds.some(memberId => 
+                            onlineUserIds.includes(memberId)
+                        );
+                        
+                        // Update the group's indicator in the conversations list
+                        const groupIndicator = document.querySelector(
+                            `.online-indicator[data-user-id="group-${conversation.userId}"]`
+                        );
+                        
+                        if (groupIndicator) {
+                            groupIndicator.classList.remove('online', 'offline');
+                            groupIndicator.classList.add(hasOnlineMembers ? 'online' : 'offline');
+                        }
+                        
+                        // If this is the currently selected conversation, also update the header
+                        if (window.currentRecipient === conversation.userId) {
+                            const headerIndicator = document.querySelector('.chat-header-name-container .online-indicator');
+                            if (headerIndicator) {
+                                headerIndicator.classList.remove('online', 'offline');
+                                headerIndicator.classList.add(hasOnlineMembers ? 'online' : 'offline');
+                                
+                                const statusText = document.querySelector('.chat-status');
+                                if (statusText) {
+                                    statusText.textContent = hasOnlineMembers ? 'Online' : 'Offline';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function updateGroupOnlineStatus(conversation) {
+        if (!conversation || !conversation.isGroup || !conversation.members) {
+            return false;
+        }
+        
+        // Convert all IDs to strings for consistent comparison
+        const memberIds = conversation.members.map(id => 
+            typeof id === 'string' ? id : id.toString()
+        );
+        
+        // Get online users as strings
+        const onlineUserIds = window.onlineUsers.map(id => 
+            typeof id === 'string' ? id : id.toString()
+        );
+        
+        // Check if any members are in the online users list
+        const hasOnlineMembers = memberIds.some(memberId => 
+            onlineUserIds.includes(memberId)
+        );
+        
+        // Store the calculated status on the conversation object
+        conversation.hasOnlineMembers = hasOnlineMembers;
+        
+        // Update UI for this specific group
+        updateGroupIndicators(conversation, hasOnlineMembers);
+        
+        return hasOnlineMembers;
+    }
+
+    // Helper function to update all indicators for a specific group
+    function updateGroupIndicators(conversation, isOnline) {
+        // Update conversation list indicator
+        const groupIndicator = document.querySelector(
+            `.online-indicator[data-user-id="group-${conversation.userId}"]`
+        );
+        
+        if (groupIndicator) {
+            groupIndicator.classList.remove('online', 'offline');
+            groupIndicator.classList.add(isOnline ? 'online' : 'offline');
+        }
+        
+        // Update the header indicator if this is the active conversation
+        if (window.currentRecipient === conversation.userId) {
+            const headerIndicator = document.querySelector('.chat-header-name-container .online-indicator');
+            if (headerIndicator) {
+                headerIndicator.classList.remove('online', 'offline');
+                headerIndicator.classList.add(isOnline ? 'online' : 'offline');
+                
+                const statusText = document.querySelector('.chat-status');
+                if (statusText) {
+                    statusText.textContent = isOnline ? 'Online' : 'Offline';
+                }
+            }
+        }
+    }
+
     // Handle new messages (for messages.html)
     function handleNewMessage(message) {
         console.log("Handling new message:", message);
@@ -192,34 +384,46 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.currentRecipient === relevantId) {
                 const messagesContainer = document.getElementById('messagesContainer');
                 if (messagesContainer) {
-                    if (typeof window.appendMessage === 'function') {
-                        window.appendMessage(message.content, false, message.timestamp);
+                    if (isGroupMessage) {
+                        // Use appendGroupMessage for group messages
+                        if (typeof window.appendGroupMessage === 'function') {
+                            window.appendGroupMessage(
+                                message.content,
+                                false, // Always false for received messages
+                                message.senderName || 'Unknown User',
+                                message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
+                                message.timestamp
+                            );
+                        } else {
+                            // Fallback if appendGroupMessage not available
+                            const messageElement = document.createElement('div');
+                            messageElement.classList.add('message', 'received');
+                            
+                            // Format timestamp
+                            const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            });
+                            
+                            messageElement.innerHTML = `
+                                <div class="group-message-header">
+                                    <img src="${message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
+                                    <span class="group-sender-name">${message.senderName || 'Unknown User'}</span>
+                                </div>
+                                <div class="message-content">${message.content}</div>
+                                <div class="message-time">${formattedTime}</div>
+                            `;
+                            
+                            messagesContainer.appendChild(messageElement);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
                     } else {
-                        // Fallback if appendMessage not available
-                        const messageElement = document.createElement('div');
-                        messageElement.classList.add('message', 'received');
-                        
-                        // Format timestamp
-                        const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit', 
-                            minute: '2-digit'
-                        });
-                        
-                        messageElement.innerHTML = `
-                            <div class="message-content">${message.content}</div>
-                            <div class="message-time">${formattedTime}</div>
-                        `;
-                        
-                        messagesContainer.appendChild(messageElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }
-                    
-                    // Mark message as read since conversation is open
-                    if (!isGroupMessage) {
-                        markMessageAsRead(relevantId);
-                    } else {
-                        // For group chats, we would need a separate endpoint to mark group messages as read
-                        // This would be implemented in a similar way to direct messages
+                        // Regular direct messages use appendMessage
+                        if (typeof window.appendMessage === 'function') {
+                            window.appendMessage(message.content, false, message.timestamp);
+                        } else {
+                            // Existing fallback code for direct messages
+                        }
                     }
                 }
             }
@@ -442,5 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Start the initial connection
     connectWebSocket();
+
+    maintainOnlineStatus();
 });
 

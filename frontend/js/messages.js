@@ -78,6 +78,76 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading online users:', error);
         });
     }
+
+    // Global function to check if a group has online members
+    function isGroupOnline(groupMembers) {
+        if (!groupMembers || !Array.isArray(groupMembers) || !window.onlineUsers) {
+            return false;
+        }
+        
+        // Convert all IDs to strings for comparison
+        const memberIds = groupMembers.map(id => typeof id === 'string' ? id : id.toString());
+        const onlineUserIds = window.onlineUsers.map(id => typeof id === 'string' ? id : id.toString());
+        
+        // Check if any member IDs are in the online users list
+        return memberIds.some(memberId => onlineUserIds.includes(memberId));
+    }
+
+    // Function to update all online status indicators
+    function updateAllOnlineStatus() {
+        // Update all conversation items in the list
+        conversations.forEach(conversation => {
+            let isOnline = false;
+            const selector = `.conversation-item[data-user-id="${conversation.userId}"] .online-indicator`;
+            const indicator = document.querySelector(selector);
+            
+            if (conversation.isGroup && conversation.members) {
+                // Calculate new status
+                isOnline = isGroupOnline(conversation.members);
+                
+                // Only update if status changed
+                if (conversation.hasOnlineMembers !== isOnline) {
+                    // Store the online status in the conversation object
+                    conversation.hasOnlineMembers = isOnline;
+                    
+                    // Update indicator if found
+                    if (indicator) {
+                        indicator.classList.remove('online', 'offline');
+                        indicator.classList.add(isOnline ? 'online' : 'offline');
+                    }
+                }
+            } else {
+                // Calculate new status
+                isOnline = window.onlineUsers && window.onlineUsers.includes(conversation.userId);
+                
+                // Only update if status changed
+                if (conversation.isOnline !== isOnline) {
+                    conversation.isOnline = isOnline;
+                    
+                    // Update indicator if found
+                    if (indicator) {
+                        indicator.classList.remove('online', 'offline');
+                        indicator.classList.add(isOnline ? 'online' : 'offline');
+                    }
+                }
+            }
+            
+            // Only update the active conversation header if this is selected and status changed
+            if (currentRecipient === conversation.userId) {
+                const headerIndicator = document.querySelector('.chat-header-name-container .online-indicator');
+                const statusText = document.querySelector('.chat-status');
+                
+                if (headerIndicator && headerIndicator.classList.contains(isOnline ? 'offline' : 'online')) {
+                    headerIndicator.classList.remove('online', 'offline');
+                    headerIndicator.classList.add(isOnline ? 'online' : 'offline');
+                    
+                    if (statusText) {
+                        statusText.textContent = isOnline ? 'Online' : 'Offline';
+                    }
+                }
+            }
+        });
+    }
     
     // Load conversations from server
     function loadConversations() {
@@ -124,6 +194,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         conversations.forEach(conversation => {
             const conversationItem = createConversationElement(conversation);
+            
+            // Add click event listener to each conversation item
+            conversationItem.addEventListener('click', () => {
+                selectConversation(conversation);
+            });
+            
             conversationsList.appendChild(conversationItem);
         });
         
@@ -145,8 +221,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         div.dataset.userId = conversation.userId;
         
-        // Check if user is online
-        const isOnline = window.onlineUsers && window.onlineUsers.includes(conversation.userId);
+        // Check if user is online - handle groups differently
+        let isOnline = false;
+        
+        if (conversation.isGroup && conversation.members) {
+            // First check if we have a previously calculated value
+            if (typeof conversation.hasOnlineMembers !== 'undefined') {
+                isOnline = conversation.hasOnlineMembers;
+            } else {
+                // Otherwise calculate it
+                const memberIds = conversation.members.map(memberId => 
+                    typeof memberId === 'string' ? memberId : memberId.toString()
+                );
+                const onlineUserIds = window.onlineUsers.map(id => id.toString());
+                isOnline = memberIds.some(memberId => onlineUserIds.includes(memberId));
+                
+                // Store the result for next time
+                conversation.hasOnlineMembers = isOnline;
+            }
+        } else {
+            // For regular users, check if the user is online
+            isOnline = window.onlineUsers && window.onlineUsers.includes(conversation.userId);
+        }
         
         div.innerHTML = `
             <img src="${conversation.profilePicture}" alt="${conversation.name}" class="conversation-avatar">
@@ -154,17 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="conversation-name-container">
                     <div class="conversation-name">${conversation.name}</div>
                     <span class="online-indicator ${isOnline ? 'online' : 'offline'}" 
-                          data-user-id="${conversation.userId}"></span>
+                          data-user-id="${conversation.isGroup ? 'group-' + conversation.userId : conversation.userId}"></span>
                 </div>
                 <div class="conversation-preview">${conversation.lastMessage || 'No messages yet'}</div>
             </div>
             ${conversation.unreadCount ? `<span class="unread-badge">${conversation.unreadCount}</span>` : ''}
         `;
         
-        div.addEventListener('click', () => {
-            selectConversation(conversation);
-        });
-        
+        // Rest of the function remains the same
         return div;
     }
     
@@ -178,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const conversationItem = document.querySelector(`.conversation-item[data-user-id="${conversation.userId}"]`);
         if (conversationItem) {
             conversationItem.classList.add('active');
-            conversationItem.classList.remove('unread'); // Remove unread highlight
+            conversationItem.classList.remove('unread');
             
             // Remove unread badge
             const badge = conversationItem.querySelector('.unread-badge');
@@ -196,33 +289,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set current recipient
         currentRecipient = conversation.userId;
         window.currentRecipient = currentRecipient;
-
-         // Check if this is a group chat
+        
+        // Update chat header elements
+        const chatUser = document.querySelector('.chat-user');
+        const userImg = document.getElementById('chatUserImg');
+        userImg.src = conversation.profilePicture;
+        
+        // Check if this is a group chat
         if (conversation.isGroup) {
-            // Show group menu and hide online status for groups
-            groupMenuContainer.style.display = 'block';
+            // For group chats, show group name
+            document.getElementById('chatUsername').textContent = conversation.name;
             
-            // For groups, don't show online status
-            const chatHeaderHTML = `
-                <div class="chat-user-info">
-                    <div class="chat-header-name-container">
-                        <h3>${conversation.name}</h3>
-                    </div>
-                </div>
-            `;
-            
-            // Replace the chat header
-            const chatUser = document.querySelector('.chat-user');
-            const userImage = chatUser.querySelector('img');
-            
-            chatUser.innerHTML = '';
-            chatUser.appendChild(userImage);
-            const chatUserInfo = document.createElement('div');
-            chatUserInfo.innerHTML = chatHeaderHTML;
-            chatUser.appendChild(chatUserInfo);
-            
-            // Add the group menu
-            chatUser.appendChild(groupMenuContainer);
+            // Show group menu
+            document.getElementById('groupMenuContainer').style.display = 'block';
             
             // Store group data for later use
             currentGroup = {
@@ -230,49 +309,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: conversation.name,
                 members: conversation.members || []
             };
+            
+            // Check if any member of the group is online - use the stored value instead of recalculating
+            const hasOnlineMembers = conversation.hasOnlineMembers || false;
+            
+            // Update ONLY this conversation's header indicator, not all indicators
+            const statusIndicator = document.querySelector('.chat-header-name-container .online-indicator');
+            if (statusIndicator) {
+                statusIndicator.style.display = 'inline-block'; // Show the indicator
+                statusIndicator.className = `online-indicator ${hasOnlineMembers ? 'online' : 'offline'}`;
+                statusIndicator.dataset.userId = 'group-' + conversation.userId; // Add 'group-' prefix to avoid conflicts
+            }
+            
+            const chatStatus = document.querySelector('.chat-status');
+            if (chatStatus) {
+                chatStatus.style.display = 'block';
+                chatStatus.textContent = hasOnlineMembers ? 'Online' : 'Offline';
+            }
         } else {
+            // For regular users - similar change using stored value
             // For regular users, show online status and hide group menu
-            groupMenuContainer.style.display = 'none';
+            document.getElementById('groupMenuContainer').style.display = 'none';
             
-            // Check if user is online
-            const isOnline = onlineUsers.includes(conversation.userId);
+            // Check if user is online - use includes with toString() for consistency
+            const isOnline = onlineUsers.includes(conversation.userId.toString());
             
-            // Existing code for regular user chats...
+            // Update username and online status
+            document.getElementById('chatUsername').textContent = conversation.name;
+            const statusIndicator = document.querySelector('.chat-header-name-container .online-indicator');
+            if (statusIndicator) {
+                statusIndicator.style.display = 'inline-block';
+                statusIndicator.className = `online-indicator ${isOnline ? 'online' : 'offline'}`;
+                statusIndicator.dataset.userId = conversation.userId;
+            }
+            
+            const chatStatus = document.querySelector('.chat-status');
+            if (chatStatus) {
+                chatStatus.style.display = 'block';
+                chatStatus.textContent = isOnline ? 'Online' : 'Offline';
+            }
         }
         
-        // Check if user is online
-        const isOnline = onlineUsers.includes(conversation.userId);
-        
-        // Update chat header
-        chatUsername.textContent = conversation.name;
-        chatUserImg.src = conversation.profilePicture;
-        
-        // Update the chat header to include online status
-        const chatHeaderHTML = `
-            <div class="chat-user-info">
-                <div class="chat-header-name-container">
-                    <h3>${conversation.name}</h3>
-                    <span class="online-indicator ${isOnline ? 'online' : 'offline'}" 
-                        data-user-id="${conversation.userId}"></span>
-                </div>
-                <div class="chat-status">${isOnline ? 'Online' : 'Offline'}</div>
-            </div>
-        `;
-        
-        // Replace the h3 element with our new structure
-        const chatUser = document.querySelector('.chat-user');
-        const userImage = chatUser.querySelector('img'); // Use a different variable name here
-        
-        // Keep the image but replace the rest
-        chatUser.innerHTML = '';
-        chatUser.appendChild(userImage);
-        const chatUserInfo = document.createElement('div');
-        chatUserInfo.innerHTML = chatHeaderHTML;
-        chatUser.appendChild(chatUserInfo);
-        
         // Show chat area and hide empty state
-        emptyChat.style.display = 'none';
-        chatArea.style.display = 'flex';
+        document.getElementById('emptyChat').style.display = 'none';
+        document.getElementById('chatArea').style.display = 'flex';
         
         // Load messages for this conversation
         loadMessages(conversation.userId);
@@ -449,10 +529,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expose loadConversations to window for WebSocket updates
     window.renderConversations = renderConversations;
     window.appendMessage = appendMessage;
+    window.appendGroupMessage = appendGroupMessage;
     window.updateConversationWithNewMessage = updateConversationWithNewMessage;
     window.conversations = conversations;
     window.loadConversations = loadConversations;
     window.currentRecipient = null;
+    window.updateAllOnlineStatus = updateAllOnlineStatus; // Add this line
+    window.isGroupOnline = isGroupOnline; // Add this line
     
     // Update conversation with new message (local state)
     function updateConversationWithNewMessage(userId, text, isSent = true) {
@@ -983,11 +1066,19 @@ function validateGroupForm() {
             const isCreator = member.isCreator;
             const roleText = isCreator ? 'Group Creator' : 'Member';
             
+            // Check if member is online - use the global onlineUsers array
+            const isOnline = window.onlineUsers && window.onlineUsers.includes(member._id.toString());
+            
             memberItem.innerHTML = `
                 <img src="${member.profilePicture}" alt="${member.name}" class="group-member-avatar">
                 <div class="group-member-info">
-                    <div class="group-member-name">${member.name}</div>
+                    <div class="group-member-name-container">
+                        <div class="group-member-name">${member.name}</div>
+                        <span class="online-indicator ${isOnline ? 'online' : 'offline'}" 
+                              data-user-id="${member._id}"></span>
+                    </div>
                     <div class="group-member-role">${roleText}</div>
+                    <div class="member-status">${isOnline ? 'Online' : 'Offline'}</div>
                 </div>
             `;
             
