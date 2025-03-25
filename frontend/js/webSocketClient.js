@@ -392,6 +392,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 false, // Always false for received messages
                                 message.senderName || 'Unknown User',
                                 message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
+                                message.attachments || [], // Pass attachments
+                                message.attachmentTypes || [], // Pass attachment types
                                 message.timestamp
                             );
                         } else {
@@ -445,10 +447,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const conversationIndex = window.conversations.findIndex(c => 
             c.userId === senderId);
         
+            let previewText = message.content;
+            let hasAttachments = message.attachments && message.attachments.length > 0;
+            let attachmentType = hasAttachments && message.attachmentTypes && message.attachmentTypes[0];
+
+            if (hasAttachments) {
+                if (attachmentType === 'image') {
+                    previewText = message.content ? `📷 ${message.content}` : "📷 Sent a photo";
+                } else if (attachmentType === 'video') {
+                    previewText = message.content ? `🎥 ${message.content}` : "🎥 Sent a video";
+                } else {
+                    previewText = message.content ? `📎 ${message.content}` : "📎 Sent an attachment";
+                }
+        } else if (!previewText) {
+            previewText = ""; // Fallback for empty messages
+        }
+
         if (conversationIndex >= 0) {
-            // Update existing conversation's last message text in the conversations array
-            window.conversations[conversationIndex].lastMessage = message.content;
-            
+             // Update existing conversation
+            window.conversations[conversationIndex].lastMessage = previewText;
+            // Save attachment info for persistence
+            window.conversations[conversationIndex].hasAttachments = hasAttachments;
+            window.conversations[conversationIndex].lastAttachmentType = attachmentType;
             // Only increment unread count if we're not viewing this conversation
             if (window.currentRecipient !== senderId) {
                 window.conversations[conversationIndex].unreadCount = 
@@ -498,6 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.renderConversations();
                 }
             }
+        localStorage.setItem('conversations', JSON.stringify(window.conversations));
         } else {
             // If conversation doesn't exist yet, fetch user info and create it
             fetchUserAndCreateConversation(senderId, message.content);
@@ -646,7 +667,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Start the initial connection
     connectWebSocket();
-
-    maintainOnlineStatus();
 });
 

@@ -463,9 +463,167 @@
 
 .message-input-container {
     display: flex;
+    align-items: center;
     padding: 15px;
     border-top: 1px solid #ccc;
     background-color: rgba(255, 255, 255, 0.3);
+    position: relative;
+}
+
+.attachment-buttons {
+    display: flex;
+    margin-right: 10px;
+}
+
+.attachment-button {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 18px;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.attachment-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #000;
+}
+
+.attachments-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 15px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-top: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none; /* Hidden by default */
+}
+
+.attachment-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.attachment-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.attachment-item .file-icon {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #666;
+    background-color: #e9e9e9;
+}
+
+.attachment-item .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 2px 5px;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.remove-attachment {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.remove-attachment:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Media in messages */
+.message .message-media {
+    margin-bottom: 5px;
+    max-width: 200px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.message .message-media img {
+    width: 100%;
+    display: block;
+}
+
+.message .message-media.video-container {
+    max-width: 240px; /* Slightly larger for videos */
+    width: 100%;
+}
+
+.message .message-media video {
+    width: 100%;
+    max-height: 320px;
+    border-radius: 8px;
+    background-color: #000;
+    display: block;
+}
+
+/* Ensure video controls are usable on small screens */
+.message .message-media video::-webkit-media-controls {
+    display: flex;
+    flex-direction: column;
+}
+
+.message .message-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+.message .message-file .file-icon {
+    font-size: 20px;
+    color: #666;
+}
+
+.message .message-file .file-name {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 
 /* Message time */

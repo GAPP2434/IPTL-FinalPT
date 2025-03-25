@@ -5,6 +5,35 @@ const GroupChat = require('../models/GroupChat');
 const User = require('../models/Users');
 const mongoose = require('mongoose');
 const WebSocket = require('ws');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../../frontend/uploads/messages');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure storage
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, uploadsDir);
+    },
+    filename: function(req, file, cb) {
+        // Create a safe filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, uniqueSuffix + ext);
+    }
+});
+
+const upload = multer({ storage: storage });
+
+const messageUpload = multer({ 
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+}).array('attachments', 5);
 
 // Middleware to check if user is authenticated
 function isAuthenticated(req, res, next) {
@@ -12,6 +41,22 @@ function isAuthenticated(req, res, next) {
         return next();
     }
     res.status(401).json({ message: 'Not authenticated' });
+}
+
+function formatLastMessageWithAttachments(content, attachments, attachmentTypes) {
+    if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
+        return content || '';
+    }
+    
+    const attachmentType = attachmentTypes && attachmentTypes[0];
+    
+    if (attachmentType === 'image') {
+        return content ? `📷 ${content}` : "📷 Sent a photo";
+    } else if (attachmentType === 'video') {
+        return content ? `🎥 ${content}` : "🎥 Sent a video";
+    } else {
+        return content ? `📎 ${content}` : "📎 Sent an attachment";
+    }
 }
 
 // Get all conversations for the current user
@@ -40,6 +85,8 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     senderId: { $first: "$senderId" },
                     recipientId: { $first: "$recipientId" },
                     isGroupMessage: { $first: "$isGroupMessage" },
+                    lastMessageAttachments: { $first: "$attachments" },        // Add this line
+                    lastMessageAttachmentTypes: { $first: "$attachmentTypes" }, // Add this line
                     unreadCount: {
                         $sum: {
                             $cond: [
@@ -77,11 +124,13 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     userId: groupId,
                     name: group.name,
                     profilePicture: 'avatars/group-default.png',
-                    lastMessage: msg.lastMessage,
+                    lastMessage: formatLastMessageWithAttachments(msg.lastMessage, msg.lastMessageAttachments, msg.lastMessageAttachmentTypes),
                     timestamp: msg.timestamp,
                     unreadCount: msg.unreadCount,
                     isGroup: true,
-                    members: group.members
+                    members: group.members,
+                    hasAttachments: msg.lastMessageAttachments && msg.lastMessageAttachments.length > 0,
+                    lastAttachmentType: msg.lastMessageAttachmentTypes && msg.lastMessageAttachmentTypes[0]
                 };
             } else {
                 // Regular user-to-user conversation
@@ -98,10 +147,12 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
                     userId: otherUserId,
                     name: otherUser ? otherUser.name : 'Unknown User',
                     profilePicture: otherUser ? otherUser.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
-                    lastMessage: msg.lastMessage,
+                    lastMessage: formatLastMessageWithAttachments(msg.lastMessage, msg.lastMessageAttachments, msg.lastMessageAttachmentTypes),
                     timestamp: msg.timestamp,
                     unreadCount: msg.unreadCount,
-                    isGroup: false
+                    isGroup: false,
+                    hasAttachments: msg.lastMessageAttachments && msg.lastMessageAttachments.length > 0,
+                    lastAttachmentType: msg.lastMessageAttachmentTypes && msg.lastMessageAttachmentTypes[0]
                 };
             }
         }));
@@ -228,103 +279,124 @@ router.get('/conversation/:userId', isAuthenticated, async (req, res) => {
 });
 
 // Send a new message
-router.post('/send', isAuthenticated, async (req, res) => {
-    try {
-        const { recipientId, content } = req.body;
-        
-        if (!recipientId || !content) {
-            return res.status(400).json({ message: 'Recipient ID and content are required' });
+router.post('/send', isAuthenticated, (req, res) => {
+    messageUpload(req, res, async function(err) {
+        if (err) {
+            console.error('Multer error:', err);
+            return res.status(400).json({ message: 'File upload error: ' + err.message });
         }
-        
-        const senderId = req.user._id;
-        
-        // Check if this is a group chat
-        const isGroupChat = await GroupChat.findById(recipientId);
-        const isGroup = !!isGroupChat;
-        
-        if (!isGroup) {
-            // Regular user-to-user message
-            // Check if recipient exists
-            const recipient = await User.findById(recipientId);
-            if (!recipient) {
-                return res.status(404).json({ message: 'Recipient not found' });
-            }
-        } else {
-            // Group chat - check if sender is a member
-            if (!isGroupChat.members.includes(senderId)) {
-                return res.status(403).json({ message: 'You are not a member of this group' });
-            }
-        }
-        
-        // Generate conversation ID
-        const conversationId = isGroup ? 
-            `group:${recipientId}` : 
-            Message.generateConversationId(senderId.toString(), recipientId);
-        
-        // Create new message
-        const newMessage = new Message({
-            senderId,
-            recipientId,
-            content,
-            conversationId,
-            timestamp: new Date(),
-            read: false,
-            isGroupMessage: isGroup
-        });
-        
-        await newMessage.save();
-        
-        // Broadcast using WebSocket
-        if (global.wss) {
-            // Create the message data to send
-            const messageData = {
-                type: 'new_message',
-                message: {
-                    _id: newMessage._id,
-                    senderId: senderId.toString(),
-                    recipientId: recipientId.toString(),
-                    content: content,
-                    timestamp: newMessage.timestamp,
-                    conversationId: conversationId,
-                    read: false,
-                    isGroupMessage: isGroup
-                }
-            };
+
+        try {
+            const { recipientId, content } = req.body;
             
-            if (isGroup) {
-                const sender = await User.findById(senderId).select('name profilePicture');
-                if (sender) {
-                    messageData.message.senderName = sender.name;
-                    messageData.message.senderAvatar = sender.profilePicture;
-                }
-                // For group chats, send to all group members except the sender
-                isGroupChat.members.forEach(memberId => {
-                    const memberIdStr = memberId.toString();
-                    // Don't send to the sender
-                    if (memberIdStr !== senderId.toString()) {
-                        global.wss.clients.forEach(client => {
-                            if (client.userId === memberIdStr && client.readyState === WebSocket.OPEN) {
-                                client.send(JSON.stringify(messageData));
-                            }
-                        });
-                    }
-                });
-            } else {
-                // For direct messages, just send to the recipient
-                global.wss.clients.forEach(client => {
-                    if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify(messageData));
-                    }
-                });
+            if (!recipientId) {
+                return res.status(400).json({ message: 'Recipient ID is required' });
             }
+            
+            const senderId = req.user._id;
+
+            // Handle file uploads
+            const attachments = req.files || [];
+            const attachmentUrls = attachments.map(file => '/uploads/messages/' + file.filename);
+            const attachmentTypes = attachments.map(file => 
+                file.mimetype.startsWith('image/') ? 'image' :
+                file.mimetype.startsWith('video/') ? 'video' : 'file'
+            );
+            
+            // Check if this is a group chat
+            const isGroupChat = await GroupChat.findById(recipientId);
+            const isGroup = !!isGroupChat;
+            
+            if (!isGroup) {
+                // Regular user-to-user message
+                // Check if recipient exists
+                const recipient = await User.findById(recipientId);
+                if (!recipient) {
+                    return res.status(404).json({ message: 'Recipient not found' });
+                }
+            } else {
+                // Group chat - check if sender is a member
+                if (!isGroupChat.members.includes(senderId)) {
+                    return res.status(403).json({ message: 'You are not a member of this group' });
+                }
+            }
+            
+            // Generate conversation ID
+            const conversationId = isGroup ? 
+                `group:${recipientId}` : 
+                Message.generateConversationId(senderId.toString(), recipientId);
+            
+            // Create new message
+            const newMessage = new Message({
+                senderId,
+                recipientId,
+                content: content || '',
+                conversationId,
+                timestamp: new Date(),
+                read: false,
+                isGroupMessage: isGroup,
+                attachments: attachmentUrls,
+                attachmentTypes: attachmentTypes
+            });
+            
+            await newMessage.save();
+            
+            // Broadcast using WebSocket
+            if (global.wss) {
+                // Create the message data to send - include attachments
+                const messageData = {
+                    type: 'new_message',
+                    message: {
+                        _id: newMessage._id,
+                        senderId: senderId.toString(),
+                        recipientId: recipientId.toString(),
+                        content: content || '',
+                        timestamp: newMessage.timestamp,
+                        conversationId: conversationId,
+                        read: false,
+                        isGroupMessage: isGroup,
+                        attachments: attachmentUrls,
+                        attachmentTypes: attachmentTypes
+                    }
+                };
+                
+                // For group messages, add sender information
+                if (isGroup) {
+                    const sender = await User.findById(senderId).select('name profilePicture');
+                    if (sender) {
+                        messageData.message.senderName = sender.name;
+                        messageData.message.senderAvatar = sender.profilePicture;
+                    }
+                    
+                    // For group chats, send to all group members except the sender
+                    isGroupChat.members.forEach(memberId => {
+                        const memberIdStr = memberId.toString();
+                        // Don't send to the sender
+                        if (memberIdStr !== senderId.toString()) {
+                            global.wss.clients.forEach(client => {
+                                if (client.userId === memberIdStr && client.readyState === WebSocket.OPEN) {
+                                    client.send(JSON.stringify(messageData));
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    // For direct messages, just send to the recipient
+                    global.wss.clients.forEach(client => {
+                        if (client.userId === recipientId.toString() && client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify(messageData));
+                        }
+                    });
+                }
+            }
+            
+            res.status(201).json(newMessage);
+            
+        } catch (error) {
+            console.error('Error sending message:', error);
+            res.status(500).json({ message: 'Server error' });
         }
-        
-        res.status(201).json(newMessage);
-        
-    } catch (error) {
-        console.error('Error sending message:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    });
 });
 
 // Search users

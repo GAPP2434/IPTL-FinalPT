@@ -17,7 +17,11 @@ const MessageSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: true
+        required: function() {
+            // Content is required ONLY if there are no attachments
+            return !(this.attachments && this.attachments.length > 0);
+        },
+        default: ''
     },
     timestamp: {
         type: Date,
@@ -39,6 +43,14 @@ const MessageSchema = new mongoose.Schema({
     isSystemMessage: {
         type: Boolean,
         default: false
+    },
+    attachments: {
+        type: [String],
+        default: []
+    },
+    attachmentTypes: {
+        type: [String],
+        default: []
     }
 });
 
