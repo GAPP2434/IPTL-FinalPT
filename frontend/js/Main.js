@@ -1,288 +1,287 @@
-import {initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
-import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal.js';
+import { initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
+import { editedImageDataUrl, editedVideoBlob, editedAudioBlob, loggedInUsername } from './uploadModal.js';
 
-//Variables
-    export const storiesContainer = document.getElementById('storiesContainer');
-    export const storyViewer = document.getElementById('storyViewer');
-    export const storyViewerContent = document.getElementById('storyViewerContent');
-    export const storyViewerTitle = document.getElementById('storyViewerTitle');
-    export const progressBar = document.getElementById('progressBar');
-    export let storyQueue = [];
-    export let currentStoryIndex = 0;
-    export let progressTimeout;
-    export let reactionCounts = {};
-    export let comments = {};
-    export let isPaused = false;
-    export let remainingTime = 0;
-    export let startTime = 0;
-    export let elapsedTime = 0;
-    export let audioElement = null;
+// Variables
+export const storiesContainer = document.getElementById('storiesContainer');
+export const storyViewer = document.getElementById('storyViewer');
+export const storyViewerContent = document.getElementById('storyViewerContent');
+export const storyViewerTitle = document.getElementById('storyViewerTitle');
+export const progressBar = document.getElementById('progressBar');
+export let storyQueue = [];
+export let currentStoryIndex = 0;
+export let progressTimeout;
+export let reactionCounts = {};
+export let comments = {};
+export let isPaused = false;
+export let remainingTime = 0;
+export let startTime = 0;
+export let elapsedTime = 0;
+export let audioElement = null;
 
-    window.addEventListener('message', (event) => {
-        if (event.origin !== window.location.origin) return;
-        if (event.data && event.data.type === 'oauthSuccess' && event.data.token) {
-            localStorage.setItem('token', event.data.token);
-            window.location.replace('index.html');
-        }
-    });
-    
-    //Add Story Function
-    export function addStories(audioStartTime) {
-        console.log('addStories function triggered');
-        const mediaInput = document.getElementById('mediaInput');
-        const storyTitleInput = document.getElementById('storyTitle');
-        const storyDescriptionInput = document.getElementById('storyDescription');
-        const storyUsernameInput = document.getElementById('storyUsername');
-        const audioInput = document.getElementById('audioInput');
-        const storiesContainer = document.getElementById('storiesContainer');
-        const files = Array.from(mediaInput.files);
-        const storyTitle = storyTitleInput.value.trim();
-        const storyDescription = storyDescriptionInput.value.trim();
-        const storyUsername = storyUsernameInput.value.trim();
-        const uploadDate = new Date().toLocaleString();
-    
-        if (files.length === 0) {
-            alert('Please select at least one image or video.');
-            return;
-        }
-    
-        files.forEach((file, index) => {
-            const formData = new FormData();
-            formData.append('title', storyTitle);
-            formData.append('description', storyDescription);
-            formData.append('username', storyUsername);
-            formData.append('media', file);
-            formData.append('audioStartTime', audioStartTime);
-    
-            fetch('/api/stories', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Story added:', data);
-                // Update the DOM with the new story
-                const storyElement = document.createElement('div');
+window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data && event.data.type === 'oauthSuccess' && event.data.token) {
+        localStorage.setItem('token', event.data.token);
+        window.location.replace('index.html');
+    }
+});
+
+// Fetch and display stories
+export function fetchAndDisplayStories() {
+    fetch('/api/stories')
+        .then(response => response.json())
+        .then(stories => {
+            const storiesContainer = document.getElementById('storiesContainer');
+            storiesContainer.innerHTML = ''; // Clear existing stories
+            stories.forEach(story => {
                 storyElement.classList.add('story');
                 storyElement.innerHTML = `
                     <div class="story-header">
-                        <span class="story-username">${data.username}</span>
-                        <span class="story-date">${new Date(data.uploadDate).toLocaleString()}</span>
+                        <span class="story-username">${story.username}</span>
+                        <span class="story-date">${new Date(story.uploadDate).toLocaleString()}</span>
                     </div>
                     <div class="story-content">
-                        <img src="${data.mediaUrl}" alt="Story Media">
-                        <p>${data.title}</p>
-                        <p>${data.description}</p>
+                        <img src="${story.mediaUrl}" alt="Story Media">
+                        <p>${story.title}</p>
+                        <p>${story.description}</p>
                     </div>
                 `;
                 storiesContainer.appendChild(storyElement);
-            })
-            .catch(error => {
-                console.error('Error adding story:', error);
-            });
-        });
-    }
-    
-    export function preloadAudio() {
-        console.log('Preloading audio for stories...');
-        storyQueue.forEach((story, index) => {
-            if (story.hasAudio) {
-                console.log(`Preloading audio for story ${index}: ${story.audioUrl}`);
-                const audio = new Audio(story.audioUrl);
-                audio.id = `audio-${index}`;
-                audio.volume = 0.5;
-                audio.preload = 'auto';
-                audio.src = story.audioUrl; // Ensure the audio source is set
-                document.body.appendChild(audio);
-            }
-        });
-    }
-      
-    export function showStory(index) {
-        const footer = document.querySelector('.footer');
-        const storyViewerTitle = document.getElementById('storyViewerTitle');
-        const storyViewerDescription = document.getElementById('storyViewerDescription');
-        const storyViewerUsername = document.getElementById('storyViewerUsername');
-        const volumeSlider = document.getElementById('volumeSlider');
-    
-        if (index < 0 || index >= storyQueue.length) {
-            storyViewer.classList.remove('active');
-            footer.classList.remove('hidden');
-            clearTimeout(progressTimeout);
-            if (audioElement) {
-                audioElement.pause();
-                audioElement.currentTime = 0;
-                audioElement.src = ''; // Clear the audio source
-                audioElement = null;
-            }
-            volumeSlider.style.display = 'none'; // Hide the volume slider
-            return;
-        }
-    
-        currentStoryIndex = index;
-        const story = storyQueue[index];
-        console.log(`Showing story ${index}:`, story);
-        storyViewerContent.innerHTML = '';
-    
-        storyViewerTitle.textContent = story.title;
-        storyViewerDescription.textContent = story.description;
-        storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
-    
-        isPaused = false;
-        remainingTime = 0;
-        startTime = 0;
-        elapsedTime = 0;
-    
-        storyViewerContent.addEventListener('click', togglePauseStory);
-    
-        if (story.type === 'image') {
-            const img = document.createElement('img');
-            img.src = story.src;
-            storyViewerContent.appendChild(img);
-    
-            img.onload = () => {
-                clearTimeout(progressTimeout);
-                remainingTime = 5000;
-                startTime = Date.now();
-                updateProgressBar(remainingTime, () => {
-                    showStory(index + 1);
+                storyQueue.push({
+                    ...story,
+                    type: story.mediaUrl.endsWith('.mp4') ? 'video' : 'image',
+                    src: story.mediaUrl,
+                    hasAudio: !!story.audioStartTime
                 });
-            };
-        } else if (story.type === 'video') {
-            const video = document.createElement('video');
-            video.src = story.src;
-            video.autoplay = true;
-            video.muted = story.hasAudio; // Mute the video if it has integrated audio
-            storyViewerContent.appendChild(video);
-            console.log(`Video element created with src: ${story.src}, muted: ${video.muted}`);
-    
-            video.onloadedmetadata = () => {
-                clearTimeout(progressTimeout);
-                remainingTime = Math.min(video.duration, 15) * 1000;
-                startTime = Date.now();
-                updateProgressBar(remainingTime, () => {
-                    showStory(index + 1);
-                });
-            };
-    
-            video.ontimeupdate = () => {
-                if (video.currentTime >= 15) {
-                    video.pause();
-                    if (storyViewerContent.contains(video)) {
-                        storyViewerContent.removeChild(video);
-                    }
-                    showStory(index + 1);
-                }
-            };
-    
-            volumeSlider.value = 0.5; // Reset to middle position
-            volumeSlider.style.display = 'block'; // Ensure the volume slider is visible
-            volumeSlider.style.transform = 'rotate(270deg)'; // Rotate the slider
-            updateVolumeSliderBackground(volumeSlider);
-    
-            volumeSlider.addEventListener('input', () => {
-                video.volume = volumeSlider.value;
-                updateVolumeSliderBackground(volumeSlider);
             });
+        })
+        .catch(error => {
+            console.error('Error fetching stories:', error);
+        });
+}
+
+// Add Story Function
+export function addStories(audioStartTime) {
+    console.log('addStories function triggered');
+    const mediaInput = document.getElementById('mediaInput');
+    const storyTitleInput = document.getElementById('storyTitle');
+    const storyDescriptionInput = document.getElementById('storyDescription');
+    const audioInput = document.getElementById('audioInput');
+    const files = Array.from(mediaInput.files);
+    const storyTitle = storyTitleInput.value.trim();
+    const storyDescription = storyDescriptionInput.value.trim();
+    const uploadDate = new Date().toLocaleString();
+
+    if (files.length === 0) {
+        alert('Please select at least one image or video.');
+        return;
+    }
+
+    files.forEach((file, index) => {
+        const formData = new FormData();
+        formData.append('title', storyTitle);
+        formData.append('description', storyDescription);
+        formData.append('username', loggedInUsername); // Use loggedInUsername instead of storyUsernameInput
+        formData.append('media', file);
+        formData.append('audioStartTime', audioStartTime);
+
+        fetch('/api/stories', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Story added:', data);
+            // Update the DOM with the new story
+            const storyElement = document.createElement('div');
+            storyElement.classList.add('story');
+            storyElement.innerHTML = `
+                <div class="story-header">
+                    <span class="story-username">${data.username}</span>
+                    <span class="story-date">${new Date(data.uploadDate).toLocaleString()}</span>
+                </div>
+                <div class="story-content">
+                    <img src="${data.mediaUrl}" alt="Story Media">
+                    <p>${data.title}</p>
+                    <p>${data.description}</p>
+                </div>
+            `;
+            storiesContainer.appendChild(storyElement);
+            storyQueue.push({
+                ...data,
+                type: data.mediaUrl.endsWith('.mp4') ? 'video' : 'image',
+                src: data.mediaUrl,
+                hasAudio: !!data.audioStartTime
+            });
+        })
+        .catch(error => {
+            console.error('Error adding story:', error);
+        });
+    });
+}
+
+export function preloadAudio() {
+    console.log('Preloading audio for stories...');
+    storyQueue.forEach((story, index) => {
+        if (story.hasAudio) {
+            console.log(`Preloading audio for story ${index}: ${story.audioUrl}`);
+            const audio = new Audio(story.audioUrl);
+            audio.id = `audio-${index}`;
+            audio.volume = 0.5;
+            audio.preload = 'auto';
+            audio.src = story.audioUrl; // Ensure the audio source is set
+            document.body.appendChild(audio);
         }
-    
+    });
+}
+
+export function showStory(index) {
+    const footer = document.querySelector('.footer');
+    const storyViewerTitle = document.getElementById('storyViewerTitle');
+    const storyViewerDescription = document.getElementById('storyViewerDescription');
+    const storyViewerUsername = document.getElementById('storyViewerUsername');
+    const volumeSlider = document.getElementById('volumeSlider');
+
+    if (index < 0 || index >= storyQueue.length) {
+        storyViewer.classList.remove('active');
+        footer.classList.remove('hidden');
+        clearTimeout(progressTimeout);
         if (audioElement) {
-            console.log('Pausing and resetting previous audio element');
             audioElement.pause();
             audioElement.currentTime = 0;
             audioElement.src = ''; // Clear the audio source
-            audioElement = null; // Ensure the audio element is reset
+            audioElement = null;
         }
-    
-        if (story.hasAudio) {
-            console.log('Loading audio for the story:', story.audioUrl);
-            audioElement = new Audio(story.audioUrl);
-            audioElement.id = story.audioId;
-            audioElement.volume = 0.5;
-            volumeSlider.style.display = 'block';
-            audioElement.preload = 'auto';
-            audioElement.currentTime = story.audioStartTime; // Set the start time
-            audioElement.play().then(() => {
-                console.log('Audio started playing');
-            }).catch(error => {
-                console.error('Error playing audio:', error);
-            });
-    
-            volumeSlider.value = 0.5; // Reset to middle position
-            updateVolumeSliderBackground(volumeSlider);
-    
-            volumeSlider.addEventListener('input', () => {
-                audioElement.volume = volumeSlider.value;
-                updateVolumeSliderBackground(volumeSlider);
-            });
-        } else if (story.hasOriginalSound) {
-            console.log('Story has original sound');
-            // No need to do anything, the video will play its original sound
-        } else {
-            console.log('No audio for this story');
-            // No audio for this story
-            volumeSlider.style.display = 'none'; // Hide the volume slider
-        }
-    
-        initializeReactionCounts(currentStoryIndex);
-        updateReactionCounts(currentStoryIndex);
-        initializeComments(currentStoryIndex);
-        updateComments(currentStoryIndex);
-    
-        storyViewer.classList.add('active');
-        footer.classList.add('hidden');
-        updateNavButtons();
-        updateStoryIndicators();
-        preloadNextStory();
+        volumeSlider.style.display = 'none'; // Hide the volume slider
+        return;
     }
 
-    export function updateVolumeSliderBackground(slider) {
-        const value = slider.value * 100;
-        slider.style.background = `linear-gradient(to right, #1877f2 ${value}%, #ccc ${value}%)`;
-    }
-    
-    export function togglePauseStory() {
-        const story = storyQueue[currentStoryIndex];
-        const video = storyViewerContent.querySelector('video');
-    
-        if (isPaused) {
-            startTime = Date.now();
-            resumeProgressBar(remainingTime);
-            if (video) {
-                video.play();
-            }
-            if (audioElement) {
-                audioElement.play();
-            }
-        } else {
+    currentStoryIndex = index;
+    const story = storyQueue[index];
+    console.log(`Showing story ${index}:`, story);
+    storyViewerContent.innerHTML = '';
+
+    storyViewerTitle.textContent = story.title;
+    storyViewerDescription.textContent = story.description;
+    storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
+
+    isPaused = false;
+    remainingTime = 0;
+    startTime = 0;
+    elapsedTime = 0;
+
+    storyViewerContent.addEventListener('click', togglePauseStory);
+
+    if (story.type === 'image') {
+        const img = document.createElement('img');
+        img.src = story.src;
+        storyViewerContent.appendChild(img);
+
+        img.onload = () => {
             clearTimeout(progressTimeout);
-            elapsedTime = Date.now() - startTime;
-            remainingTime -= elapsedTime;
-            if (video) {
+            remainingTime = 5000;
+            startTime = Date.now();
+            updateProgressBar(remainingTime, () => {
+                showStory(index + 1);
+            });
+        };
+    } else if (story.type === 'video') {
+        const video = document.createElement('video');
+        video.src = story.src;
+        video.autoplay = true;
+        video.muted = story.hasAudio; // Mute the video if it has integrated audio
+        storyViewerContent.appendChild(video);
+
+        video.onloadedmetadata = () => {
+            clearTimeout(progressTimeout);
+            remainingTime = Math.min(video.duration, 15) * 1000;
+            startTime = Date.now();
+            updateProgressBar(remainingTime, () => {
+                showStory(index + 1);
+            });
+        };
+
+        video.ontimeupdate = () => {
+            if (video.currentTime >= 15) {
                 video.pause();
+                if (storyViewerContent.contains(video)) {
+                    storyViewerContent.removeChild(video);
+                }
+                showStory(index + 1);
             }
-            if (audioElement) {
-                audioElement.pause();
-            }
-            pauseProgressBar();
-        }
-        isPaused = !isPaused;
+        };
+
+        volumeSlider.value = 0.5; // Reset to middle position
+        volumeSlider.style.display = 'block'; // Ensure the volume slider is visible
+        volumeSlider.style.transform = 'rotate(270deg)'; // Rotate the slider
+        updateVolumeSliderBackground(volumeSlider);
+
+        volumeSlider.addEventListener('input', () => {
+            video.volume = volumeSlider.value;
+            updateVolumeSliderBackground(volumeSlider);
+        });
     }
-    
-    // Updating the Progress Bar
-    export function updateProgressBar(duration, callback) {
-        const progressBar = document.getElementById('progressBar');
-        progressBar.style.transition = 'none';
-        progressBar.style.width = '0%';
 
-        // Force reflow to reset the transition
-        progressBar.offsetHeight;
+    if (audioElement) {
+        console.log('Pausing and resetting previous audio element');
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement.src = ''; // Clear the audio source
+        audioElement = null; // Ensure the audio element is reset
+    }
 
+    if (story.hasAudio) {
+        console.log('Loading audio for the story:', story.audioUrl);
+        audioElement = new Audio(story.audioUrl);
+        audioElement.id = story.audioId;
+        audioElement.volume = 0.5;
+        volumeSlider.style.display = 'block';
+        audioElement.preload = 'auto';
+        audioElement.currentTime = story.audioStartTime; // Set the start time
+        audioElement.play().then(() => {
+            console.log('Audio started playing');
+        }).catch(error => {
+            console.error('Error playing audio:', error);
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            audioElement.volume = volumeSlider.value;
+            updateVolumeSliderBackground(volumeSlider);
+        });
+    } else if (story.hasOriginalSound) {
+        console.log('Story has original sound');
+        // No need to do anything, the video will play its original sound
+    } else {
+        console.log('No audio for this story');
+        // No audio for this story
+        volumeSlider.style.display = 'none'; // Hide the volume slider
+    }
+
+    initializeReactionCounts(currentStoryIndex);
+    updateReactionCounts(currentStoryIndex);
+    initializeComments(currentStoryIndex);
+    updateComments(currentStoryIndex);
+
+    storyViewer.classList.add('active');
+    footer.classList.add('hidden');
+    updateNavButtons();
+    updateStoryIndicators();
+    preloadNextStory();
+}
+
+export function updateVolumeSliderBackground(slider) {
+    const value = slider.value * 100;
+    slider.style.background = `linear-gradient(to right, #1877f2 ${value}%, #ccc ${value}%)`;
+}
+
+export function togglePauseStory() {
+    const story = storyQueue[currentStoryIndex];
+    const video = storyViewerContent.querySelector('video');
         progressBar.style.transition = `width ${duration}ms linear`;
         progressBar.style.width = '100%';
 
