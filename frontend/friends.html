@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/Icon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends - Gathering Hub</title>
+    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/friends.css">
+    <link rel="stylesheet" href="css/commonlyUsed.css">
+    <script src="js/authCheck.js"></script>
+    <script src="js/friends.js" defer></script>
+    <script src="js/components.js"></script>
+    <script src="js/webSocketClient.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <header class="header"></header>
+    
+    <!-- Main Content -->
+    <main class="friends-main">
+        <div class="friends-container">
+            <div class="friends-tabs">
+                <button class="tab-button active" data-tab="followers">Followers</button>
+                <button class="tab-button" data-tab="discover">Find People</button>
+                <button class="tab-button" data-tab="following">Following</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Followers Tab -->
+                <div id="followers-tab" class="tab-panel active">
+                    <h2>People who follow you</h2>
+                    <div id="followers-list" class="friends-list">
+                        <!-- Followers will be loaded here -->
+                        <div class="no-friends-message">No Followers Yet</div>
+                    </div>
+                </div>
+                
+                <!-- Discover Tab -->
+                <div id="discover-tab" class="tab-panel">
+                    <h2>Find People to Follow</h2>
+                    <div class="search-container">
+                        <input type="text" id="userSearchInput" placeholder="Search users...">
+                        <button id="searchButton"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div id="search-results" class="search-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+                
+                <!-- Following Tab -->
+                <div id="following-tab" class="tab-panel">
+                    <h2>People you follow</h2>
+                    <div id="following-list" class="friends-list">
+                        <!-- Following will be loaded here -->
+                        <div class="no-friends-message">You're not following anyone yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Message container for notifications -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="loading-content">
+            <img src="images/loadingScreen.png" alt="Loading..." class="loader-image">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer"></footer>
+</body>
+</html>

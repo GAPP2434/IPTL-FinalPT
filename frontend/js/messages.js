@@ -22,14 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let conversations = [];
     let onlineUsers = [];
     window.onlineUsers = onlineUsers;
-    
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
 
     // Initialize
     function init() {
@@ -365,50 +357,19 @@ document.addEventListener('DOMContentLoaded', function() {
         renderConversations();
     }
     
-    // Search users
-    function searchUsers(query, inModal = false) {
-        if (!query.trim()) return;
-        
-        fetch(`/api/messages/search?q=${encodeURIComponent(query)}`, {
-            credentials: 'include'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to search users');
-            }
-            return response.json();
-        })
-        .then(users => {
-            if (inModal) {
-                renderSearchResults(users);
-            } else {
-                // For main search, open modal and show results
-                openFindPeopleModal();
-                modalSearchInput.value = query;
-                renderSearchResults(users);
-            }
-        })
-        .catch(error => {
-            console.error('Error searching users:', error);
-            
-            // Fallback to sample data for demo/testing
-            const results = [
-                { _id: '1', name: 'Hunter', profilePicture: 'avatars/Avatar_Anby_Demara.webp' },
-                { _id: '2', name: 'Palico', profilePicture: 'avatars/Avatar_Default_Cat.webp' },
-                { _id: '3', name: 'MHWPlayer', profilePicture: 'avatars/Avatar_Default_Dog.webp' },
-                { _id: '4', name: 'MonsterSlayer', profilePicture: 'avatars/Avatar_Default_Thiren_1.webp' },
-                { _id: '5', name: 'GatheringExpert', profilePicture: 'avatars/Avatar_Burnice_White.webp' }
-            ].filter(user => user.name.toLowerCase().includes(query.toLowerCase()));
-            
-            if (inModal) {
-                renderSearchResults(results);
-            } else {
-                openFindPeopleModal();
-                modalSearchInput.value = query;
-                renderSearchResults(results);
-            }
-        });
-    }
+    // Search Function
+    window.searchUtils.setupSearch({
+        inputElement: userSearchInput,
+        buttonElement: searchButton,
+        endpoint: '/api/messages/search',
+        renderResults: (users) => {
+            // Your existing renderSearchResults function with message buttons
+            renderSearchResults(users);
+        },
+        clearResults: () => {
+            searchResults.innerHTML = '';
+        }
+    });
     
     // Render search results
     function renderSearchResults(results) {
@@ -502,36 +463,30 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingModal.style.display = 'none';
         }
     }
+
+    function searchModalUsers(query) {
+        if (!query.trim()) return;
+        
+        fetch(`/api/messages/search?q=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+            return response.json();
+        })
+        .then(results => {
+            renderSearchResults(results);
+        })
+        .catch(error => {
+            console.error('Error searching users:', error);
+            searchResults.innerHTML = '<div class="no-results">Error searching users. Please try again.</div>';
+        });
+    }
     
     // Set up event listeners
     function setupEventListeners() {
-
-         // Live search in main search bar
-         userSearchInput.addEventListener('input', debounce(function() {
-            const query = userSearchInput.value.trim();
-            if (query.length >= 2) { // Only search if at least 2 characters
-                searchUsers(query);
-            }
-        }, 300)); // 300ms debounce
-
-        // Search button
-        searchButton.addEventListener('click', () => {
-            const query = userSearchInput.value.trim();
-            if (query) {
-                searchUsers(query);
-            }
-        });
-
-        // Search input (for hitting Enter)
-        userSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const query = userSearchInput.value.trim();
-                if (query) {
-                    searchUsers(query);
-                }
-            }
-        });
-        
         // New message button
         newMessageButton.addEventListener('click', openFindPeopleModal);
         
@@ -539,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closeFindPeopleModal.addEventListener('click', () => {
             findPeopleModal.style.display = 'none';
         });
-
+    
         // Click outside modal to close
         window.addEventListener('click', (e) => {
             if (e.target === findPeopleModal) {
@@ -547,22 +502,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Live search in modal
-        modalSearchInput.addEventListener('input', debounce(function() {
+        // Set up search for modal - need a separate instance
+        modalSearchInput.addEventListener('input', window.searchUtils.debounce(function() {
             const query = modalSearchInput.value.trim();
-            if (query.length >= 2) { // Only search if at least 2 characters
-                searchUsers(query, true);
+            if (query.length >= 2) {
+                // Use a function to handle modal search specifically
+                searchModalUsers(query);
             } else if (query.length === 0) {
-                // Clear results if search is empty
                 searchResults.innerHTML = '';
             }
-        }, 300)); // 300ms debounce
-
-        // Keep the click event as fallback
+        }, 300));
+    
+        // Modal search button
         modalSearchButton.addEventListener('click', () => {
             const query = modalSearchInput.value.trim();
             if (query) {
-                searchUsers(query, true);
+                searchModalUsers(query);
             }
         });
         

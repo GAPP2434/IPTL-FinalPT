@@ -31,6 +31,11 @@
                 </div>
                 <div class="user-info">
                     <h2 id="userName">User Name</h2>
+                    <div class="user-stats">
+                        <a href="#" id="followersCount" class="stat-link">0 Followers</a>
+                        <span class="stat-divider">•</span>
+                        <a href="#" id="followingCount" class="stat-link">0 Following</a>
+                    </div>
                     <p id="userBio">No bio available</p>
                 </div>
             </div>
@@ -45,6 +50,17 @@
             </div>
         </div>
     </main>
+
+    <div id="followModal" class="modal">
+        <div class="follow-modal-content">
+            <span class="follow-modal-close">&times;</span>
+            <h2 id="followModalTitle">Followers</h2>
+            <div id="followModalList" class="follow-list">
+                <!-- Users will be loaded here -->
+                <div class="no-follow-message">No users to display</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Profile Edit Modal -->
     <div id="profileEditModal" class="modal">

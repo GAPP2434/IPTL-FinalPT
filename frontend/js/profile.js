@@ -17,6 +17,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const coverPhotoPreview = document.getElementById('coverPhotoPreview');
     const profilePicPreview = document.getElementById('profilePicPreview');
     const bioInput = document.getElementById('bioInput');
+    const followModal = document.getElementById('followModal');
+    const followModalClose = document.querySelector('.follow-modal-close');
+    const followModalTitle = document.getElementById('followModalTitle');
+    const followModalList = document.getElementById('followModalList');
+    const followersCountLink = document.getElementById('followersCount');
+    const followingCountLink = document.getElementById('followingCount');
     
     // Open modal when Edit Profile button is clicked
     editProfileBtn.addEventListener('click', function() {
@@ -42,6 +48,30 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('click', function(event) {
         if (event.target === profileEditModal) {
             profileEditModal.style.display = 'none';
+        }
+    });
+
+    // Open followers modal when followers count is clicked
+    followersCountLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        openFollowModal('followers');
+    });
+
+    // Open following modal when following count is clicked
+    followingCountLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        openFollowModal('following');
+    });
+
+    // Close modal when X is clicked
+    followModalClose.addEventListener('click', function() {
+        followModal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === followModal) {
+            followModal.style.display = 'none';
         }
     });
     
@@ -101,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Send update to server
-        fetch('/api/user/profile', {
+        fetch('/api/users/profile', {
             method: 'POST',
             body: formData,
             credentials: 'include'
@@ -163,38 +193,20 @@ document.addEventListener('DOMContentLoaded', function() {
 // Function to fetch user profile data
 function fetchUserProfile() {
     fetch('/api/users/profile', {
-        credentials: 'include' // Important for sending cookies
+        credentials: 'include'
     })
-    .then(response => {
-        if (!response.ok) {
-            // Fall back to using auth/user if user/profile doesn't exist yet
-            return fetch('/api/auth/user', {
-                credentials: 'include'
-            });
-        }
-        return response;
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to fetch user data');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(user => {
-        // Update profile information
-        document.getElementById('userName').textContent = user.name || 'User Name';
+        document.getElementById('userName').textContent = user.name;
+        document.getElementById('userBio').textContent = user.bio || 'No bio available';
+        document.getElementById('profilePicture').src = user.profilePicture;
         
-        // Update profile picture if available
-        if (user.profilePicture) {
-            document.getElementById('profilePicture').src = user.profilePicture;
-        }
+        // Update follower/following counts
+        document.getElementById('followersCount').textContent = 
+            `${user.followersCount || 0} Followers`;
+        document.getElementById('followingCount').textContent = 
+            `${user.followingCount || 0} Following`;
         
-        // Update bio if available
-        if (user.bio) {
-            document.getElementById('userBio').textContent = user.bio;
-        }
-        
-        // Update cover photo if available
         if (user.coverPhoto) {
             document.querySelector('.cover-photo-section').style.backgroundImage = `url('${user.coverPhoto}')`;
             document.querySelector('.cover-photo-section').style.backgroundSize = 'cover';
@@ -205,24 +217,6 @@ function fetchUserProfile() {
         console.error('Error fetching user profile:', error);
         showMessage('Failed to load profile. Please try refreshing the page.', 'error');
     });
-}
-
-// Function to show messages
-function showMessage(message, type) {
-    const messageContainer = document.getElementById('message-container');
-    if (!messageContainer) {
-        console.log(message); // Fallback if no message container
-        return;
-    }
-    
-    const messageElement = document.getElementById('message');
-    messageElement.textContent = message;
-    messageElement.className = 'message ' + type;
-    messageContainer.style.display = 'block';
-    
-    setTimeout(() => {
-        messageContainer.style.display = 'none';
-    }, 5000);
 }
 
 // Function to fetch user posts (placeholder)
@@ -255,5 +249,111 @@ function fetchUserPosts() {
         `;
         
         postsContainer.appendChild(postElement);
+    });
+}
+
+// Function to open the followers/following modal
+function openFollowModal(type) {
+    followModalTitle.textContent = type === 'followers' ? 'Followers' : 'Following';
+    followModal.style.display = 'block';
+    
+    // Show loading state
+    followModalList.innerHTML = '<div class="loading-message">Loading...</div>';
+    
+    // Fetch and display the data
+    fetch(`/api/users/${type}`, {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to load ${type}`);
+        }
+        return response.json();
+    })
+    .then(users => {
+        renderFollowList(users, type);
+    })
+    .catch(error => {
+        console.error(`Error loading ${type}:`, error);
+        followModalList.innerHTML = `<div class="no-follow-message">Failed to load ${type}. Please try again.</div>`;
+    });
+}
+
+// Function to render the followers/following list
+function renderFollowList(users, type) {
+    if (users.length === 0) {
+        followModalList.innerHTML = `<div class="no-follow-message">No ${type} to display</div>`;
+        return;
+    }
+    
+    followModalList.innerHTML = '';
+    
+    users.forEach(user => {
+        const userElement = document.createElement('div');
+        userElement.classList.add('follow-item');
+        
+        let actionButton = '';
+        if (type === 'followers' && !user.youFollow) {
+            actionButton = `<button class="follow-button" data-user-id="${user._id}">Follow</button>`;
+        } else if (user.youFollow || type === 'following') {
+            actionButton = `<button class="follow-button unfollow-button" data-user-id="${user._id}">Unfollow</button>`;
+        }
+        
+        userElement.innerHTML = `
+            <img src="${user.profilePicture}" alt="${user.name}" class="follow-avatar">
+            <div class="follow-info">
+                <div class="follow-name">${user.name}</div>
+                <div class="follow-bio">${user.bio || ''}</div>
+            </div>
+            <div class="follow-action">
+                ${actionButton}
+            </div>
+        `;
+        
+        followModalList.appendChild(userElement);
+    });
+    
+    // Add event listeners for follow/unfollow buttons
+    attachFollowButtonListeners();
+}
+
+// Attach event listeners to follow/unfollow buttons
+function attachFollowButtonListeners() {
+    const followButtons = document.querySelectorAll('.follow-button:not(.unfollow-button)');
+    const unfollowButtons = document.querySelectorAll('.unfollow-button');
+    
+    followButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            // Use the shared follow function with callbacks for specific behavior
+            window.userInteractions.followUser(userId, this, {
+                onSuccess: () => {
+                    fetchUserProfile(); // Update follower count after success
+                }
+            });
+        });
+    });
+    
+    unfollowButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            // Use the shared unfollow function with callbacks for specific behavior
+            window.userInteractions.unfollowUser(userId, this, {
+                onSuccess: () => {
+                    fetchUserProfile(); // Update follower count after success
+                    
+                    // Special handling for following list - remove user from list
+                    if (followModalTitle.textContent === 'Following') {
+                        const userElement = button.closest('.follow-item');
+                        userElement.remove();
+                        
+                        // If no more following, show message
+                        if (followModalList.children.length === 0) {
+                            followModalList.innerHTML = '<div class="no-follow-message">You\'re not following anyone</div>';
+                        }
+                    }
+                }
+            });
+        });
     });
 }

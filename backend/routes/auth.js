@@ -12,19 +12,18 @@ const nodemailer = require('nodemailer');
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        const uploadDir = path.join(__dirname, '../../frontend/uploads');
-        
+    destination: function (req, file, cb) {
+        const uploadPath = path.join(__dirname, '../../frontend/avatars');
         // Create directory if it doesn't exist
-        if (!fs.existsSync(uploadDir)){
-            fs.mkdirSync(uploadDir, { recursive: true });
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
         }
-        
-        cb(null, uploadDir);
+        cb(null, uploadPath);
     },
-    filename: function(req, file, cb) {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'profilePicture-' + uniqueSuffix + ext);
     }
 });
 
@@ -76,7 +75,19 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
         
         // If profile picture was uploaded, add its info to user object
         if (req.file) {
-            const profilePicturePath = req.file.path.replace('\\', '/').split('frontend/')[1];
+            // Fix the path processing to handle Windows and Unix paths correctly
+            let profilePicturePath = req.file.path;
+            
+            // Convert backslashes to forward slashes for consistency
+            profilePicturePath = profilePicturePath.replace(/\\/g, '/');
+            
+            // Extract just the part after 'frontend/'
+            const pathParts = profilePicturePath.split('frontend/');
+            if (pathParts.length > 1) {
+                profilePicturePath = pathParts[1];
+            }
+            
+            console.log("Profile picture path:", profilePicturePath);
             newUser.profilePicture = profilePicturePath;
         } else {
             // Assign random default avatar
