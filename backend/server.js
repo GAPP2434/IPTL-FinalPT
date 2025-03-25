@@ -171,6 +171,7 @@ function broadcastToAll(data) {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
+app.use('/api/posts', require('./routes/postRoutes'));
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));

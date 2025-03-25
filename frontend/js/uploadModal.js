@@ -16,6 +16,17 @@ export function openUploadModal() {
 
 window.openUploadModal = openUploadModal;
 
+document.addEventListener('DOMContentLoaded', function() {
+    fetchAndDisplayPosts();
+    
+    // Add a section heading to clearly label the posts area
+    const blogContainer = document.querySelector('.blog-container');
+    const postsHeading = document.createElement('h2');
+    postsHeading.textContent = 'Hunter Posts';
+    postsHeading.classList.add('section-heading');
+    blogContainer.insertBefore(postsHeading, blogContainer.firstChild);
+});
+
 document.getElementById('closeUploadModal').addEventListener('click', () => {
     document.getElementById('uploadModal').style.display = 'none';
     editedImageDataUrl = null;
@@ -613,80 +624,207 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
     // Post Content
     const blogPostInput = document.getElementById('blog-post-input');
     const blogPostText = blogPostInput.value.trim();
-    //const blogPostTitleInput = document.getElementById('blog-post-title-input');
-    //const blogPostTitle = blogPostTitleInput.value.trim();
-   
+    
     // Get the selected image
     const blogPostImageInput = document.getElementById('blog-post-image-input');
     const blogPostImage = blogPostImageInput.files[0];
     
-    fetch('/api/current-user-id')
-      .then(response => {
-        console.log('Response status code:', response.status);
-        console.log('Response headers:', response.headers);
-        return response.text();
-      })
-      .then(async responseText => {
-        try {
-          const data = JSON.parse(responseText);
-          const userId = data.userId;
-          const blogPostUsername = await getUsernameFromDatabase(userId);
-          const avatarUrl = await getAvatarUrlFromDatabase(userId);
-        } catch (error) {
-          console.error('Error parsing response data:', error);
-        }
-      })
-      .catch(error => console.error(error));
-
-    // Check if there is text or an image
-    if (blogPostText || blogPostImage) { // && blogPostTitle
-      // Get the current date and time
-      const currentTime = new Date();
-      const blogPostTimestamp = `${currentTime.toLocaleDateString()} | ${currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  
-      // Add the blog post to the list of blog posts
-      const blogPosts = document.getElementById('blog-posts');
-      const newBlogPost = document.createElement('div');
-      newBlogPost.classList.add('blog-post');
-      // Inner HTML
-      let postContent = `
-      <div class="post-header">
-        <span class="avatar" style="background-image: url(${avatarUrl})"></span>
-        <div class="post-info">
-            <div class="username">${blogPostUsername}</div>
-            <div class="timestamp">on ${blogPostTimestamp}</div>
-        </div>
-      </div>
-    `;
-
-      if (blogPostText) {
-        postContent += `<p>${blogPostText}</p>`;
-      }
-  
-      if (blogPostImage) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          postContent += `<img src="${reader.result}" alt="Uploaded image">`;
-          newBlogPost.innerHTML = postContent;
-      
-          // Prepend the new post to the blogPosts element
-          blogPosts.prepend(newBlogPost);
-        };
-        reader.readAsDataURL(blogPostImage);
-      } else {
-        newBlogPost.innerHTML = postContent;
-      
-        // Prepend the new post to the blogPosts element
-        blogPosts.prepend(newBlogPost);
-      }
-
-      // Clear the input fields
-      blogPostInput.value = '';
-      blogPostImageInput.value = '';
-      document.getElementById('file-names').innerHTML = '';
-      document.getElementById('postContentCounter').innerHTML = '0/250';
+    // Check if there is text or an image before proceeding
+    if (!blogPostText && !blogPostImage) {
+        alert('Please enter text or add an image for your post.');
+        return;
     }
-  });
+    
+    // Show loading indicator if available
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        const loadingText = loadingModal.querySelector('.loading-content p');
+        if (loadingText) loadingText.textContent = 'Creating your post...';
+        loadingModal.style.display = 'flex';
+    }
+    
+    try {
+        // Get the current user info using the working endpoint
+        const response = await fetch('/api/auth/user', {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to get user information');
+        }
+        
+        const user = await response.json();
+        
+        // Create a FormData object to handle the file upload
+        const formData = new FormData();
+        formData.append('content', blogPostText);
+        
+        // Get optional username if provided, otherwise use the user's name
+        const blogPostUsername = document.getElementById('blog-post-username-input').value.trim();
+        if (blogPostUsername) {
+            formData.append('displayName', blogPostUsername);
+        }
+        
+        // Add image file if present
+        if (blogPostImage) {
+            formData.append('media', blogPostImage);
+        }
+        
+        // Send the post data to the server
+        const saveResponse = await fetch('/api/posts/create', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+        
+        if (!saveResponse.ok) {
+            throw new Error('Failed to save post to the database');
+        }
+        
+        const savedPost = await saveResponse.json();
+        
+        // Get the current date and time
+        const currentTime = new Date();
+        const blogPostTimestamp = `${currentTime.toLocaleDateString()} | ${currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        
+        // Add the blog post to the list of blog posts
+        const blogPosts = document.getElementById('blog-posts');
+        const newBlogPost = document.createElement('div');
+        newBlogPost.classList.add('blog-post');
+        newBlogPost.dataset.postId = savedPost._id; // Add the post ID as a data attribute
+        
+        // Get username and avatar from the user data
+        const avatarUrl = user.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
+        const displayName = blogPostUsername || user.name;
+        
+        // Inner HTML
+        let postContent = `
+        <div class="post-header">
+            <span class="avatar" style="background-image: url(${avatarUrl})"></span>
+            <div class="post-info">
+                <div class="username">${displayName}</div>
+                <div class="timestamp">on ${blogPostTimestamp}</div>
+            </div>
+        </div>
+        `;
+        
+        if (blogPostText) {
+            postContent += `<p>${blogPostText}</p>`;
+        }
+        
+        if (blogPostImage) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                postContent += `<img src="${e.target.result}" alt="Uploaded image">`;
+                newBlogPost.innerHTML = postContent;
+                
+                // Prepend the new post to the blogPosts element
+                blogPosts.prepend(newBlogPost);
+                
+                // Hide loading indicator
+                if (loadingModal) loadingModal.style.display = 'none';
+            };
+            reader.readAsDataURL(blogPostImage);
+        } else {
+            newBlogPost.innerHTML = postContent;
+            
+            // Prepend the new post to the blogPosts element
+            blogPosts.prepend(newBlogPost);
+            
+            // Hide loading indicator
+            if (loadingModal) loadingModal.style.display = 'none';
+        }
+        
+        // Clear the input fields
+        blogPostInput.value = '';
+        blogPostImageInput.value = '';
+        document.getElementById('file-names').textContent = 'No file selected';
+        document.getElementById('postContentCounter').textContent = '0/250';
+        document.getElementById('blog-post-username-input').value = '';
+        
+        // Close the modal
+        document.getElementById('postSubmissionModal').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error creating post:', error);
+        alert('Failed to create post. Please try again.');
+        
+        // Hide loading indicator
+        if (loadingModal) loadingModal.style.display = 'none';
+    }
+});
+
+//Function to fetch all posts and display them
+function fetchAndDisplayPosts() {
+    fetch('/api/posts', {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load posts');
+        }
+        return response.json();
+    })
+    .then(posts => {
+        const blogPosts = document.getElementById('blog-posts');
+        
+        // Clear existing posts
+        blogPosts.innerHTML = '';
+        
+        if (posts.length === 0) {
+            blogPosts.innerHTML = '<div class="no-posts-message">No posts yet. Be the first to share!</div>';
+            return;
+        }
+        
+        // Display posts in descending order (newest first)
+        posts.forEach(post => {
+            const postElement = createPostElement(post);
+            blogPosts.appendChild(postElement);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching posts:', error);
+        document.getElementById('blog-posts').innerHTML = 
+            '<div class="error-message">Failed to load posts. Please refresh the page.</div>';
+    });
+}
+
+// Function to create a post element
+function createPostElement(post) {
+    const postElement = document.createElement('div');
+    postElement.classList.add('blog-post');
+    postElement.dataset.postId = post._id;
+    
+    // Format the timestamp
+    const postDate = new Date(post.timestamp);
+    const formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    
+    // Get user data
+    const userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
+    const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
+    
+    // Create post HTML
+    let postContent = `
+    <div class="post-header">
+        <span class="avatar" style="background-image: url(${userAvatar})"></span>
+        <div class="post-info">
+            <div class="username">${userName}</div>
+            <div class="timestamp">on ${formattedDate}</div>
+        </div>
+    </div>
+    `;
+    
+    if (post.content) {
+        postContent += `<p>${post.content}</p>`;
+    }
+    
+    if (post.media) {
+        postContent += `<img src="${post.media}" alt="Post image">`;
+    }
+    
+    postElement.innerHTML = postContent;
+    return postElement;
+}
 
 // Get the floating post button and modal elements
 const floatingPostButton = document.getElementById('floatingPostButton');
