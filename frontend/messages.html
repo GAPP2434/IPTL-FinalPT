@@ -80,12 +80,24 @@
                     <div id="messagesContainer" class="messages-chat-container">
                         <!-- Messages will be loaded here -->
                     </div>
-                    
+                    <div id="attachmentsPreview" class="attachments-preview"></div>
                     <div class="message-input-container">
+                        <div class="attachment-buttons">
+                            <button id="mediaButton" class="attachment-button" title="Attach Media">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <button id="fileButton" class="attachment-button" title="Attach File">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
                         <textarea id="messageInput" placeholder="Type a message..."></textarea>
                         <button id="sendMessageButton">
                             <i class="fas fa-paper-plane"></i>
                         </button>
+                        
+                        <!-- Hidden file inputs -->
+                        <input type="file" id="mediaInput" accept="image/*,video/*" style="display: none;">
+                        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" style="display: none;">
                     </div>
                 </div>
             </div>

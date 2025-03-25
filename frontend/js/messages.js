@@ -34,11 +34,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeGroupMembersModal = document.getElementById('closeGroupMembersModal');
     const groupMembersTitle = document.getElementById('groupMembersTitle');
     const groupMembersList = document.getElementById('groupMembersList');
+    const mediaButton = document.getElementById('mediaButton');
+    const fileButton = document.getElementById('fileButton');
+    const mediaInput = document.getElementById('mediaInput');
+    const fileInput = document.getElementById('fileInput');
+    const attachmentsPreview = document.getElementById('attachmentsPreview');
     
     // State
     let currentRecipient = null;
     let conversations = [];
     let onlineUsers = [];
+    let messageAttachments = [];
+    let currentGroup = null; // Add this line to define currentGroup at the top level
     window.onlineUsers = onlineUsers;
 
     // Initialize
@@ -46,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadOnlineUsers();
         loadConversations();
         setupEventListeners();
+        setupAttachmentListeners(); // Add this line
         
         // Reconnect WebSocket if needed
         if (window.connectWebSocket && typeof window.connectWebSocket === 'function') {
@@ -164,8 +172,39 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             conversations = data;
+            
+            // Process conversations to fix preview messages if needed
+            conversations.forEach(conversation => {
+                // Check if the conversation contains attachment but lacks the emoji indicator
+                if (conversation.hasAttachments && conversation.lastMessage) {
+                    // If there's no emoji prefix, add appropriate indicator
+                    if (!conversation.lastMessage.includes('📷') && 
+                        !conversation.lastMessage.includes('🎥') && 
+                        !conversation.lastMessage.includes('📎')) {
+                        
+                        // Add appropriate indicator based on attachment type
+                        if (conversation.lastAttachmentType === 'image') {
+                            conversation.lastMessage = conversation.lastMessage ? 
+                                `📷 ${conversation.lastMessage}` : 
+                                "📷 Sent a photo";
+                        } else if (conversation.lastAttachmentType === 'video') {
+                            conversation.lastMessage = conversation.lastMessage ? 
+                                `🎥 ${conversation.lastMessage}` : 
+                                "🎥 Sent a video";
+                        } else {
+                            conversation.lastMessage = conversation.lastMessage ? 
+                                `📎 ${conversation.lastMessage}` : 
+                                "📎 Sent an attachment";
+                        }
+                    }
+                }
+            });
+            
             renderConversations();
             hideLoading();
+            
+            // Save to localStorage as fallback
+            localStorage.setItem('conversations', JSON.stringify(conversations));
         })
         .catch(error => {
             console.error('Error loading conversations:', error);
@@ -398,12 +437,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             message.isCurrentUser, 
                             message.senderName || 'Unknown',
                             message.senderAvatar,
+                            message.attachments || [],
+                            message.attachmentTypes || [],
                             message.timestamp
                         );
                     }
                 } else {
                     // Regular direct message
-                    appendMessage(message.content, message.isCurrentUser, message.timestamp);
+                    appendMessage(
+                        message.content, 
+                        message.isCurrentUser, 
+                        message.attachments || [], 
+                        message.attachmentTypes || [],
+                        message.timestamp
+                    );
                 }
             });
             
@@ -418,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Append a message to the chat
-    function appendMessage(text, sent, timestamp = new Date()) {
+    function appendMessage(text, sent, attachments = [], attachmentTypes = [], timestamp = new Date()) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(sent ? 'sent' : 'received');
@@ -426,8 +473,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format the timestamp
         const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
+        // Generate attachment HTML if there are attachments
+        let attachmentsHTML = '';
+        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+            attachments.forEach((url, index) => {
+                const type = attachmentTypes && attachmentTypes[index] ? attachmentTypes[index] : 'file';
+                if (type === 'image') {
+                    attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
+                } else if (type === 'video') {
+                    attachmentsHTML += `<div class="message-media video-container">
+                                        <video controls width="100%" preload="metadata">
+                                            <source src="${url}" type="video/mp4">
+                                        </video>
+                                    </div>`;
+                } else {
+                    // Extract filename from URL
+                    const filename = url.split('/').pop();
+                    attachmentsHTML += `
+                        <div class="message-file">
+                            <div class="file-icon"><i class="fas fa-file"></i></div>
+                            <div class="file-name">${filename}</div>
+                            <a href="${url}" target="_blank" class="file-download"><i class="fas fa-download"></i></a>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
         messageElement.innerHTML = `
-            <div class="message-content">${text}</div>
+            ${attachmentsHTML}
+            ${text ? `<div class="message-content">${text}</div>` : ''}
             <div class="message-time">${formattedTime}</div>
         `;
         
@@ -455,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add a function to display group messages with sender name
-    function appendGroupMessage(text, isSent, senderName, senderAvatar, timestamp = new Date()) {
+    function appendGroupMessage(text, isSent, senderName, senderAvatar, attachments = [], attachmentTypes = [], timestamp = new Date()) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(isSent ? 'sent' : 'received');
@@ -463,20 +538,48 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format the timestamp
         const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
+        // Generate attachment HTML
+        let attachmentsHTML = '';
+        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+            attachments.forEach((url, index) => {
+                const type = attachmentTypes && attachmentTypes[index] ? attachmentTypes[index] : 'file';
+                if (type === 'image') {
+                    attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
+                } else if (type === 'video') {
+                attachmentsHTML += `<div class="message-media video-container">
+                                            <video controls width="100%" preload="metadata">
+                                                <source src="${url}" type="video/mp4">
+                                            </video>
+                                        </div>`;
+                } else {
+                    // Extract filename from URL
+                    const filename = url.split('/').pop();
+                    attachmentsHTML += `
+                        <div class="message-file">
+                            <div class="file-icon"><i class="fas fa-file"></i></div>
+                            <div class="file-name">${filename}</div>
+                            <a href="${url}" target="_blank" class="file-download"><i class="fas fa-download"></i></a>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
         if (!isSent) {
-            // Only add sender info for messages from others
             messageElement.innerHTML = `
                 <div class="group-message-header">
                     <img src="${senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
                     <span class="group-sender-name">${senderName}</span>
                 </div>
-                <div class="message-content">${text}</div>
+                ${attachmentsHTML}
+                ${text ? `<div class="message-content">${text}</div>` : ''}
                 <div class="message-time">${formattedTime}</div>
             `;
         } else {
             // Own messages don't need sender info
             messageElement.innerHTML = `
-                <div class="message-content">${text}</div>
+                ${attachmentsHTML}
+                ${text ? `<div class="message-content">${text}</div>` : ''}
                 <div class="message-time">${formattedTime}</div>
             `;
         }
@@ -488,25 +591,60 @@ document.addEventListener('DOMContentLoaded', function() {
     // Send a message
     function sendMessage() {
         const text = messageInput.value.trim();
-        if (!text || !currentRecipient) return;
         
-        // Append message to UI immediately
-        appendMessage(text, true);
+        // Don't send if no text and no attachments
+        if (!text && messageAttachments.length === 0) return;
         
-        // Clear input
+        if (!currentRecipient) return;
+        
+        // Create FormData to send both text and files
+        const formData = new FormData();
+        formData.append('recipientId', currentRecipient);
+        formData.append('content', text);
+        
+        // Add all attachments to the FormData
+        messageAttachments.forEach(attachment => {
+            formData.append('attachments', attachment.file);
+        });
+        
+        // Show a temporary version with the attachments in the UI immediately
+        const tempAttachmentUrls = [];
+        const tempAttachmentTypes = [];
+        
+        if (messageAttachments.length > 0) {
+            messageAttachments.forEach(attachment => {
+                // Create temporary object URLs for immediate display
+                const tempUrl = URL.createObjectURL(attachment.file);
+                tempAttachmentUrls.push(tempUrl);
+                
+                if (attachment.file.type.startsWith('image/')) {
+                    tempAttachmentTypes.push('image');
+                } else if (attachment.file.type.startsWith('video/')) {
+                    tempAttachmentTypes.push('video');
+                } else {
+                    tempAttachmentTypes.push('file');
+                }
+            });
+        }
+        
+        // Add to UI immediately (will be replaced when real message comes back from server)
+        if (currentGroup) {
+            appendGroupMessage(text, true, null, null, tempAttachmentUrls, tempAttachmentTypes);
+        } else {
+            appendMessage(text, true, tempAttachmentUrls, tempAttachmentTypes);
+        }
+        
+        // Clear the input and attachments
         messageInput.value = '';
+        messageAttachments = [];
+        attachmentsPreview.innerHTML = '';
+        attachmentsPreview.style.display = 'none';
         
         // Send to server
         fetch('/api/messages/send', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             credentials: 'include',
-            body: JSON.stringify({
-                recipientId: currentRecipient,
-                content: text
-            })
+            body: formData // Send FormData instead of JSON
         })
         .then(response => {
             if (!response.ok) {
@@ -515,14 +653,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            // Update conversation with new message (true means message is sent by current user)
-            updateConversationWithNewMessage(currentRecipient, text, true);
+            // Update conversation with new message
+            updateConversationWithNewMessage(currentRecipient, text, true, tempAttachmentUrls, tempAttachmentTypes);
         })
         .catch(error => {
             console.error('Error sending message:', error);
-            
-            // Even if server fails, update local state for demo purposes
-            updateConversationWithNewMessage(currentRecipient, text, true);
+            // Show error to user
+            showMessage('Failed to send message. Please try again.', 'error');
         });
     }
 
@@ -538,12 +675,33 @@ document.addEventListener('DOMContentLoaded', function() {
     window.isGroupOnline = isGroupOnline; // Add this line
     
     // Update conversation with new message (local state)
-    function updateConversationWithNewMessage(userId, text, isSent = true) {
+    function updateConversationWithNewMessage(userId, text, isSent = true, attachments = [], attachmentTypes = []) {
         const conversationIndex = conversations.findIndex(c => c.userId === userId);
+        
+        // Generate preview text based on attachments
+        let previewText = text;
+        let hasAttachments = attachments && attachments.length > 0;
+        let attachmentType = hasAttachments && attachmentTypes && attachmentTypes[0];
+        
+        if (hasAttachments) {
+            if (attachmentType === 'image') {
+                previewText = text ? `📷 ${text}` : "📷 Sent a photo";
+            } else if (attachmentType === 'video') {
+                previewText = text ? `🎥 ${text}` : "🎥 Sent a video";
+            } else {
+                previewText = text ? `📎 ${text}` : "📎 Sent an attachment";
+            }
+        } else if (!previewText) {
+            previewText = ""; // Fallback for empty messages
+        }
         
         if (conversationIndex >= 0) {
             // Update existing conversation
-            conversations[conversationIndex].lastMessage = text;
+            conversations[conversationIndex].lastMessage = previewText;
+            // Store attachment info for persistence
+            conversations[conversationIndex].hasAttachments = hasAttachments;
+            conversations[conversationIndex].lastAttachmentType = attachmentType;
+            
             // Don't increase unread count for messages the current user sent
             if (!isSent) {
                 conversations[conversationIndex].unreadCount = 
@@ -557,6 +715,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // If this is a new conversation, try to add it (might need user details)
             loadConversations();
         }
+        
+        // Save to localStorage for persistence across refreshes
+        localStorage.setItem('conversations', JSON.stringify(conversations));
         
         // Re-render conversations
         renderConversations();
@@ -1085,6 +1246,136 @@ function validateGroupForm() {
             groupMembersList.appendChild(memberItem);
         });
     }
+
+    // Setup event listeners for attachments
+    function setupAttachmentListeners() {
+        // Media button click
+        mediaButton.addEventListener('click', () => {
+            mediaInput.click();
+        });
+        
+        // File button click
+        fileButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Media selection
+        mediaInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files, 'media');
+            }
+        });
+        
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files, 'file');
+            }
+        });
+    }
+
+    // Handle file selection
+    function handleFileSelection(files, type) {
+        Array.from(files).forEach(file => {
+            // Create a unique ID for this attachment
+            const attachmentId = 'attachment-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            // Store the file with metadata
+            messageAttachments.push({
+                id: attachmentId,
+                file: file,
+                type: type,
+                name: file.name
+            });
+            
+            // Create preview
+            createAttachmentPreview(file, type, attachmentId);
+        });
+        
+        // Show the attachments preview area
+        if (messageAttachments.length > 0) {
+            attachmentsPreview.style.display = 'flex';
+        }
+        
+        // Clear file inputs
+        mediaInput.value = '';
+        fileInput.value = '';
+    }
+
+    // Create attachment preview
+    function createAttachmentPreview(file, type, id) {
+        const attachmentItem = document.createElement('div');
+        attachmentItem.classList.add('attachment-item');
+        attachmentItem.dataset.id = id;
+        
+        let innerContent = '';
+        
+        if (type === 'media' && file.type.startsWith('image/')) {
+            // Image preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                attachmentItem.innerHTML = `
+                    <img src="${e.target.result}" alt="${file.name}">
+                    <div class="file-name">${file.name}</div>
+                    <button class="remove-attachment" data-id="${id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // File icon for documents or videos
+            let iconClass = 'fas fa-file';
+            
+            if (file.type.includes('pdf')) {
+                iconClass = 'fas fa-file-pdf';
+            } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                iconClass = 'fas fa-file-word';
+            } else if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) {
+                iconClass = 'fas fa-file-excel';
+            } else if (file.type.includes('video')) {
+                iconClass = 'fas fa-file-video';
+            }
+            
+            attachmentItem.innerHTML = `
+                <div class="file-icon">
+                    <i class="${iconClass}"></i>
+                </div>
+                <div class="file-name">${file.name}</div>
+                <button class="remove-attachment" data-id="${id}">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+        }
+        
+        attachmentsPreview.appendChild(attachmentItem);
+        
+        // Add event listener to remove button after the item is added to the DOM
+        setTimeout(() => {
+            const removeButton = attachmentItem.querySelector('.remove-attachment');
+            if (removeButton) {
+                removeButton.addEventListener('click', () => {
+                    removeAttachment(id);
+                });
+            }
+        }, 0);
+    }
+
+    // Remove attachment
+    function removeAttachment(id) {
+        // Remove from array
+        messageAttachments = messageAttachments.filter(attachment => attachment.id !== id);
+        
+        // Remove from preview
+        const attachmentItem = attachmentsPreview.querySelector(`.attachment-item[data-id="${id}"]`);
+        if (attachmentItem) {
+            attachmentItem.remove();
+        }
+        
+        // Hide preview if no attachments
+        if (messageAttachments.length === 0) {
+            attachmentsPreview.style.display = 'none';
+        }
+    }
+
 });
-
-
