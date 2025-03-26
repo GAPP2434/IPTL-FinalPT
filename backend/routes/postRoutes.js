@@ -91,6 +91,14 @@ router.get('/', async (req, res) => {
         // Get posts sorted by timestamp (newest first)
         const posts = await Post.find()
             .populate('userId', 'name profilePicture')
+            .populate('repostedBy', 'name profilePicture') // Populate the repostedBy field
+            .populate({
+                path: 'originalPostId',
+                populate: {
+                    path: 'userId',
+                    select: 'name profilePicture'
+                }
+            }) // Populate the original post's user information
             .sort({ timestamp: -1 })
             .limit(50); // Limit to 50 posts for performance
         
@@ -134,5 +142,38 @@ router.post('/like/:postId', isAuthenticated, async (req, res) => {
     }
 });
 
+// Repost a post
+router.post('/repost/:postId', isAuthenticated, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user._id;
+
+        const originalPost = await Post.findById(postId);
+        if (!originalPost) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const repost = new Post({
+            userId: userId,
+            content: originalPost.content,
+            media: originalPost.media,
+            displayName: req.user.name,
+            timestamp: new Date(),
+            reactions: {
+                like: 0,
+                likedBy: []
+            },
+            isRepost: true,
+            originalPostId: originalPost._id,
+            repostedBy: userId
+        });
+
+        await repost.save();
+        res.json({ message: "Post reposted successfully", repost });
+    } catch (error) {
+        console.error("Error reposting post:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 module.exports = router;

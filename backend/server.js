@@ -19,6 +19,7 @@ global.adminWss = adminWss;
 
 require("./passportSetup");
 const storiesRoutes = require('./routes/storiesRoutes');
+const postRoutes = require('./routes/postRoutes');
 
 // Create a single upgrade handler for the server
 server.removeAllListeners('upgrade'); // Clear any existing listeners
@@ -595,6 +596,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
+app.use('/api/posts', postRoutes);
 app.use('/api/stories', storiesRoutes);
 app.use('/api/admin', require('./routes/adminRoute'));
 

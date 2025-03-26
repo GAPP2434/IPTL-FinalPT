@@ -28,6 +28,18 @@ const PostSchema = new mongoose.Schema({
     reactions: {
         like: { type: Number, default: 0 },
         likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }] // Stores user IDs who liked the post
+    },
+    isRepost: {
+        type: Boolean,
+        default: false
+    },
+    originalPostId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Post"
+    },
+    repostedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     }
 });
 

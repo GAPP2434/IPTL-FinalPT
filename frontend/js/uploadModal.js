@@ -818,7 +818,14 @@ function createPostElement(post) {
     const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
     const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
 
+    let repostInfo = '';
+    if (post.isRepost && post.repostedBy) {
+        const reposterName = post.repostedBy.name || 'Anonymous';
+        repostInfo = `<div class="repost-info">Reposted by ${reposterName}</div>`;
+    }
+
     postElement.innerHTML = `
+        ${repostInfo}
         <div class="post-header">
             <span class="avatar" style="background-image: url(${userAvatar})"></span>
             <div class="post-info">
@@ -832,6 +839,8 @@ function createPostElement(post) {
         </div>
         <div class="post-footer">
             <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
+            <button class="share-button" data-post-id="${post._id}">🔗 Share</button>
+            <button class="repost-button" data-post-id="${post._id}">🔁 Repost</button>
         </div>
     `;
     return postElement;
@@ -858,6 +867,33 @@ document.addEventListener('click', async (event) => {
             event.target.textContent = `👍 ${result.likes}`;
         } catch (error) {
             console.error("Error:", error);
+        }
+    } else if (event.target.classList.contains('share-button')) {
+        const postId = event.target.dataset.postId;
+        const postUrl = `${window.location.origin}/post/${postId}`;
+        navigator.clipboard.writeText(postUrl).then(() => {
+            alert('Post link copied to clipboard!');
+        }).catch(error => {
+            console.error('Error copying post link:', error);
+        });
+    } else if (event.target.classList.contains('repost-button')) {
+        const postId = event.target.dataset.postId;
+
+        try {
+            const response = await fetch(`/api/posts/repost/${postId}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to repost");
+            }
+
+            const result = await response.json();
+            fetchAndDisplayPosts(); // Refresh posts to show the repost
+            alert('Post reposted successfully!');
+        } catch (error) {
+            console.error("Error reposting:", error);
         }
     }
 });
