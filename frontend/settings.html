@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/Icon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Gathering Hub</title>
+    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/commonlyUsed.css">
+    <script src="js/authCheck.js"></script>
+    <script src="js/settings.js" defer></script>
+    <script src="js/components.js"></script>
+    <script src="js/webSocketClient.js"></script>
+</head>
+<body>
+    <header class="header"></header>
+    
+    <!-- Main Content -->
+    <main>
+        <div class="settings-container">
+            <div class="settings-sidebar">
+                <h2>Settings</h2>
+                <ul class="settings-menu">
+                    <li>
+                        <button class="settings-menu-item active" data-section="account">
+                            Account Settings
+                        </button>
+                    </li>
+                    <li>
+                        <button class="settings-menu-item" data-section="privacy">
+                            Privacy & Security Settings
+                        </button>
+                    </li>
+                    <li>
+                        <button class="settings-menu-item" data-section="notifications">
+                            Notification Settings
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Account Settings Section -->
+                <div id="account-section" class="settings-section active">
+                    <h2>Account Settings</h2>
+                    
+                    <div class="account-info">
+                        <div class="info-group">
+                            <label>Username</label>
+                            <div class="info-value" id="username-display"></div>
+                        </div>
+                        
+                        <div class="info-group">
+                            <label>Email</label>
+                            <div class="info-value" id="email-display"></div>
+                        </div>
+                        
+                        <div class="info-actions">
+                            <button id="change-password-btn" class="primary-button">Change Password</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Change Password Form (hidden initially) -->
+                    <div id="password-form" class="change-password-form" style="display: none;">
+                        <h3>Change Password</h3>
+                        
+                        <form id="password-change-form">
+                            <div class="form-group">
+                                <label for="current-password">Current Password</label>
+                                <input type="password" id="current-password" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="new-password">New Password</label>
+                                <input type="password" id="new-password" maxlength="20" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirm-password">Confirm New Password</label>
+                                <input type="password" id="confirm-password" maxlength="20" required>
+                                <div class="input-requirements">
+                                    <small id="password-match">Passwords must match</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" id="cancel-password-btn" class="cancel-button">Cancel</button>
+                                <button type="submit" class="save-button">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Privacy Settings Section -->
+                <div id="privacy-section" class="settings-section">
+                    <h2>Privacy & Security Settings</h2>
+                    
+                    <div class="privacy-setting-card">
+                        <div class="privacy-setting-info">
+                            <h3>Profile Privacy</h3>
+                            <p class="setting-description">When your profile is private, only your name, profile picture, and cover photo will be visible to other users. Your posts, followers, and following lists will be hidden.</p>
+                        </div>
+                        
+                        <div class="privacy-setting-control">
+                            <button id="toggle-profile-privacy" class="toggle-button">
+                                <span class="toggle-state">Make Profile Private</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="privacy-info-box">
+                        <h4>About Profile Privacy</h4>
+                        <ul>
+                            <li>When your profile is private, users can still follow you, but you must approve their follow requests</li>
+                            <li>Your existing followers will maintain access to your content</li>
+                            <li>Your posts won't appear in public feeds or search results</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Notifications Settings Section -->
+                <div id="notifications-section" class="settings-section">
+                    <h2>Notification Settings</h2>
+                    <p>Notification settings will be available soon.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Message container for notifications -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+    
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="loading-content">
+            <img src="images/loadingScreen.png" alt="Loading..." class="loader-image">
+            <p>Processing your request...</p>
+        </div>
+    </div>
+    
+    <!-- Ban Notification Modal -->
+    <div id="banModal" class="modal">
+        <div class="modal-content ban-modal-content">
+            <h2>Account Banned</h2>
+            <p id="banMessage">Your account has been banned by an administrator. You can no longer access the website.</p>
+            <p>If you believe this was done in error, please contact support.</p>
+            <div class="modal-actions">
+                <button id="banConfirmButton" class="confirm-button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Suspension Notification Modal -->
+    <div id="suspensionModal" class="modal">
+        <div class="modal-content suspension-modal-content">
+            <h2>Account Suspended</h2>
+            <p id="suspensionMessage">Your account has been temporarily suspended.</p>
+            <p>If you believe this was done in error, please contact support.</p>
+            <div class="modal-actions">
+                <button id="suspensionConfirmButton" class="confirm-button">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer"></footer>
+</body>
+</html>

@@ -61,6 +61,12 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    
+    isPrivateProfile: {
+        type: Boolean,
+        default: false
+    },
+
     publicKey: {
         type: Object, // Store the entire JWK object
         default: null

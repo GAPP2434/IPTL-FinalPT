@@ -106,21 +106,39 @@ router.post('/profile', isAuthenticated, upload.fields([
 router.get('/profile', isAuthenticated, async (req, res) => {
     try {
         const userId = req.user._id;
-        const user = await User.findById(userId);
+        const profileUserId = req.query.userId || userId; // Allow viewing other profiles
+        const isOwnProfile = userId.toString() === profileUserId.toString();
+        
+        const user = await User.findById(profileUserId);
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        res.json({
+        // Check if current user follows this profile
+        const youFollow = !isOwnProfile ? 
+            !!(await User.findOne({ _id: userId, following: profileUserId })) : 
+            false;
+        
+        // Create response object
+        const profileData = {
             name: user.name,
-            email: user.email,
+            email: isOwnProfile ? user.email : undefined,
             profilePicture: user.profilePicture,
-            bio: user.bio || '',
             coverPhoto: user.coverPhoto || '',
-            followersCount: user.followers ? user.followers.length : 0,
-            followingCount: user.following ? user.following.length : 0
-        });
+            isPrivateProfile: user.isPrivateProfile || false,
+            isOwnProfile: isOwnProfile,
+            youFollow: youFollow
+        };
+        
+        // Only include these details if profile is public or it's the owner or current user follows private account
+        if (!user.isPrivateProfile || isOwnProfile || youFollow) {
+            profileData.bio = user.bio || '';
+            profileData.followersCount = user.followers ? user.followers.length : 0;
+            profileData.followingCount = user.following ? user.following.length : 0;
+        }
+        
+        res.json(profileData);
         
     } catch (error) {
         console.error('Error fetching profile:', error);
@@ -180,12 +198,18 @@ router.get('/search', isAuthenticated, async (req, res) => {
 router.get('/followers', isAuthenticated, async (req, res) => {
     try {
         const currentUserId = req.user._id;
+        const profileUserId = req.query.userId || currentUserId; // Allow viewing other users' followers
         
-        // Find current user with populated followers
-        const user = await User.findById(currentUserId).populate('followers', '_id name profilePicture bio');
+        // Find user with populated followers
+        const user = await User.findById(profileUserId).populate('followers', '_id name profilePicture bio');
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if profile is private and not the current user
+        if (user.isPrivateProfile && !currentUserId.equals(user._id)) {
+            return res.json([]); // Return empty array for private profiles
         }
         
         // Check if current user follows each of their followers
@@ -216,15 +240,37 @@ router.get('/followers', isAuthenticated, async (req, res) => {
 router.get('/following', isAuthenticated, async (req, res) => {
     try {
         const currentUserId = req.user._id;
+        const profileUserId = req.query.userId || currentUserId; // Allow viewing other users' following
         
-        // Find current user with populated following
-        const user = await User.findById(currentUserId).populate('following', '_id name profilePicture bio');
+        // Find user with populated following
+        const user = await User.findById(profileUserId).populate('following', '_id name profilePicture bio');
         
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        res.json(user.following);
+        // Check if profile is private and not the current user
+        if (user.isPrivateProfile && !currentUserId.equals(user._id)) {
+            return res.json([]); // Return empty array for private profiles
+        }
+        
+        // Check if current user follows each of the users that this user follows
+        const followingWithStatus = await Promise.all(user.following.map(async (followed) => {
+            const isFollowing = await User.findOne({
+                _id: currentUserId,
+                following: followed._id
+            });
+            
+            return {
+                _id: followed._id,
+                name: followed.name,
+                profilePicture: followed.profilePicture,
+                bio: followed.bio,
+                youFollow: !!isFollowing
+            };
+        }));
+        
+        res.json(followingWithStatus);
         
     } catch (error) {
         console.error('Error getting following:', error);
@@ -374,6 +420,120 @@ router.get('/basic-info/:userId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching user info:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.post('/change-password', isAuthenticated, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user._id;
+        
+        // Find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Validate current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+        
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+        
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({ message: 'Server error during password change' });
+    }
+});
+
+// Get user privacy status
+router.get('/privacy-status', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId).select('isPrivateProfile');
+        
+        res.json({
+            isPrivate: user.isPrivateProfile || false
+        });
+    } catch (error) {
+        console.error('Error fetching privacy status:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update user privacy settings
+router.post('/update-privacy', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { isPrivate } = req.body;
+        
+        // Update user privacy setting
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { isPrivateProfile: isPrivate },
+            { new: true }
+        );
+        
+        res.json({
+            success: true,
+            isPrivate: user.isPrivateProfile
+        });
+    } catch (error) {
+        console.error('Error updating privacy settings:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get user profile data
+router.get('/profile', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const profileUserId = req.query.userId || userId; // Allow viewing other profiles
+        const isOwnProfile = userId.toString() === profileUserId.toString();
+        
+        const user = await User.findById(profileUserId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if current user follows this profile
+        const youFollow = !isOwnProfile ? 
+            !!(await User.findOne({ _id: userId, following: profileUserId })) : 
+            false;
+        
+        // Create response object
+        const profileData = {
+            name: user.name,
+            email: isOwnProfile ? user.email : undefined,
+            profilePicture: user.profilePicture,
+            coverPhoto: user.coverPhoto || '',
+            isPrivateProfile: user.isPrivateProfile || false,
+            isOwnProfile: isOwnProfile,
+            youFollow: youFollow
+        };
+        
+        // Only include these details if profile is public or it's the owner or current user follows private account
+        if (!user.isPrivateProfile || isOwnProfile || youFollow) {
+            profileData.bio = user.bio || '';
+            profileData.followersCount = user.followers ? user.followers.length : 0;
+            profileData.followingCount = user.following ? user.following.length : 0;
+        }
+        
+        res.json(profileData);
+        
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ message: 'Server error during profile fetch' });
     }
 });
 
