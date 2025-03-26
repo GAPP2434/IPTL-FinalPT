@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/Icon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Gathering Hub</title>
+    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/adminPanel.css">
+    <link rel="stylesheet" href="css/commonlyUsed.css">
+    <script src="js/authCheck.js"></script>
+    <script src="js/adminPanel.js" defer></script>
+    <script src="js/components.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <header class="header"></header>
+    
+    <!-- Main Content -->
+    <main class="admin-main">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h1>Administration Panel</h1>
+            </div>
+            <div class="admin-tabs">
+                <button class="tab-button active" data-tab="users">User & Content Management</button>
+                <button class="tab-button" data-tab="analytics">Analytics & Insights</button>
+                <button class="tab-button" data-tab="security">Moderation & Security</button>
+                <button class="tab-button" data-tab="settings">Customization & Settings</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- User Management Tab -->
+                <div id="users-tab" class="tab-panel active">
+                    <h2>User Management</h2>
+                    
+                    <div class="admin-controls">
+                        <div class="search-container">
+                            <input type="text" id="userSearchInput" placeholder="Search users...">
+                            <button id="userSearchButton"><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="filter-container">
+                            <select id="userStatusFilter">
+                                <option value="all">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="suspended">Suspended</option>
+                                <option value="banned">Banned</option>
+                            </select>
+                            <select id="userRoleFilter">
+                                <option value="all">All Roles</option>
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="user-table">
+                            <thead>
+                                <tr>
+                                    <th>Avatar</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <!-- User data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Analytics Tab -->
+                <div id="analytics-tab" class="tab-panel">
+                    <h2>User Engagement Analytics</h2>
+                    
+                    <div class="stats-container">
+                        <div class="stat-card primary">
+                            <div class="stat-label">Total Users</div>
+                            <div class="stat-value" id="totalUsers">0</div>
+                            <div class="stat-desc">Registered users</div>
+                        </div>
+                        
+                        <div class="stat-card success">
+                            <div class="stat-label">Active Now</div>
+                            <div class="stat-value" id="activeUsers">0</div>
+                            <div class="stat-desc">Currently online</div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <div class="stat-label">New Today</div>
+                            <div class="stat-value" id="newUsers">0</div>
+                            <div class="stat-desc">Users joined today</div>
+                        </div>
+                        
+                        <div class="stat-card danger">
+                            <div class="stat-label">Flagged</div>
+                            <div class="stat-value" id="flaggedUsers">0</div>
+                            <div class="stat-desc">Users pending review</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Monthly Active Users</h3>
+                    <div id="monthlyActiveUsersChart" style="height: 300px; background-color: #f9f9f9; border-radius: 8px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+                        <span>Chart data loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Security Tab -->
+                <div id="security-tab" class="tab-panel">
+                    <h2>Security Logs</h2>
+                    
+                    <div class="admin-controls">
+                        <div class="search-container">
+                            <input type="text" id="securitySearchInput" placeholder="Search logs...">
+                            <button id="securitySearchButton"><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="filter-container">
+                            <select id="securitySeverityFilter">
+                                <option value="all">All Severities</option>
+                                <option value="info">Info</option>
+                                <option value="warning">Warning</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="security-log-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>IP Address</th>
+                                    <th>User</th>
+                                    <th>Event</th>
+                                    <th>Severity</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="securityLogTableBody">
+                                <!-- Security logs will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Settings Tab -->
+                <div id="settings-tab" class="tab-panel">
+                    <h2>Customization & Settings</h2>
+                    <p>Settings functionality will be implemented in future updates.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Message container for notifications -->
+    <div id="message-container" class="message-container">
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="loading-content">
+            <img src="images/loadingScreen.png" alt="Loading..." class="loader-image">
+            <p>Loading data...</p>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeConfirmModal">&times;</span>
+            <h2 id="confirmTitle">Confirm Action</h2>
+            <p id="confirmMessage">Are you sure you want to perform this action?</p>
+            <div class="modal-actions">
+                <button id="cancelButton" class="cancel-button">Cancel</button>
+                <button id="confirmButton" class="confirm-button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer"></footer>
+    <script src="js/adminWebSocket.js"></script>
+</body>
+</html>

@@ -38,6 +38,18 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+    // Add role field
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
+    // Add status field for managing user accounts
+    status: {
+        type: String,
+        enum: ['active', 'suspended', 'banned'],
+        default: 'active'
+    },
     password: {
         type: String,
         // Only require password for non-Google users

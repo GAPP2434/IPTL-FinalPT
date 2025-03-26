@@ -9,13 +9,19 @@ const cookieSession = require('cookie-session');
 const passport = require('passport');
 const http = require('http');
 const WebSocket = require('ws');
+const User = require('./models/Users');
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ noServer: true }); // Changed to noServer: true
+const adminWss = new WebSocket.Server({ noServer: true });
 const onlineUsers = new Set();
 global.wss = wss;
+global.adminWss = adminWss;
+
 require("./passportSetup");
 const storiesRoutes = require('./routes/storiesRoutes');
 
+// Create a single upgrade handler for the server
+server.removeAllListeners('upgrade'); // Clear any existing listeners
 // Load environment variables
 dotenv.config();
 
@@ -181,12 +187,309 @@ function broadcastToAll(data) {
     });
 }
 
+// ADMIN STUFF
+// Handle upgrade for WebSocket connections - FIX THE UPGRADE HANDLING
+server.on('upgrade', function(request, socket, head) {
+    // Parse the URL to get the pathname
+    const { pathname } = new URL(request.url, 'http://localhost');
+
+    try {
+        if (pathname === '/admin') {
+            console.log('Admin WebSocket connection requested');
+            adminWss.handleUpgrade(request, socket, head, function(ws) {
+                adminWss.emit('connection', ws, request);
+            });
+        } else if (pathname === '/' || pathname === '/ws') {
+            console.log('Regular WebSocket connection requested');
+            wss.handleUpgrade(request, socket, head, function(ws) {
+                wss.emit('connection', ws, request);
+            });
+        } else {
+            // No handler matched
+            console.log(`No WebSocket handler for path: ${pathname}`);
+            socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+            socket.destroy();
+        }
+    } catch (err) {
+        console.error('Error during WebSocket upgrade:', err);
+        if (!socket.destroyed) {
+            socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+            socket.destroy();
+        }
+    }
+});
+
+// Handle admin WebSocket connections
+adminWss.on('connection', (ws, req) => {
+    console.log('Admin client connected');
+    
+    // Extract user ID from session cookie (same as regular WebSocket)
+    const cookies = req.headers.cookie;
+    if (cookies) {
+        const sessionCookie = cookies.split(';').find(c => c.trim().startsWith('session='));
+        if (sessionCookie) {
+            try {
+                // Extract user ID from session
+                const sessionData = Buffer.from(sessionCookie.split('=')[1], 'base64').toString('utf-8');
+                const sessionJson = JSON.parse(sessionData.split('.')[0]);
+                const userId = sessionJson.passport.user;
+                
+                if (userId) {
+                    // Verify the user is an admin
+                    User.findById(userId).then(user => {
+                        if (user && user.role === 'admin') {
+                            console.log(`Admin WebSocket authenticated for admin ${user.name}`);
+                            ws.userId = userId;
+                            ws.isAdmin = true;
+                            
+                            // Send success auth result
+                            ws.send(JSON.stringify({
+                                type: 'auth_result',
+                                success: true
+                            }));
+                        } else {
+                            console.log('Non-admin tried to connect to admin WebSocket');
+                            ws.send(JSON.stringify({
+                                type: 'auth_result',
+                                success: false,
+                                message: 'Admin privileges required'
+                            }));
+                            ws.close();
+                        }
+                    }).catch(error => {
+                        console.error('Error verifying admin:', error);
+                        ws.close();
+                    });
+                }
+            } catch (error) {
+                console.error('Error parsing session data for admin WebSocket:', error);
+                ws.close();
+            }
+        } else {
+            ws.close();
+        }
+    } else {
+        ws.close();
+    }
+    
+    // Handle messages from admin clients
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            // Only process messages if the connection is authenticated as admin
+            if (!ws.isAdmin) {
+                console.log('Ignoring message from non-admin connection');
+                return;
+            }
+            
+            // Process admin-specific commands
+            switch (data.type) {
+                case 'ban_user':
+                    handleBanUser(data, ws);
+                    break;
+                case 'unban_user':
+                    handleUnbanUser(data, ws);
+                    break;
+                case 'suspend_user':
+                    handleSuspendUser(data, ws);
+                    break;
+                default:
+                    console.log('Unknown admin command:', data.type);
+            }
+        } catch (error) {
+            console.error('Admin WebSocket message error:', error);
+        }
+    });
+    
+    // Handle admin disconnection
+    ws.on('close', () => {
+        console.log('Admin client disconnected');
+    });
+});
+
+// Admin command handlers
+async function handleBanUser(data, ws) {
+    try {
+        const { userId, reason } = data;
+        
+        // Update user status in database
+        const user = await User.findByIdAndUpdate(
+            userId, 
+            { status: 'banned' },
+            { new: true }
+        );
+        
+        if (!user) {
+            return;
+        }
+        
+        console.log(`User ${user.name} banned by admin ${ws.userId}`);
+        
+        // Notify other admins
+        adminWss.clients.forEach((client) => {
+            if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'user_banned',
+                    userId: userId,
+                    username: user.name,
+                    reason: reason,
+                    adminId: ws.userId
+                }));
+            }
+        });
+        
+        // Notify the banned user if they're online
+        wss.clients.forEach((client) => {
+            if (client.userId === userId && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'account_banned',
+                    reason: reason || 'Your account has been banned by an administrator.'
+                }));
+            }
+        });
+        
+        // Add security log
+        addSecurityLog({
+            action: 'user_banned',
+            targetUserId: userId,
+            adminId: ws.userId,
+            details: reason || 'No reason provided',
+            severity: 'critical'
+        });
+        
+    } catch (error) {
+        console.error('Error banning user:', error);
+    }
+}
+
+async function handleUnbanUser(data, ws) {
+    try {
+        const { userId } = data;
+        
+        // Update user status in database
+        const user = await User.findByIdAndUpdate(
+            userId, 
+            { status: 'active' },
+            { new: true }
+        );
+        
+        if (!user) {
+            return;
+        }
+        
+        console.log(`User ${user.name} unbanned by admin ${ws.userId}`);
+        
+        // Notify other admins
+        adminWss.clients.forEach((client) => {
+            if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'user_unbanned',
+                    userId: userId,
+                    username: user.name,
+                    adminId: ws.userId
+                }));
+            }
+        });
+        
+        // Add security log
+        addSecurityLog({
+            action: 'user_unbanned',
+            targetUserId: userId,
+            adminId: ws.userId,
+            details: 'User account reactivated',
+            severity: 'warning'
+        });
+        
+    } catch (error) {
+        console.error('Error unbanning user:', error);
+    }
+}
+
+async function handleSuspendUser(data, ws) {
+    try {
+        const { userId, reason, duration } = data;
+        
+        // Update user status in database
+        const user = await User.findByIdAndUpdate(
+            userId, 
+            { status: 'suspended' },
+            { new: true }
+        );
+        
+        if (!user) {
+            return;
+        }
+        
+        console.log(`User ${user.name} suspended by admin ${ws.userId}`);
+        
+        // Notify other admins
+        adminWss.clients.forEach((client) => {
+            if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'user_suspended',
+                    userId: userId,
+                    username: user.name,
+                    reason: reason,
+                    duration: duration,
+                    adminId: ws.userId
+                }));
+            }
+        });
+        
+        // Notify the suspended user if they're online
+        wss.clients.forEach((client) => {
+            if (client.userId === userId && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'account_suspended',
+                    reason: reason || 'Your account has been temporarily suspended.',
+                    duration: duration || '24h'
+                }));
+            }
+        });
+        
+        // Add security log
+        addSecurityLog({
+            action: 'user_suspended',
+            targetUserId: userId,
+            adminId: ws.userId,
+            details: `${reason || 'No reason provided'} (Duration: ${duration || '24h'})`,
+            severity: 'warning'
+        });
+        
+    } catch (error) {
+        console.error('Error suspending user:', error);
+    }
+}
+
+// Function to add security logs
+async function addSecurityLog(logData) {
+    try {
+        // In a real implementation, you would save this to a SecurityLogs collection
+        console.log('Security log:', logData);
+        
+        // Broadcast to admins
+        adminWss.clients.forEach((client) => {
+            if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'security_alert',
+                    ...logData,
+                    timestamp: new Date()
+                }));
+            }
+        });
+    } catch (error) {
+        console.error('Error adding security log:', error);
+    }
+}
+
 // Import and use routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api/stories', storiesRoutes);
+app.use('/api/admin', require('./routes/adminRoute'));
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));

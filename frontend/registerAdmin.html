@@ -1,19 +1,22 @@
+Admin.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gathering Hub - Register</title>
+    <title>Admin Registration - Gathering Hub</title>
     <link rel="icon" type="image/x-icon" href="images/Icon.ico">
     <link rel="stylesheet" href="css/register.css">
+    <link rel="stylesheet" href="css/adminPanel.css">
+    <script src="js/registerAdmin.js"></script>
 </head>
 <body>
     <div class="auth-container">
         <div class="auth-box">
-            <h1>Create Account</h1>
-            <form id="registerForm" enctype="multipart/form-data">
+            <h1>Admin Registration</h1>
+            <form id="registerAdminForm" enctype="multipart/form-data">
                 <div class="form-group">
-                    <label for="username">Username</label>
+                    <label for="username">Admin Username</label>
                     <input type="text" id="username" name="username" maxlength="15" pattern="[a-zA-Z0-9_-]+" required>
                     <div class="input-requirements">
                         <small>Max 15 characters, alphanumeric with underscore or dash only.</small>
@@ -47,10 +50,18 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="adminCode">Administrator Code</label>
+                    <input type="password" id="adminCode" name="adminCode" required>
+                    <div class="input-requirements">
+                        <small>Enter the administrator verification code</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="profilePicture">Profile Picture (Optional)</label>
                     <div class="profile-upload">
                         <div class="profile-preview-container">
-                            <img id="profilePreview" src="avatars/Avatar_Default_Anonymous.webp" alt="Profile Preview">
+                            <img id="profilePreview" src="avatars/Avatar_Default_Admin.webp" alt="Profile Preview">
                         </div>
                         <input type="file" id="profilePicture" name="profilePicture" accept="image/*">
                         <button type="button" id="chooseProfileBtn">Choose Image</button>
@@ -58,25 +69,19 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" id="registerButton">Register</button>
+                    <button type="submit" id="registerButton">Register as Admin</button>
                 </div>
 
                 <div class="form-footer">
-                    <p>Already have an account? <a href="login.html">Log In</a></p>
+                    <p>Regular user? <a href="register.html">Register here</a></p>
                 </div>
             </form>
         </div>
-        <!-- Add this to the bottom of frontend/register.html before the closing </div> -->
-<div class="admin-registration-link">
-    <p>Are you an administrator? <a href="registerAdmin.html">Register as admin</a></p>
-</div>
     </div>
 
-    <!-- Message display for errors or success -->
     <div id="message-container" class="message-container">
         <div id="message" class="message"></div>
     </div>
     
-    <script src="js/register.js"></script>
 </body>
 </html>

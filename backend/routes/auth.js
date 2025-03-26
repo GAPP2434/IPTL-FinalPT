@@ -108,19 +108,24 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 });
 
 // Login user
-router.post('/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        // Check if user exists
-        const user = await User.findOne({ name: username });
-        if (!user) {
-            return res.status(400).json({ message: 'Invalid username or password' });
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', async (err, user, info) => {
+        if (err) {
+            return res.status(500).json({ message: 'Authentication error' });
         }
-        // Validate password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid username or password' });
+        
+        if (!user) {
+            return res.status(401).json({ message: info.message || 'Invalid username or password' });
+        }
+        
+        // Check if the user is banned
+        if (user.status === 'banned') {
+            return res.status(403).json({ message: 'Your account has been banned. Please contact support for more information.' });
+        }
+        
+        // Check if the user is suspended
+        if (user.status === 'suspended') {
+            return res.status(403).json({ message: 'Your account has been temporarily suspended. Please try again later or contact support.' });
         }
         
         req.login(user, (err) => {
@@ -128,22 +133,20 @@ router.post('/login', async (req, res) => {
                 return res.status(500).json({ message: 'Error during login' });
             }
             
-            // Include needsEncryptionSetup flag in the SAME response
+            // Include needsEncryptionSetup flag in the response
             return res.json({ 
                 success: true, 
                 user: {
-                    id: req.user.id, 
+                    id: user._id, 
                     name: user.name, 
                     email: user.email,
-                    profilePicture: user.profilePicture 
+                    profilePicture: user.profilePicture,
+                    role: user.role
                 },
                 needsEncryptionSetup: !user.publicKey
             });
         });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ message: 'Server error during login' });
-    }
+    })(req, res, next);
 });
 
 
@@ -264,6 +267,72 @@ router.post('/reset-password', async (req, res) => {
     } catch (err) {
         console.error('Reset password error:', err);
         res.status(500).json({ message: 'Server error during password reset' });
+    }
+});
+
+// Admin registration endpoint
+router.post('/register-admin', upload.single('profilePicture'), async (req, res) => {
+    try {
+        const { name, email, password, adminCode } = req.body;
+        
+        // Validate admin code
+        const validAdminCode = process.env.ADMIN_REGISTRATION_CODE || 'lebronjames';
+        if (adminCode !== validAdminCode) {
+            return res.status(401).json({ message: 'Invalid administrator code' });
+        }
+        
+        // Check if email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered' });
+        }
+        
+        // Check if username already exists
+        const existingUsername = await User.findOne({ name });
+        if (existingUsername) {
+            return res.status(400).json({ message: 'Username already taken' });
+        }
+        
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        
+        // Create new user with admin role
+        const newUser = new User({
+            name,
+            email,
+            password: hashedPassword,
+            role: 'admin'
+        });
+        
+        // Handle profile picture if provided
+        if (req.file) {
+            // Fix the path processing to handle Windows and Unix paths correctly
+            let profilePicturePath = req.file.path;
+            
+            // Convert backslashes to forward slashes for consistency
+            profilePicturePath = profilePicturePath.replace(/\\/g, '/');
+            
+            // Extract just the part after 'frontend/'
+            const pathParts = profilePicturePath.split('frontend/');
+            if (pathParts.length > 1) {
+                profilePicturePath = pathParts[1];
+            }
+            
+            console.log("Admin profile picture path:", profilePicturePath);
+            newUser.profilePicture = profilePicturePath;
+        } else {
+            // Use default admin avatar
+            newUser.profilePicture = `avatars/Avatar_Default_Admin.webp`;
+        }
+        
+        // Save user to database
+        await newUser.save();
+        
+        res.status(201).json({ message: 'Admin registered successfully' });
+    } catch (err) {
+        console.error('Admin registration error:', err);
+        res.status(500).json({ message: 'Server error during admin registration' });
     }
 });
 module.exports = router;

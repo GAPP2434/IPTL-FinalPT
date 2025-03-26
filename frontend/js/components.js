@@ -261,3 +261,24 @@ window.searchUtils = {
     debounce,
     setupSearch
 };
+
+// Check if the user is an admin and show admin panel button
+function checkAdminAccess() {
+    fetch('/api/auth/user', {
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(user => {
+        const adminButton = document.getElementById('adminPanelButton');
+        if (adminButton) {
+            adminButton.style.display = user && user.role === 'admin' ? 'inline-block' : 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error checking admin access:', error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkAdminAccess, 100); // Small delay to ensure header has loaded
+});

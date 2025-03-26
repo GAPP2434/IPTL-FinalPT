@@ -187,6 +187,94 @@
     100% { transform: rotate(-360deg); }
 }
 
+/* Ban Modal Styling */
+.ban-modal-content {
+    background-color: #f8d7da;
+    border: 2px solid #f5c6cb;
+    color: #721c24;
+    text-align: center;
+    padding: 30px;
+}
+
+.ban-modal-content h2 {
+    color: #721c24;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.ban-modal-content .modal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.ban-modal-content .confirm-button {
+    background-color: #721c24;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.ban-modal-content .confirm-button:hover {
+    background-color: #5a171d;
+}
+
+/* Suspension Modal Styling */
+.suspension-modal-content {
+    background-color: #fff3cd;
+    border: 2px solid #ffeeba;
+    color: #856404;
+    text-align: center;
+    padding: 30px;
+}
+
+.suspension-modal-content h2 {
+    color: #856404;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.suspension-modal-content .modal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.suspension-modal-content .confirm-button {
+    background-color: #856404;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.suspension-modal-content .confirm-button:hover {
+    background-color: #6a5003;
+}
+
+/* Force display for modals - cannot be closed except via the button */
+.modal.force-display {
+    display: block !important;
+    z-index: 9999; /* Make sure it's on top of everything */
+}
+
+.modal.force-display .modal-content {
+    animation: modalShake 0.5s;
+}
+
+@keyframes modalShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
 /* 7. Common animations */
 @keyframes fadeIn {
     from {
