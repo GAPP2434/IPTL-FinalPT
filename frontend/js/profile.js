@@ -337,14 +337,16 @@ function attachFollowButtonListeners() {
     unfollowButtons.forEach(button => {
         button.addEventListener('click', function() {
             const userId = this.dataset.userId;
+            // Get the parent element before doing the operation
+            const userElement = this.closest('.follow-item');
+            
             // Use the shared unfollow function with callbacks for specific behavior
             window.userInteractions.unfollowUser(userId, this, {
                 onSuccess: () => {
                     fetchUserProfile(); // Update follower count after success
                     
                     // Special handling for following list - remove user from list
-                    if (followModalTitle.textContent === 'Following') {
-                        const userElement = button.closest('.follow-item');
+                    if (followModalTitle.textContent === 'Following' && userElement) {
                         userElement.remove();
                         
                         // If no more following, show message
