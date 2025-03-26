@@ -11,9 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create WebSocket connection
+        
+        // Create WebSocket connection with explicit path
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        window.socket = new WebSocket(`${wsProtocol}//${window.location.host}`);
+        window.socket = new WebSocket(`${wsProtocol}//${window.location.host}/`);
         
         // Connection opened
         window.socket.addEventListener('open', () => {
