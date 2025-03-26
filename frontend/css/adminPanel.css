@@ -153,21 +153,35 @@
     border-radius: 12px;
     font-size: 0.8rem;
     color: white;
-    font-weight: bold;
-    text-align: center;
+    font-weight: 500;
     display: inline-block;
+    text-align: center;
+    min-width: 70px;
+    transition: all 0.3s ease; /* Smooth transition when status changes */
 }
 
 .status-active {
-    background-color: #4CAF50;
-}
-
-.status-suspended {
-    background-color: #ff9800;
+    background-color: #28a745;
 }
 
 .status-banned {
-    background-color: #f44336;
+    background-color: #dc3545;
+}
+
+.status-suspended {
+    background-color: #ffc107;
+    color: #212529; /* Dark text for better contrast on yellow */
+}
+
+.status-change {
+    animation: statusChange 0.5s ease;
+}
+
+/* Add animation for status change */
+@keyframes statusChange {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 /* Search and filter controls */

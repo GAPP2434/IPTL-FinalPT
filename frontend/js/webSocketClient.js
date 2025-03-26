@@ -67,6 +67,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'read_receipt':
                         handleReadReceipt(data);
                         break;
+                    // ADD THESE NEW CASES
+                    case 'account_banned':
+                        // User has been banned - show modal and force logout
+                        handleAccountBanned(data);
+                        break;
+                    case 'account_suspended':
+                        // User has been suspended - show modal and force logout  
+                        handleAccountSuspended(data);
+                        break;
                     default:
                         console.log("Unhandled message type:", data.type);
                 }
@@ -769,6 +778,105 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Add this function to handle account banned notifications
+    function handleAccountBanned(data) {
+        console.log("Account banned notification received:", data);
+        
+        // Show ban modal with reason if provided
+        const reason = data.reason || "Your account has been banned by an administrator.";
+        showBanModal(reason);
+    }
+
+    // Add this function to handle account suspended notifications
+    function handleAccountSuspended(data) {
+        console.log("Account suspended notification received:", data);
+        
+        // Show suspension modal with reason if provided
+        const reason = data.reason || "Your account has been temporarily suspended.";
+        showSuspensionModal(reason);
+    }
+
+    // Helper function to show the ban modal
+    function showBanModal(message) {
+        const banModal = document.getElementById('banModal');
+        if (banModal) {
+            const banMessageElement = document.getElementById('banMessage');
+            if (banMessageElement) {
+                banMessageElement.textContent = message;
+            }
+            
+            banModal.classList.add('force-display');
+            banModal.style.display = 'block';
+            
+            // Setup confirm button
+            const banConfirmButton = document.getElementById('banConfirmButton');
+            if (banConfirmButton) {
+                const newButton = banConfirmButton.cloneNode(true);
+                banConfirmButton.parentNode.replaceChild(newButton, banConfirmButton);
+                
+                newButton.addEventListener('click', () => {
+                    // Logout and redirect to login
+                    fetch('/api/auth/logout', {
+                        credentials: 'include'
+                    })
+                    .finally(() => {
+                        localStorage.removeItem('token');
+                        window.location.href = 'login.html';
+                    });
+                });
+            }
+        } else {
+            alert(message);
+            fetch('/api/auth/logout', {
+                credentials: 'include'
+            })
+            .finally(() => {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            });
+        }
+    }
+
+    // Helper function to show the suspension modal
+    function showSuspensionModal(message) {
+        const suspensionModal = document.getElementById('suspensionModal');
+        if (suspensionModal) {
+            const suspensionMessageElement = document.getElementById('suspensionMessage');
+            if (suspensionMessageElement) {
+                suspensionMessageElement.textContent = message;
+            }
+            
+            suspensionModal.classList.add('force-display');
+            suspensionModal.style.display = 'block';
+            
+            // Setup confirm button
+            const suspensionConfirmButton = document.getElementById('suspensionConfirmButton');
+            if (suspensionConfirmButton) {
+                const newButton = suspensionConfirmButton.cloneNode(true);
+                suspensionConfirmButton.parentNode.replaceChild(newButton, suspensionConfirmButton);
+                
+                newButton.addEventListener('click', () => {
+                    // Logout and redirect to login
+                    fetch('/api/auth/logout', {
+                        credentials: 'include'
+                    })
+                    .finally(() => {
+                        localStorage.removeItem('token');
+                        window.location.href = 'login.html';
+                    });
+                });
+            }
+        } else {
+            alert(message);
+            fetch('/api/auth/logout', {
+                credentials: 'include'
+            })
+            .finally(() => {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+            });
+        }
+    }
     // Start the initial connection
     connectWebSocket();
 });

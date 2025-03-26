@@ -410,10 +410,74 @@ async function handleSuspendUser(data, ws) {
     try {
         const { userId, reason, duration } = data;
         
-        // Update user status in database
+        // Special case: if duration is "0h" or empty, treat as immediate reactivation
+        if (!duration || duration === '0h' || duration === '0m' || duration === '0d') {
+            // Reactivate user immediately
+            const user = await User.findByIdAndUpdate(
+                userId, 
+                { status: 'active' },
+                { new: true }
+            );
+            
+            if (!user) return;
+            
+            console.log(`User ${user.name} reactivated by admin ${ws.userId}`);
+            
+            // Notify admins
+            adminWss.clients.forEach((client) => {
+                if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({
+                        type: 'user_reactivated',
+                        userId: userId,
+                        username: user.name,
+                        adminId: ws.userId
+                    }));
+                }
+            });
+            
+            // Add security log
+            addSecurityLog({
+                action: 'user_reactivated',
+                targetUserId: userId,
+                adminId: ws.userId,
+                details: reason || 'User reactivated by admin',
+                severity: 'info'
+            });
+            
+            return;
+        }
+        
+        // Parse the duration (e.g., "24h", "3d", "30m")
+        let suspensionMs = 0;
+        if (duration) {
+            const unit = duration.slice(-1);
+            const value = parseInt(duration.slice(0, -1));
+            
+            if (!isNaN(value)) {
+                switch (unit) {
+                    case 'h': // Hours
+                        suspensionMs = value * 60 * 60 * 1000;
+                        break;
+                    case 'd': // Days
+                        suspensionMs = value * 24 * 60 * 60 * 1000;
+                        break;
+                    case 'm': // Minutes
+                        suspensionMs = value * 60 * 1000;
+                        break;
+                }
+            }
+        }
+        
+        // Calculate when suspension ends
+        const suspensionEndsAt = new Date(Date.now() + suspensionMs);
+        
+        // Update user status in database with suspension end time
         const user = await User.findByIdAndUpdate(
             userId, 
-            { status: 'suspended' },
+            { 
+                status: 'suspended',
+                suspensionEndsAt: suspensionEndsAt
+            },
             { new: true }
         );
         
@@ -421,7 +485,7 @@ async function handleSuspendUser(data, ws) {
             return;
         }
         
-        console.log(`User ${user.name} suspended by admin ${ws.userId}`);
+        console.log(`User ${user.name} suspended by admin ${ws.userId} until ${suspensionEndsAt}`);
         
         // Notify other admins
         adminWss.clients.forEach((client) => {
@@ -432,6 +496,7 @@ async function handleSuspendUser(data, ws) {
                     username: user.name,
                     reason: reason,
                     duration: duration,
+                    suspensionEndsAt: suspensionEndsAt,
                     adminId: ws.userId
                 }));
             }
@@ -443,7 +508,8 @@ async function handleSuspendUser(data, ws) {
                 client.send(JSON.stringify({
                     type: 'account_suspended',
                     reason: reason || 'Your account has been temporarily suspended.',
-                    duration: duration || '24h'
+                    duration: duration || '24h',
+                    suspensionEndsAt: suspensionEndsAt
                 }));
             }
         });
@@ -456,6 +522,47 @@ async function handleSuspendUser(data, ws) {
             details: `${reason || 'No reason provided'} (Duration: ${duration || '24h'})`,
             severity: 'warning'
         });
+        
+        // Schedule automatic reactivation when suspension period ends
+        setTimeout(async () => {
+            try {
+                // Check if the user is still suspended (they might have been banned or manually reactivated)
+                const currentUser = await User.findById(userId);
+                if (currentUser && currentUser.status === 'suspended') {
+                    // Reactivate the user
+                    const updatedUser = await User.findByIdAndUpdate(
+                        userId,
+                        { status: 'active', suspensionEndsAt: null },
+                        { new: true }
+                    );
+                    
+                    console.log(`User ${updatedUser.name} automatically reactivated after suspension period`);
+                    
+                    // Notify admins about the automatic reactivation
+                    adminWss.clients.forEach((client) => {
+                        if (client.isAdmin && client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: 'user_reactivated',
+                                userId: userId,
+                                username: updatedUser.name,
+                                reason: 'Suspension period expired',
+                                automatic: true
+                            }));
+                        }
+                    });
+                    
+                    // Add security log
+                    addSecurityLog({
+                        action: 'user_auto_reactivated',
+                        targetUserId: userId,
+                        details: 'Suspension period expired',
+                        severity: 'info'
+                    });
+                }
+            } catch (error) {
+                console.error('Error automatically reactivating user after suspension:', error);
+            }
+        }, suspensionMs);
         
     } catch (error) {
         console.error('Error suspending user:', error);
