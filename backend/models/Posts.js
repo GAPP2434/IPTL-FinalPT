@@ -1,6 +1,26 @@
 // filepath: d:\Github Repos\IPTL-FinalPT\backend\models\Posts.js
 const mongoose = require("mongoose");
 
+const CommentSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    username: {
+        type: String,
+        required: true
+    },
+    comment: {
+        type: String,
+        required: true
+    },
+    timestamp: {
+        type: Date,
+        default: Date.now
+    }
+});
+
 const PostSchema = new mongoose.Schema({
     _id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -40,7 +60,8 @@ const PostSchema = new mongoose.Schema({
     repostedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
-    }
+    },
+    comments: [CommentSchema]
 });
 
 module.exports = mongoose.model("Post", PostSchema);

@@ -852,12 +852,66 @@ function createPostElement(post) {
             <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
             <button class="share-button" data-post-id="${post._id}">🔗 Share</button>
             <button class="repost-button" data-post-id="${post._id}">🔁 Repost</button>
+         </div>
+        <div class="comment-section">
+            <div class="comment-input">
+                <input type="text" class="comment-input-field" placeholder="Add a comment..." data-post-id="${post._id}">
+                <button class="send-comment-button" data-post-id="${post._id}">Send</button>
+            </div>
+            <div class="comment-list" id="commentList-${post._id}">
+                ${(Array.isArray(post.comments) ? post.comments : []).map(comment => `
+                    <div class="comment">
+                        <span class="username">${comment.username}:</span> ${comment.comment}
+                    </div>
+                `).join('')}
+            </div>
         </div>
     `;
     return postElement;
 }
 
+// Listen for comment submissions
+document.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('send-comment-button')) {
+        const postId = event.target.dataset.postId;
+        const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
+        const commentText = commentInput.value.trim();
 
+        if (!commentText) {
+            alert('Please enter a comment.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ comment: commentText })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to add comment');
+            }
+
+            const newComment = await response.json();
+            const commentList = document.getElementById(`commentList-${postId}`);
+            const commentElement = document.createElement('div');
+            commentElement.classList.add('comment');
+            commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${newComment.comment}`;
+            commentList.appendChild(commentElement);
+
+            // Clear the input field
+            commentInput.value = '';
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            alert(`Failed to add comment: ${error.message}`);
+        }
+    }
+});
 
 // Listen for Post Reactions
 document.addEventListener('click', async (event) => {
