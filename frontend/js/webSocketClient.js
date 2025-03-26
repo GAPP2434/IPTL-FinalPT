@@ -108,109 +108,252 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleGroupUpdated(data) {
-        console.log("GROUP UPDATE RECEIVED - NEW HANDLER:", data);
-        
-        // 1. Force update the message in the conversation preview immediately
-        if (window.conversations) {
-            const conversationIndex = window.conversations.findIndex(c => c.userId === data.groupId);
-            if (conversationIndex >= 0) {
-                // Update last message
-                window.conversations[conversationIndex].lastMessage = data.message;
-                
-                // Update other properties
-                if (data.updatedField === 'profilePicture') {
-                    window.conversations[conversationIndex].profilePicture = data.newValue;
-                    
-                    // Force-update profile picture in UI with cache buster
-                    const conversationItem = document.querySelector(`.conversation-item[data-user-id="${data.groupId}"]`);
-                    if (conversationItem) {
-                        const avatar = conversationItem.querySelector('.conversation-avatar');
-                        if (avatar) {
-                            avatar.src = data.newValue + '?t=' + new Date().getTime();
-                        }
-                    }
-                    
-                    // Update chat header if this is the current conversation
-                    if (window.currentRecipient === data.groupId) {
-                        const chatUserImg = document.getElementById('chatUserImg');
-                        if (chatUserImg) {
-                            chatUserImg.src = data.newValue + '?t=' + new Date().getTime();
-                        }
-                    }
-                } 
-                else if (data.updatedField === 'name') {
-                    window.conversations[conversationIndex].name = data.newValue;
-                    
-                    // Update conversation name in UI
-                    const conversationItem = document.querySelector(`.conversation-item[data-user-id="${data.groupId}"]`);
-                    if (conversationItem) {
-                        const nameElement = conversationItem.querySelector('.conversation-name');
-                        if (nameElement) {
-                            nameElement.textContent = data.newValue;
-                        }
-                    }
-                    
-                    // Update chat header if this is the current conversation
-                    if (window.currentRecipient === data.groupId) {
-                        const chatUsername = document.getElementById('chatUsername');
-                        if (chatUsername) {
-                            chatUsername.textContent = data.newValue;
-                        }
-                    }
-                }
-                
-                // Save to localStorage
-                localStorage.setItem('conversations', JSON.stringify(window.conversations));
-                
-                // Force re-render conversations
-                if (typeof window.renderConversations === 'function') {
-                    window.renderConversations();
-                }
-            }
-        }
-        
-        // 2. Add system message directly to DOM if we're viewing this conversation
-        if (window.currentRecipient === data.groupId) {
-            // Get the messages container
-            const messagesContainer = document.getElementById('messagesContainer');
-            if (messagesContainer) {
-                // Create a system message element - copied from appendSystemMessage implementation
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message', 'system-message');
-                
-                // Format the timestamp
-                const formattedTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                messageElement.innerHTML = `
-                    <div class="system-message-content">${data.message}</div>
-                    <div class="message-time">${formattedTime}</div>
-                `;
-                
-                // Add to DOM
-                messagesContainer.appendChild(messageElement);
-                
-                // Force scroll to bottom
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                
-                console.log("Successfully added system message to chat:", data.message);
-            } else {
-                console.error("Could not find messages container");
-            }
-        } else {
-            console.log("Not currently viewing the updated group chat");
-        }
-        
-        // 3. Show a notification to the user regardless
-        try {
-            // Use the notification system if available
-            if (typeof window.showMessage === 'function') {
-                window.showMessage(data.message, 'info');
-            }
-        } catch (e) {
-            console.error("Error showing notification:", e);
-        }
+// Completely redesigned group update handler - use a 3-layer strategy
+function handleGroupUpdated(data) {
+    console.log("NEW GROUP UPDATE HANDLER:", data);
+    
+    // Layer 1: Update global group cache - create if it doesn't exist
+    window._groupsCache = window._groupsCache || {};
+    
+    // Store the updated value in the permanent cache
+    if (!window._groupsCache[data.groupId]) {
+        window._groupsCache[data.groupId] = {};
     }
+    
+    // Store the updated field and its value
+    window._groupsCache[data.groupId][data.updatedField] = data.newValue;
+    window._groupsCache[data.groupId].lastUpdated = Date.now();
+    
+    // Layer 2: Store in localStorage for persistence across page loads
+    localStorage.setItem('_groupsCache', JSON.stringify(window._groupsCache));
+    
+    // Layer 3: Direct DOM manipulation with robust selectors
+    try {
+        // Keep track of which elements we've updated to avoid duplicate work
+        const updatedElements = new Set();
+        
+        if (data.updatedField === 'profilePicture') {
+            // Create a unique cache buster with random component
+            const cacheBuster = `?v=${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const newSrc = data.newValue + cacheBuster;
+            
+            // A. Update conversation list avatars - iterate through all possible matches
+            document.querySelectorAll(`.conversation-item[data-user-id="${data.groupId}"]`).forEach(item => {
+                if (!item || updatedElements.has(item)) return;
+                
+                const avatar = item.querySelector('.conversation-avatar');
+                if (avatar) {
+                    // Force image refresh by removing and recreating
+                    const newImg = document.createElement('img');
+                    newImg.src = newSrc;
+                    newImg.alt = "Group";
+                    newImg.className = avatar.className;
+                    avatar.parentNode.replaceChild(newImg, avatar);
+                    updatedElements.add(item);
+                }
+            });
+            
+            // B. Update chat header if active
+            if (window.currentRecipient === data.groupId) {
+                const headerImg = document.getElementById('chatUserImg');
+                if (headerImg) {
+                    headerImg.src = newSrc;
+                    // Also force reload by setting crossOrigin attribute
+                    headerImg.crossOrigin = Date.now().toString();
+                }
+            }
+            
+            // C. Update conversation data structure
+            if (window.conversations) {
+                const idx = window.conversations.findIndex(c => c.userId === data.groupId);
+                if (idx !== -1) {
+                    window.conversations[idx].profilePicture = data.newValue;
+                    // Force save to localStorage
+                    localStorage.setItem('conversations', JSON.stringify(window.conversations));
+                }
+            }
+            
+            // D. Update current group if applicable
+            if (window.currentGroup && window.currentGroup.id === data.groupId) {
+                window.currentGroup.profilePicture = data.newValue;
+            }
+        }
+        else if (data.updatedField === 'name') {
+            // A. Update conversation list names
+            document.querySelectorAll(`.conversation-item[data-user-id="${data.groupId}"]`).forEach(item => {
+                if (!item || updatedElements.has(item)) return;
+                
+                const nameEl = item.querySelector('.conversation-name');
+                if (nameEl) {
+                    nameEl.textContent = data.newValue;
+                    // Mark as permanently updated
+                    nameEl.dataset.permanentGroupName = 'true';
+                    nameEl.dataset.groupName = data.newValue;
+                    updatedElements.add(item);
+                }
+            });
+            
+            // B. Update chat header name if active
+            if (window.currentRecipient === data.groupId) {
+                const headerName = document.getElementById('chatUsername');
+                if (headerName) {
+                    headerName.textContent = data.newValue;
+                    headerName.dataset.permanentGroupName = 'true';
+                    headerName.dataset.groupName = data.newValue;
+                }
+            }
+            
+            // C. Update conversation data structure
+            if (window.conversations) {
+                const idx = window.conversations.findIndex(c => c.userId === data.groupId);
+                if (idx !== -1) {
+                    window.conversations[idx].name = data.newValue;
+                    // Force save to localStorage
+                    localStorage.setItem('conversations', JSON.stringify(window.conversations));
+                }
+            }
+            
+            // D. Update current group if applicable
+            if (window.currentGroup && window.currentGroup.id === data.groupId) {
+                window.currentGroup.name = data.newValue;
+            }
+        }
+        
+        // Add system message to chat if viewing this conversation
+        if (window.currentRecipient === data.groupId) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (messagesContainer && window.appendSystemMessage) {
+                window.appendSystemMessage(data.message, new Date());
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        // Show notification
+        if (window.showMessage) {
+            window.showMessage(data.message, 'info');
+        }
+    } catch (error) {
+        console.error("Error updating group info:", error);
+    }
+    
+    // Finally, set up a MutationObserver to keep our changes applied
+    setupGroupUpdateObserver(data.groupId, data.updatedField, data.newValue);
+}
+
+// New function to setup a MutationObserver that keeps our changes intact
+function setupGroupUpdateObserver(groupId, field, value) {
+    // Create an observer instance
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                // Check if any conversation items were added
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node
+                        const item = node.matches(`.conversation-item[data-user-id="${groupId}"]`) ? 
+                            node : node.querySelector(`.conversation-item[data-user-id="${groupId}"]`);
+                            
+                        if (item) {
+                            if (field === 'profilePicture') {
+                                const avatar = item.querySelector('.conversation-avatar');
+                                if (avatar && !avatar.src.includes(value)) {
+                                    avatar.src = value + '?v=' + Date.now();
+                                }
+                            } else if (field === 'name') {
+                                const nameEl = item.querySelector('.conversation-name');
+                                if (nameEl && nameEl.textContent !== value) {
+                                    nameEl.textContent = value;
+                                    nameEl.dataset.permanentGroupName = 'true';
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (mutation.type === 'attributes') {
+                // If src attribute changes on an avatar we're watching
+                if (mutation.attributeName === 'src' && 
+                    field === 'profilePicture' && 
+                    mutation.target.matches('.conversation-avatar') &&
+                    mutation.target.closest(`.conversation-item[data-user-id="${groupId}"]`)) {
+                    
+                    const newSrc = value + '?v=' + Date.now();
+                    if (!mutation.target.src.includes(value)) {
+                        mutation.target.src = newSrc;
+                    }
+                }
+            }
+        });
+    });
+    
+    // Start observing the conversations list
+    const conversationsList = document.getElementById('conversationsList');
+    if (conversationsList) {
+        observer.observe(conversationsList, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true,
+            attributeFilter: ['src', 'textContent']
+        });
+    }
+    
+    // Store the observer to disconnect later if needed
+    window._groupObservers = window._groupObservers || {};
+    window._groupObservers[`${groupId}-${field}`] = observer;
+    
+    // Set timeout to disconnect after 10 seconds to avoid memory leaks
+    setTimeout(() => {
+        if (window._groupObservers[`${groupId}-${field}`]) {
+            window._groupObservers[`${groupId}-${field}`].disconnect();
+            delete window._groupObservers[`${groupId}-${field}`];
+        }
+    }, 10000);
+}
+
+// Add this to your EXISTING DOMContentLoaded function
+// This loads the group cache on page load and applies it to the UI
+document.addEventListener('DOMContentLoaded', function() {
+    // Add this code inside your existing DOMContentLoaded
+    // at the beginning of your WebSocket initialization
+    
+    // Load group cache from localStorage
+    try {
+        const cachedGroups = localStorage.getItem('_groupsCache');
+        if (cachedGroups) {
+            window._groupsCache = JSON.parse(cachedGroups);
+            
+            // Wait for conversations to be rendered
+            const checkConversations = setInterval(() => {
+                if (document.getElementById('conversationsList')?.children.length > 0) {
+                    clearInterval(checkConversations);
+                    
+                    // Apply cached group updates to the UI
+                    Object.keys(window._groupsCache).forEach(groupId => {
+                        const group = window._groupsCache[groupId];
+                        
+                        if (group.profilePicture) {
+                            document.querySelectorAll(`.conversation-item[data-user-id="${groupId}"] .conversation-avatar`)
+                            .forEach(img => {
+                                img.src = group.profilePicture + '?v=' + group.lastUpdated;
+                            });
+                        }
+                        
+                        if (group.name) {
+                            document.querySelectorAll(`.conversation-item[data-user-id="${groupId}"] .conversation-name`)
+                            .forEach(nameEl => {
+                                nameEl.textContent = group.name;
+                                nameEl.dataset.permanentGroupName = 'true';
+                            });
+                        }
+                    });
+                }
+            }, 300);
+            
+            // Stop checking after 10 seconds to avoid infinite loop
+            setTimeout(() => clearInterval(checkConversations), 10000);
+        }
+    } catch (e) {
+        console.error("Error loading groups cache:", e);
+    }
+});
 
     // Add this function to handle group-added events
     function handleGroupAdded(data) {

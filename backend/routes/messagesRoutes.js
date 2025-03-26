@@ -651,7 +651,6 @@ router.post('/group/:groupId/update-picture', isAuthenticated, (req, res) => {
             // Notify group members via WebSocket
             if (global.wss) {
                 group.members.forEach(memberId => {
-                    if (memberId.toString() !== currentUserId.toString()) {
                         const message = {
                             type: 'group_updated',
                             groupId: groupId,
@@ -665,7 +664,6 @@ router.post('/group/:groupId/update-picture', isAuthenticated, (req, res) => {
                                 client.send(JSON.stringify(message));
                             }
                         });
-                    }
                 });
             }
             

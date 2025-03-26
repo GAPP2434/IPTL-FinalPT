@@ -458,6 +458,15 @@ function loadMessages(userId) {
         for (let i = 0; i < messages.length; i++) {
             const message = messages[i];
             
+                // Handle system messages first
+                if (message.isSystemMessage) {
+                    appendSystemMessage(
+                        message.content,
+                        message.timestamp
+                    );
+                    continue; // Skip to the next message
+                }
+
             // Display the message
             if (message.isGroupMessage) {
                 appendGroupMessage(
@@ -1459,30 +1468,34 @@ async function createGroupChat() {
     function fetchGroupMembers() {
         const groupMembersList = document.getElementById('groupMembersList');
         
-        if (!groupMembersList) return;
-        
-        groupMembersList.innerHTML = '<div class="loading-message">Loading members...</div>';
-        
-        if (!currentGroup || !currentGroup.id) {
-            groupMembersList.innerHTML = '<div class="error-message">Error: Group information is missing</div>';
+        if (!groupMembersList || !currentGroup) {
+            console.error('Group members list element or currentGroup not found');
             return;
         }
+        
+        // Show loading message
+        groupMembersList.innerHTML = '<div class="loading-message">Loading members...</div>';
         
         fetch(`/api/messages/group-members/${currentGroup.id}`, {
             credentials: 'include'
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Failed to load group members: ${response.status} ${response.statusText}`);
+                throw new Error('Failed to fetch group members');
             }
             return response.json();
         })
         .then(members => {
-            console.log("Received group members:", members);
+            // Check if we got a valid response
+            if (!Array.isArray(members)) {
+                throw new Error('Invalid response format');
+            }
+            
+            // Render the members
             renderGroupMembers(members);
         })
         .catch(error => {
-            console.error('Error loading group members:', error);
+            console.error('Error fetching group members:', error);
             if (groupMembersList) {
                 groupMembersList.innerHTML = `<div class="error-message">Failed to load group members: ${error.message}</div>`;
             }
@@ -1746,6 +1759,13 @@ async function createGroupChat() {
 
     // Function to render group members
     function renderGroupMembers(members) {
+        const groupMembersList = document.getElementById('groupMembersList');
+        
+        if (!groupMembersList) {
+            console.error('Group members list element not found');
+            return;
+        }
+        
         if (!members || members.length === 0) {
             groupMembersList.innerHTML = '<div class="no-results">No members found</div>';
             return;

@@ -986,10 +986,14 @@
 
 /* System messages */
 .system-message {
-    align-self: center;
+    width: 100%; /* Take full width for proper centering */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin: 15px 0;
-    max-width: 90%;
     text-align: center;
+    float: none !important; /* Prevent float interference */
+    align-self: center;
 }
 
 .system-message-content {
@@ -999,12 +1003,15 @@
     border-radius: 15px;
     font-style: italic;
     font-size: 0.9rem;
+    max-width: 70%;
+    display: inline-block;
 }
 
 .system-message .message-time {
     text-align: center;
     margin-top: 3px;
     font-size: 0.7rem;
+    color: #888;
 }
 
 /* Group message styling */
