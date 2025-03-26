@@ -418,3 +418,24 @@
     overflow-y: auto;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Add shadow for depth */
 }
+
+.follow-profile-link {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.follow-profile-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.private-profile-icon {
+    font-size: 0.8rem;
+    margin-left: 8px;
+    color: #666;
+    vertical-align: middle;
+}

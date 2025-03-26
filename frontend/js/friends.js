@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (discoverTab && discoverTab.classList.contains('active')) {
             loadRecommendedUsers();
         }
+        
+        // Check if requests tab is active
+        const requestsTab = document.querySelector('.tab-button[data-tab="requests"]');
+        if (requestsTab && requestsTab.classList.contains('active')) {
+            loadFollowRequests();
+        }
     }
     
     // Set up event listeners
@@ -38,29 +44,347 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tabId = button.dataset.tab + '-tab';
                 document.getElementById(tabId).classList.add('active');
                 
-                // Load recommended users when discover tab is clicked
+                // Load data based on tab
                 if (button.dataset.tab === 'discover') {
-                    loadRecommendedUsers();
+                    // Clear search input
+                    userSearchInput.value = '';
+                    
+                    // Check if search input is empty
+                    if (!userSearchInput.value.trim()) {
+                        loadRecommendedUsers();
+                    }
+                    // Check if we need to refresh the discover tab
+                    else if (button.dataset.needsRefresh === 'true') {
+                        loadRecommendedUsers();
+                        button.dataset.needsRefresh = 'false';
+                    }
                 }
             });
         });
     }
 
-    function loadRecommendedUsers() {
-        // Show loading state
-        searchResults.innerHTML = '<div class="loading-message">Finding people you might want to follow...</div>';
+    function loadFollowRequests() {
+        loadReceivedRequests();
+        loadSentRequests();
+    }
+
+    // Load received follow requests
+    function loadReceivedRequests() {
+        showLoading();
         
-        fetch('/api/users/recommended', {
+        fetch('/api/users/follow-requests/received', {
             credentials: 'include'
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Failed to load recommended users');
+                throw new Error('Failed to load follow requests');
             }
             return response.json();
         })
-        .then(users => {
-            renderSearchResults(users);
+        .then(requests => {
+            hideLoading();
+            renderReceivedRequests(requests);
+        })
+        .catch(error => {
+            console.error('Error loading follow requests:', error);
+            hideLoading();
+            showMessage('Failed to load follow requests. Please try again later.', 'error');
+        });
+    }
+
+    // Load sent follow requests
+    function loadSentRequests() {
+        fetch('/api/users/follow-requests/sent', {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load sent requests');
+            }
+            return response.json();
+        })
+        .then(requests => {
+            renderSentRequests(requests);
+        })
+        .catch(error => {
+            console.error('Error loading sent requests:', error);
+            showMessage('Failed to load sent requests. Please try again later.', 'error');
+        });
+    }
+
+    // Render received follow requests
+    function renderReceivedRequests(requests) {
+        const requestsList = document.getElementById('received-requests-list');
+        
+        if (!requestsList) return;
+        
+        if (requests.length === 0) {
+            requestsList.innerHTML = '<div class="no-requests-message">No pending follow requests</div>';
+            return;
+        }
+        
+        requestsList.innerHTML = '';
+        
+        requests.forEach(user => {
+            const requestElement = document.createElement('div');
+            requestElement.classList.add('request-item');
+            requestElement.dataset.userId = user._id;
+            
+            // Add private profile indicator if applicable
+            const privateIndicator = user.isPrivateProfile ? 
+                '<i class="fas fa-lock private-profile-icon" title="Private Profile"></i>' : '';
+            
+            requestElement.innerHTML = `
+                <div class="friend-profile-link" data-user-id="${user._id}">
+                    <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
+                    <div class="friend-info">
+                        <div class="friend-name">
+                            ${user.name}
+                            ${privateIndicator}
+                        </div>
+                        <div class="friend-bio">${user.bio || ''}</div>
+                    </div>
+                </div>
+                <div class="request-actions">
+                    <button class="accept-button" data-user-id="${user._id}">Accept</button>
+                    <button class="decline-button" data-user-id="${user._id}">Decline</button>
+                </div>
+            `;
+            
+            // Add click events
+            const profileLink = requestElement.querySelector('.friend-profile-link');
+            if (profileLink) {
+                profileLink.addEventListener('click', () => {
+                    navigateToUserProfile(user._id);
+                });
+            }
+            
+            const acceptButton = requestElement.querySelector('.accept-button');
+            if (acceptButton) {
+                acceptButton.addEventListener('click', () => {
+                    acceptFollowRequest(user._id, requestElement);
+                });
+            }
+            
+            const declineButton = requestElement.querySelector('.decline-button');
+            if (declineButton) {
+                declineButton.addEventListener('click', () => {
+                    declineFollowRequest(user._id, requestElement);
+                });
+            }
+            
+            requestsList.appendChild(requestElement);
+        });
+    }
+
+    // Render sent follow requests
+    function renderSentRequests(requests) {
+        const requestsList = document.getElementById('sent-requests-list');
+        
+        if (!requestsList) return;
+        
+        if (requests.length === 0) {
+            requestsList.innerHTML = '<div class="no-requests-message">No sent requests</div>';
+            return;
+        }
+        
+        requestsList.innerHTML = '';
+        
+        requests.forEach(user => {
+            const requestElement = document.createElement('div');
+            requestElement.classList.add('request-item');
+            requestElement.dataset.userId = user._id;
+            
+            // Add private profile indicator if applicable
+            const privateIndicator = user.isPrivateProfile ? 
+                '<i class="fas fa-lock private-profile-icon" title="Private Profile"></i>' : '';
+            
+            requestElement.innerHTML = `
+                <div class="friend-profile-link" data-user-id="${user._id}">
+                    <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
+                    <div class="friend-info">
+                        <div class="friend-name">
+                            ${user.name}
+                            ${privateIndicator}
+                        </div>
+                        <div class="friend-bio">${user.bio || ''}</div>
+                    </div>
+                </div>
+                <div class="request-actions">
+                    <span class="request-status">Pending</span>
+                    <button class="cancel-button" data-user-id="${user._id}">Cancel</button>
+                </div>
+            `;
+            
+            // Add click events
+            const profileLink = requestElement.querySelector('.friend-profile-link');
+            if (profileLink) {
+                profileLink.addEventListener('click', () => {
+                    navigateToUserProfile(user._id);
+                });
+            }
+            
+            const cancelButton = requestElement.querySelector('.cancel-button');
+            if (cancelButton) {
+                cancelButton.addEventListener('click', () => {
+                    cancelFollowRequest(user._id, requestElement);
+                });
+            }
+            
+            requestsList.appendChild(requestElement);
+        });
+    }
+
+    // Accept follow request
+    function acceptFollowRequest(userId, element) {
+        fetch('/api/users/follow-requests/accept', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ userId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to accept request');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Remove request from list
+            element.remove();
+            
+            // Check if the list is now empty
+            const requestsList = document.getElementById('received-requests-list');
+            if (requestsList && requestsList.children.length === 0) {
+                requestsList.innerHTML = '<div class="no-requests-message">No pending follow requests</div>';
+            }
+            
+            // Show success message
+            showMessage('Follow request accepted', 'success');
+            
+            // Refresh followers list
+            loadFollowers();
+        })
+        .catch(error => {
+            console.error('Error accepting follow request:', error);
+            showMessage('Failed to accept follow request. Please try again.', 'error');
+        });
+    }
+
+    // Decline follow request
+    function declineFollowRequest(userId, element) {
+        fetch('/api/users/follow-requests/decline', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ userId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to decline request');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Remove request from list
+            element.remove();
+            
+            // Check if the list is now empty
+            const requestsList = document.getElementById('received-requests-list');
+            if (requestsList && requestsList.children.length === 0) {
+                requestsList.innerHTML = '<div class="no-requests-message">No pending follow requests</div>';
+            }
+            
+            // Show success message
+            showMessage('Follow request declined', 'success');
+        })
+        .catch(error => {
+            console.error('Error declining follow request:', error);
+            showMessage('Failed to decline follow request. Please try again.', 'error');
+        });
+    }
+
+    // Cancel follow request
+    function cancelFollowRequest(userId, element) {
+        fetch('/api/users/follow-requests/cancel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ userId })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to cancel request');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Remove request from list
+            element.remove();
+            
+            // Check if the list is now empty
+            const requestsList = document.getElementById('sent-requests-list');
+            if (requestsList && requestsList.children.length === 0) {
+                requestsList.innerHTML = '<div class="no-requests-message">No sent requests</div>';
+            }
+            
+            // Show success message
+            showMessage('Follow request canceled', 'success');
+            
+            // Refresh discover tab to show the user again
+            const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
+            if (discoverTab) {
+                // If we're on the discover tab, reload it immediately
+                if (discoverTab.classList.contains('active')) {
+                    loadRecommendedUsers();
+                }
+                // Otherwise, we'll just mark it for reload when user switches to that tab
+                else {
+                    discoverTab.dataset.needsRefresh = 'true';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error canceling follow request:', error);
+            showMessage('Failed to cancel follow request. Please try again.', 'error');
+        });
+    }
+
+    function loadRecommendedUsers() {
+        // Show loading state
+        const searchResults = document.getElementById('search-results');
+        searchResults.innerHTML = '<div class="loading-message">Finding people you might want to follow...</div>';
+        
+        // First get users with pending requests to exclude them
+        fetch('/api/users/follow-requests/sent', {
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(sentRequests => {
+            // Get list of user IDs with pending requests
+            const pendingRequestIds = sentRequests.map(user => user._id);
+            
+            // Now fetch recommended users
+            return fetch('/api/users/recommended', {
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load recommended users');
+                }
+                return response.json();
+            })
+            .then(users => {
+                // Filter out users who have pending requests
+                const filteredUsers = users.filter(user => !pendingRequestIds.includes(user._id));
+                renderSearchResults(filteredUsers);
+            });
         })
         .catch(error => {
             console.error('Error loading recommended users:', error);
@@ -165,11 +489,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 `<button class="follow-button" data-user-id="${user._id}">Follow</button>`;
         }
         
+        // Create private profile indicator if applicable
+        const privateIndicator = user.isPrivateProfile ? 
+            '<i class="fas fa-lock private-profile-icon" title="Private Profile"></i>' : '';
+        
         div.innerHTML = `
-            <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
-            <div class="friend-info">
-                <div class="friend-name">${user.name}</div>
-                <div class="friend-bio">${user.bio || ''}</div>
+            <div class="friend-profile-link" data-user-id="${user._id}">
+                <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">
+                        ${user.name}
+                        ${privateIndicator}
+                    </div>
+                    <div class="friend-bio">${user.bio || ''}</div>
+                </div>
             </div>
             <div class="friend-action">
                 ${actionButton}
@@ -192,9 +525,21 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Add event listener for profile link
+        const profileLink = div.querySelector('.friend-profile-link');
+        if (profileLink) {
+            profileLink.addEventListener('click', () => {
+                navigateToUserProfile(user._id);
+            });
+        }
+        
         return div;
     }
     
+    function navigateToUserProfile(userId) {
+        window.location.href = `profile.html?userId=${userId}`;
+    }
+
     // Search Function
     window.searchUtils.setupSearch({
         inputElement: userSearchInput,
@@ -204,7 +549,12 @@ document.addEventListener('DOMContentLoaded', function() {
             renderSearchResults(users);
         },
         clearResults: () => {
-            searchResults.innerHTML = '';
+            // Load recommended users instead of just clearing
+            loadRecommendedUsers();
+        },
+        // Add a new callback for empty search
+        onEmptySearch: () => {
+            loadRecommendedUsers();
         }
     });
 
@@ -243,20 +593,65 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update UI
             const followButton = elementToUpdate.querySelector('.follow-button');
             if (followButton) {
-                const unfollowButton = document.createElement('button');
-                unfollowButton.classList.add('unfollow-button');
-                unfollowButton.dataset.userId = userId;
-                unfollowButton.textContent = 'Unfollow';
-                
-                unfollowButton.addEventListener('click', () => {
-                    unfollowUser(userId, elementToUpdate);
-                });
-                
-                followButton.replaceWith(unfollowButton);
+                if (data.requestSent) {
+                    // It was a follow request
+                    const requestSentButton = document.createElement('button');
+                    requestSentButton.classList.add('follow-button', 'request-sent-button');
+                    requestSentButton.dataset.userId = userId;
+                    requestSentButton.textContent = 'Request Sent';
+                    requestSentButton.disabled = true;
+                    
+                    followButton.replaceWith(requestSentButton);
+                    
+                    // Show success message
+                    showMessage('Follow request sent', 'success');
+                    
+                    // Remove user from recommended/discover list if we're in the discover tab
+                    const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
+                    if (discoverTab && discoverTab.classList.contains('active')) {
+                        // Wait a moment before removing to let the user see what happened
+                        setTimeout(() => {
+                            const parentItem = elementToUpdate.closest('.friend-item');
+                            if (parentItem) {
+                                parentItem.remove();
+                                
+                                // Check if the list is now empty
+                                checkEmptyDiscoverList();
+                            }
+                        }, 1500);
+                    }
+                } else {
+                    // Normal follow for public profile
+                    const unfollowButton = document.createElement('button');
+                    unfollowButton.classList.add('unfollow-button');
+                    unfollowButton.dataset.userId = userId;
+                    unfollowButton.textContent = 'Unfollow';
+                    
+                    unfollowButton.addEventListener('click', () => {
+                        unfollowUser(userId, elementToUpdate);
+                    });
+                    
+                    followButton.replaceWith(unfollowButton);
+                    
+                    // Show success message
+                    showMessage('You are now following this user', 'success');
+                    
+                    // Remove user from recommended/discover list if we're in the discover tab
+                    const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
+                    if (discoverTab && discoverTab.classList.contains('active')) {
+                        // Wait a moment before removing to let the user see what happened
+                        setTimeout(() => {
+                            const parentItem = elementToUpdate.closest('.friend-item');
+                            if (parentItem) {
+                                parentItem.remove();
+                                
+                                // Check if the list is now empty
+                                checkEmptyDiscoverList();
+                            }
+                        }, 1500);
+                    }
+                }
             }
-            
-            // Show success message
-            showMessage('You are now following this user', 'success');
             
             // Reload following list
             loadFollowing();
@@ -265,6 +660,13 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error following user:', error);
             showMessage('Failed to follow user. Please try again.', 'error');
         });
+    }
+
+    function checkEmptyDiscoverList() {
+        const searchResults = document.getElementById('search-results');
+        if (searchResults && searchResults.children.length === 0) {
+            searchResults.innerHTML = '<div class="no-results">No users found. Try a different search.</div>';
+        }
     }
     
     // Unfollow user

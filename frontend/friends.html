@@ -24,6 +24,7 @@
                 <button class="tab-button active" data-tab="followers">Followers</button>
                 <button class="tab-button" data-tab="discover">Find People</button>
                 <button class="tab-button" data-tab="following">Following</button>
+                <button class="tab-button" data-tab="requests">Requests</button>
             </div>
             
             <div class="tab-content">
@@ -54,6 +55,23 @@
                     <div id="following-list" class="friends-list">
                         <!-- Following will be loaded here -->
                         <div class="no-friends-message">You're not following anyone yet</div>
+                    </div>
+                </div>
+
+                <!-- Add the new Requests tab panel after the other panels -->
+                <div id="requests-tab" class="tab-panel">
+                    <div class="requests-container">
+                        <h3>Follow Requests</h3>
+                        <div id="received-requests-list" class="requests-list">
+                            <!-- Received requests will be loaded here -->
+                            <div class="no-requests-message">No pending follow requests</div>
+                        </div>
+                        
+                        <h3>Sent Requests</h3>
+                        <div id="sent-requests-list" class="requests-list">
+                            <!-- Sent requests will be loaded here -->
+                            <div class="no-requests-message">No sent requests</div>
+                        </div>
                     </div>
                 </div>
             </div>

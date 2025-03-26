@@ -61,6 +61,21 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+
+    isPrivateProfile: {
+        type: Boolean,
+        default: false
+    },
+
+    followRequestsReceived: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    followRequestsSent: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+
     publicKey: {
         type: Object, // Store the entire JWK object
         default: null

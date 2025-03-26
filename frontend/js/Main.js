@@ -138,10 +138,7 @@ export function addStories(audioStartTime) {
 
             // Update click event listeners for all stories
             const storyElements = storiesContainer.querySelectorAll('.story');
-            storyElements.forEach((element, index) => {
-                element.removeEventListener('click', () => showStory(index));
-                element.addEventListener('click', () => showStory(index));
-            });
+            storyElement.addEventListener('click', () => showStory(index)); // Add click event listener
         })
         .catch(error => {
             console.error('Error adding story:', error);
@@ -199,7 +196,7 @@ export function showStory(index) {
             audioElement.src = ''; // Clear the audio source
             audioElement = null;
         }
-        volumeSlider.style.display = 'none'; // Hide the volume slider
+        volumeSlider.style.display = 'block'; // Ensure the volume slider is always visible
         return;
     }
 
@@ -259,7 +256,7 @@ export function showStory(index) {
         };
 
         volumeSlider.value = 0.5; // Reset to middle position
-        volumeSlider.style.display = 'block'; // Ensure the volume slider is visible
+        volumeSlider.style.display = 'block'; // Ensure the volume slider is always visible
         volumeSlider.style.transform = 'rotate(270deg)'; // Rotate the slider
         updateVolumeSliderBackground(volumeSlider);
 
@@ -301,7 +298,7 @@ export function showStory(index) {
     } else {
         console.log('No audio for this story');
         // No audio for this story
-        volumeSlider.style.display = 'none'; // Hide the volume slider
+        volumeSlider.style.display = 'block'; // Ensure the volume slider is always visible
     }
 
     initializeReactionCounts(currentStoryIndex);
@@ -324,14 +321,31 @@ export function updateVolumeSliderBackground(slider) {
 export function togglePauseStory() {
     const story = storyQueue[currentStoryIndex];
     const video = storyViewerContent.querySelector('video');
-        progressBar.style.transition = `width ${duration}ms linear`;
-        progressBar.style.width = '100%';
 
-        progressTimeout = setTimeout(() => {
-            progressBar.style.width = '0%';
-            callback();
-        }, duration);
+    if (isPaused) {
+        isPaused = false;
+        if (video) {
+            video.play();
+        }
+        if (audioElement) {
+            audioElement.play();
+        }
+        const elapsedTime = Date.now() - startTime;
+        remainingTime -= elapsedTime;
+        startTime = Date.now();
+        resumeProgressBar(remainingTime);
+    } else {
+        isPaused = true;
+        if (video) {
+            video.pause();
+        }
+        if (audioElement) {
+            audioElement.pause();
+        }
+        pauseProgressBar();
+        remainingTime -= Date.now() - startTime;
     }
+}
 
     // Pausing and Resuming the Progress Bar
     export function pauseProgressBar() {
