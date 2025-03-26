@@ -469,33 +469,6 @@ router.get('/online-users', isAuthenticated, (req, res) => {
     }
 });
 
-// Add this new route to messagesRoutes.js
-router.put('/mark-read/:senderId', isAuthenticated, async (req, res) => {
-    try {
-        const currentUserId = req.user._id;
-        const senderId = req.params.senderId;
-        
-        // Generate conversation ID
-        const conversationId = Message.generateConversationId(currentUserId.toString(), senderId);
-        
-        // Update read status for messages
-        const result = await Message.updateMany(
-            { 
-                conversationId, 
-                recipientId: currentUserId,
-                read: false
-            },
-            { $set: { read: true } }
-        );
-        
-        res.json({ success: true, updated: result.nModified });
-        
-    } catch (error) {
-        console.error('Error marking messages as read:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
 // Create group chat
 router.post('/create-group', isAuthenticated, async (req, res) => {
     try {
@@ -982,6 +955,65 @@ router.post('/group/:groupId/remove-member', isAuthenticated, async (req, res) =
         
     } catch (error) {
         console.error('Error removing member from group:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Modify the /mark-read route to send WebSocket notifications
+router.post('/mark-read', isAuthenticated, async (req, res) => {
+    try {
+        const { conversationId } = req.body;
+        const currentUserId = req.user._id;
+        
+        if (!conversationId) {
+            return res.status(400).json({ message: 'Conversation ID is required' });
+        }
+        
+        // Update read status for messages
+        const result = await Message.updateMany(
+            { 
+                conversationId, 
+                recipientId: currentUserId,
+                read: false
+            },
+            { $set: { read: true } }
+        );
+        
+        // Get the IDs of the messages that were marked as read
+        const updatedMessages = await Message.find({
+            conversationId,
+            recipientId: currentUserId,
+            read: true
+        }).select('_id senderId');
+        
+        // Group messages by sender for sending read receipts
+        const messagesBySender = {};
+        updatedMessages.forEach(msg => {
+            if (!messagesBySender[msg.senderId]) {
+                messagesBySender[msg.senderId] = [];
+            }
+            messagesBySender[msg.senderId].push(msg._id.toString());
+        });
+        
+        // Send read receipts via WebSocket to each sender
+        if (global.wss) {
+            Object.keys(messagesBySender).forEach(senderId => {
+                global.wss.clients.forEach(client => {
+                    if (client.userId === senderId && client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'read_receipt',
+                            messageIds: messagesBySender[senderId],
+                            conversationId: conversationId,
+                            readBy: currentUserId
+                        }));
+                    }
+                });
+            });
+        }
+        
+        res.json({ success: true, updated: result.nModified });
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

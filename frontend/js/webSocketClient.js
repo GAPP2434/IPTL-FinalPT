@@ -63,6 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log("Group update details:", data);
                         handleGroupUpdated(data);
                         break;
+                    case 'read_receipt':
+                        handleReadReceipt(data);
+                        break;
                     default:
                         console.log("Unhandled message type:", data.type);
                 }
@@ -84,6 +87,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Add this new handler function for read receipts
+    function handleReadReceipt(data) {
+        console.log("Read receipt received:", data);
+        
+        // Find the messages sent by the current user to this recipient
+        if (window.currentUserId && window.messagesContainer) {
+            const messages = window.messagesContainer.querySelectorAll('.message.sent');
+            
+            messages.forEach(message => {
+                // Check if this message belongs to the conversation that was read
+                if (message.dataset.messageId && data.messageIds.includes(message.dataset.messageId)) {
+                    // Update read status to "Seen"
+                    const readStatus = message.querySelector('.read-status');
+                    if (readStatus) {
+                        readStatus.textContent = 'Seen';
+                    }
+                }
+            });
+        }
+    }
+
     function handleGroupUpdated(data) {
         console.log("GROUP UPDATE RECEIVED - NEW HANDLER:", data);
         
@@ -380,62 +404,76 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle new messages (for messages.html)
-async function handleNewMessage(message) {
-    console.log("Handling new message:", message);
+    async function handleNewMessage(message) {
+        console.log("Handling new message:", message);
+        
+        try {
+            // Create a processed message object
+            const processedMessage = {
+                ...message
+            };
     
-    try {
-        // Create a processed message object (no decryption)
-        const processedMessage = {
-            ...message
-        };
-
-        if (window.location.pathname.includes('messages.html')) {
-            // Always update the conversation preview
-            updateConversationLocally(processedMessage);
-            
-            // For group messages, the conversation ID is different than regular messages
-            const isGroupMessage = processedMessage.isGroupMessage || processedMessage.conversationId.startsWith('group:');
-            
-            // Determine which conversation this message belongs to
-            let relevantId;
-            if (isGroupMessage) {
-                // For group messages, the recipient ID is the group ID
-                relevantId = processedMessage.recipientId.toString();
-            } else {
-                // For direct messages, the relevant ID depends on if the user sent or received the message
-                relevantId = processedMessage.senderId === window.currentUserId ? 
-                    processedMessage.recipientId.toString() : 
-                    processedMessage.senderId.toString();
-            }
-            
-            // Check if the user is currently viewing this conversation
-            if (window.currentRecipient === relevantId) {
-                // The user is currently looking at this conversation, so append the message to the UI
+            if (window.location.pathname.includes('messages.html')) {
+                // Always update the conversation preview
+                updateConversationLocally(processedMessage);
+                
+                // For group messages, the conversation ID is different than regular messages
+                const isGroupMessage = processedMessage.isGroupMessage || processedMessage.conversationId.startsWith('group:');
+                
+                // Determine which conversation this message belongs to
+                let relevantId;
                 if (isGroupMessage) {
-                    window.appendGroupMessage(
-                        processedMessage.content, 
-                        processedMessage.senderId === window.currentUserId,
-                        processedMessage.senderName,
-                        processedMessage.senderAvatar,
-                        processedMessage.attachments || [],
-                        processedMessage.attachmentTypes || [],
-                        new Date(processedMessage.timestamp)
-                    );
+                    relevantId = processedMessage.recipientId.toString();
                 } else {
-                    window.appendMessage(
-                        processedMessage.content, 
-                        processedMessage.senderId === window.currentUserId,
-                        processedMessage.attachments || [], 
-                        processedMessage.attachmentTypes || [],
-                        new Date(processedMessage.timestamp)
-                    );
+                    relevantId = processedMessage.senderId === window.currentUserId ? 
+                        processedMessage.recipientId.toString() : 
+                        processedMessage.senderId.toString();
+                }
+                
+                // Check if the user is currently viewing this conversation
+                if (window.currentRecipient === relevantId) {
+                    // The user is currently looking at this conversation, so append the message to the UI
+                    if (isGroupMessage) {
+                        window.appendGroupMessage(
+                            processedMessage.content, 
+                            processedMessage.senderId === window.currentUserId,
+                            processedMessage.senderName,
+                            processedMessage.senderAvatar,
+                            processedMessage.attachments || [],
+                            processedMessage.attachmentTypes || [],
+                            new Date(processedMessage.timestamp)
+                        );
+                    } else {
+                        window.appendMessage(
+                            processedMessage.content, 
+                            processedMessage.senderId === window.currentUserId,
+                            processedMessage.attachments || [], 
+                            processedMessage.attachmentTypes || [],
+                            new Date(processedMessage.timestamp)
+                        );
+                    }
+                    
+                    // *** NEW CODE: Automatically mark this message as read if it's not from you ***
+                    if (processedMessage.senderId !== window.currentUserId) {
+                        // Mark as read on server
+                        await fetch('/api/messages/mark-read', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                conversationId: processedMessage.conversationId
+                            })
+                        });
+                        console.log("Marked new message as read automatically");
+                    }
                 }
             }
+        } catch (error) {
+            console.error('Error processing message:', error);
         }
-    } catch (error) {
-        console.error('Error processing message:', error);
     }
-}
     
     // Handle new stories (for index.html)
     function handleNewStory(story) {

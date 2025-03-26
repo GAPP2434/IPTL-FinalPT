@@ -468,7 +468,9 @@ function loadMessages(userId) {
                     message.attachments || [],
                     message.attachmentTypes || [],
                     message.timestamp,
-                    [] // Default empty array for attachmentNames
+                    [], // Default empty array for attachmentNames
+                    message.read, // Pass the read status
+                    message._id  // Add message ID
                 );
             } else {
                 // Regular direct message
@@ -478,7 +480,9 @@ function loadMessages(userId) {
                     message.attachments || [], 
                     message.attachmentTypes || [],
                     message.timestamp,
-                    []
+                    [], // Default empty array for attachmentNames
+                    message.read, // Pass the read status
+                    message._id  // Add message ID
                 );
             }
         }
@@ -494,11 +498,16 @@ function loadMessages(userId) {
 }
     
     // Append a message to the chat
-    function appendMessage(text, sent, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = []) {
+    function appendMessage(text, sent, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = [], read = false, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(sent ? 'sent' : 'received');
         
+        // Add message ID as a data attribute for read receipt handling
+        if (messageId) {
+            messageElement.dataset.messageId = messageId;
+        }
+
         // Format the timestamp
         const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
@@ -526,7 +535,13 @@ function loadMessages(userId) {
                 if (type === 'image') {
                     attachmentsHTML += `<div class="message-media"><img src="${url}" alt="Image"></div>`;
                 } else if (type === 'video') {
-                    // Video HTML...
+                    // Add proper video HTML implementation
+                    attachmentsHTML += `<div class="message-media video-container">
+                        <video controls width="100%" preload="metadata">
+                            <source src="${url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>`;
                 } else {
                     // File HTML using the extracted filename
                     attachmentsHTML += `
@@ -543,7 +558,10 @@ function loadMessages(userId) {
         messageElement.innerHTML = `
             ${attachmentsHTML}
             ${text ? `<div class="message-content">${text}</div>` : ''}
-            <div class="message-time">${formattedTime}</div>
+            <div class="message-time">
+                ${formattedTime}
+                ${sent ? `<span class="read-status">${read ? 'Seen' : 'Sent'}</span>` : ''}
+            </div>
         `;
         
         messagesContainer.appendChild(messageElement);
@@ -570,11 +588,15 @@ function loadMessages(userId) {
     }
 
     // Add a function to display group messages with sender name
-    function appendGroupMessage(text, isSent, senderName, senderAvatar, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = []) {
+    function appendGroupMessage(text, isSent, senderName, senderAvatar, attachments = [], attachmentTypes = [], timestamp = new Date(), attachmentNames = [], read = false, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message');
         messageElement.classList.add(isSent ? 'sent' : 'received');
         
+        if (messageId) {
+            messageElement.dataset.messageId = messageId;
+        }
+
         // Format the timestamp
         const formattedTime = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
@@ -628,11 +650,14 @@ function loadMessages(userId) {
                 <div class="message-time">${formattedTime}</div>
             `;
         } else {
-            // Own messages don't need sender info
+            // Own messages don't need sender info but do need read status
             messageElement.innerHTML = `
                 ${attachmentsHTML}
                 ${text ? `<div class="message-content">${text}</div>` : ''}
-                <div class="message-time">${formattedTime}</div>
+                <div class="message-time">
+                    ${formattedTime}
+                    <span class="read-status">${read ? 'Seen' : 'Sent'}</span>
+                </div>
             `;
         }
         
@@ -735,6 +760,7 @@ async function sendMessage() {
     window.isGroupOnline = isGroupOnline; // Add this line
     window.appendSystemMessage = appendSystemMessage; 
     window.showMessage = showMessage;
+    window.messagesContainer = messagesContainer;
     
     // Listen for group update events from WebSocket
 window.addEventListener('groupUpdate', function(event) {

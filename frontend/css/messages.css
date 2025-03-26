@@ -1060,3 +1060,10 @@
 .group-member-item .online-indicator.offline {
     background-color: #8a8a8a;
 }
+
+.read-status {
+    margin-left: 5px;
+    font-size: 0.7rem;
+    opacity: 0.8;
+    font-style: italic;
+}
