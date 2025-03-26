@@ -491,12 +491,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         );
                         
                         if (!isValidJson) {
-                            console.log('Message content:', message.content);
-                            console.log('Message encryptionType:', message.encryptionType);
                             console.log('Content is not in proper JSON format despite having encryptionType flag');
-                            
-                            // Just use the message content as-is since it's not properly encrypted
-                            // This handles legacy or improperly formatted messages
+                            // Use as-is
                         } else {
                             try {
                                 // Try parsing the JSON first to validate it's proper format
@@ -514,23 +510,30 @@ document.addEventListener('DOMContentLoaded', function() {
                                             userId // Group ID
                                         );
                                     } else if (message.encryptionType === 'direct') {
+                                        // This will now handle errors internally and return friendly messages
                                         decryptedContent = await window.messageEncryption.decryptMessage(
                                             message.content
                                         );
                                     }
-                                    console.log('Successfully decrypted message');
+                                    
+                                    // Check if decryption actually succeeded or returned an error message
+                                    if (decryptedContent.startsWith('🔒')) {
+                                        console.log('Message could not be decrypted with current keys');
+                                    } else {
+                                        console.log('Successfully decrypted message');
+                                    }
                                 }
                             } catch (jsonError) {
-                                console.error('Error parsing or validating encrypted content:', jsonError);
-                                // Use content as-is
+                                console.error('Error processing encrypted content:', jsonError);
+                                decryptedContent = "🔒 Couldn't process this message.";
                             }
                         }
                         
                         // Update the message content with decrypted version or original
                         message.content = decryptedContent;
                     } catch (error) {
-                        console.error("Failed to decrypt historical message:", error);
-                        message.content = "[Encrypted message - unable to decrypt]";
+                        console.error("Failed to process message:", error);
+                        message.content = "🔒 Couldn't process this message.";
                     }
                 }
                 // HANDLE OUR OWN MESSAGES THAT DON'T HAVE ORIGINAL TEXT
@@ -779,14 +782,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         // Direct message encryption
                         encryptedText = await window.messageEncryption.encryptMessage(text, currentRecipient);
-                        encryptionType = 'direct';
+                        
+                        // Check if encryption was successful or if we got back an object indicating encryption is unavailable
+                        if (typeof encryptedText === 'object' && encryptedText.encryptionUnavailable) {
+                            // Encryption unavailable, use plain text
+                            console.log("Recipient doesn't have encryption set up, sending in plain text");
+                            formData.append('content', encryptedText.plaintext);
+                            
+                            // Don't set encryptionType for plain text
+                            // Show a notification that the message was sent unencrypted
+                            showMessage('Message sent unencrypted because the recipient has not set up encryption.', 'warning');
+                        } else {
+                            formData.append('content', encryptedText);
+                            encryptionType = 'direct';
+                            formData.append('encryptionType', encryptionType);
+                        }
                     }
                     
-                    // Send encrypted message
-                    formData.append('content', encryptedText);
-                    formData.append('encryptionType', encryptionType);
-                    console.log("Message encrypted successfully");
-                    console.log("Including originalContent:", originalText);
+                    console.log("Message prepared for sending");
                 } catch (encryptError) {
                     console.error('Encryption failed, falling back to plain text:', encryptError);
                     formData.append('content', text); // Fallback to unencrypted
