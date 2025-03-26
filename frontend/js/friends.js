@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize
     function init() {
-
         const elementsExist = checkElementsExist();
         if (!elementsExist) {
             console.error("Some critical elements are missing from the DOM");
@@ -42,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
         loadFollowers();
         loadFollowing();
+        updateRequestsBadge(); // Add this line
         
         // Check if discover tab is active and load recommended users
         const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show success message
             showMessage('Follow request accepted', 'success');
-            
+            updateRequestsBadge();
             // Refresh followers list
             loadFollowers();
         })
@@ -355,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show success message
             showMessage('Follow request declined', 'success');
+            updateRequestsBadge();
         })
         .catch(error => {
             console.error('Error declining follow request:', error);
@@ -390,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show success message
             showMessage('Follow request canceled', 'success');
-            
+            updateRequestsBadge();
             // Refresh discover tab to show the user again
             const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
             if (discoverTab) {
@@ -628,16 +629,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateRequestsBadge() {
-        // First check if we need to reload the requests tab
-        fetch('/api/users/follow-requests/sent', {
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(requests => {
-            // Update the badge or indicator if needed
+        // Start with Promise.all to fetch both sent and received requests
+        Promise.all([
+            fetch('/api/users/follow-requests/sent', { credentials: 'include' }).then(res => res.json()),
+            fetch('/api/users/follow-requests/received', { credentials: 'include' }).then(res => res.json())
+        ])
+        .then(([sentRequests, receivedRequests]) => {
+            // Calculate total number of requests
+            const totalRequests = sentRequests.length + receivedRequests.length;
+            
+            // Update the badge on the requests tab
             const requestsTab = document.querySelector('.tab-button[data-tab="requests"]');
             if (requestsTab) {
-                if (requests.length > 0) {
+                if (totalRequests > 0) {
                     // Add or update badge
                     let badge = requestsTab.querySelector('.requests-badge');
                     if (!badge) {
@@ -645,7 +649,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         badge.className = 'requests-badge';
                         requestsTab.appendChild(badge);
                     }
-                    badge.textContent = requests.length;
+                    badge.textContent = totalRequests;
+                    badge.title = `${sentRequests.length} sent, ${receivedRequests.length} received`;
                 } else {
                     // Remove badge if no requests
                     const badge = requestsTab.querySelector('.requests-badge');
