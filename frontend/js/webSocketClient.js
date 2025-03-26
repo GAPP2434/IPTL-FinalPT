@@ -380,150 +380,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle new messages (for messages.html)
-    async function handleNewMessage(message) {
-        console.log("Handling new message:", message);
-        console.log("Message structure:", JSON.stringify(message));
-        
-        try {
-            let decryptedContent = message.content;
-            
-            console.log("Message encryption type:", message.encryptionType);
-            console.log("Raw message content:", message.content);
+async function handleNewMessage(message) {
+    console.log("Handling new message:", message);
+    
+    try {
+        // Create a processed message object (no decryption)
+        const processedMessage = {
+            ...message
+        };
 
-            // Attempt to decrypt the message if encryption is available
-            if (window.messageEncryption && message.encryptionType) {
-                try {
-                    if (message.encryptionType === 'group') {
-                        console.log("Attempting to decrypt group message");
-                        decryptedContent = await window.messageEncryption.decryptGroupMessage(
-                            message.content, 
-                            message.recipientId
-                        );
-                    } else if (message.encryptionType === 'direct') {
-                        console.log("Attempting to decrypt direct message");
-                        console.log("Private key available:", !!window.messageEncryption.keyPair.privateKey);
-                        decryptedContent = await window.messageEncryption.decryptMessage(message.content);
-                    }
-                    console.log("Message decrypted successfully");
-                } catch (decryptError) {
-                    console.error("Decryption failed:", decryptError);
-                    console.error("Decryption error details:", decryptError.stack);
-                    decryptedContent = "[Encrypted message - decryption failed]";
-                }
+        if (window.location.pathname.includes('messages.html')) {
+            // Always update the conversation preview
+            updateConversationLocally(processedMessage);
+            
+            // For group messages, the conversation ID is different than regular messages
+            const isGroupMessage = processedMessage.isGroupMessage || processedMessage.conversationId.startsWith('group:');
+            
+            // Determine which conversation this message belongs to
+            let relevantId;
+            if (isGroupMessage) {
+                // For group messages, the recipient ID is the group ID
+                relevantId = processedMessage.recipientId.toString();
+            } else {
+                // For direct messages, the relevant ID depends on if the user sent or received the message
+                relevantId = processedMessage.senderId === window.currentUserId ? 
+                    processedMessage.recipientId.toString() : 
+                    processedMessage.senderId.toString();
             }
-    
-            // Create a new message object with decrypted content
-            const processedMessage = {
-                ...message,
-                content: decryptedContent
-            };
-    
-            if (window.location.pathname.includes('messages.html')) {
-                // Always update the conversation preview
-                updateConversationLocally(processedMessage);
-                
-                // For group messages, the conversation ID is different than regular messages
-                const isGroupMessage = processedMessage.isGroupMessage || processedMessage.conversationId.startsWith('group:');
-                
-                // Determine which conversation this message belongs to
-                let relevantId;
+            
+            // Check if the user is currently viewing this conversation
+            if (window.currentRecipient === relevantId) {
+                // The user is currently looking at this conversation, so append the message to the UI
                 if (isGroupMessage) {
-                    // For group messages, the recipient ID is the group ID
-                    relevantId = processedMessage.recipientId.toString();
+                    window.appendGroupMessage(
+                        processedMessage.content, 
+                        processedMessage.senderId === window.currentUserId,
+                        processedMessage.senderName,
+                        processedMessage.senderAvatar,
+                        processedMessage.attachments || [],
+                        processedMessage.attachmentTypes || [],
+                        new Date(processedMessage.timestamp)
+                    );
                 } else {
-                    // For direct messages, it's the sender's ID
-                    relevantId = processedMessage.senderId.toString();
-                }
-                
-                // If the conversation is currently open, append the message to the chat
-                if (window.currentRecipient === relevantId) {
-                    const messagesContainer = document.getElementById('messagesContainer');
-                    if (messagesContainer) {
-                        if (isGroupMessage) {
-                            // Use appendGroupMessage for group messages
-                            if (typeof window.appendGroupMessage === 'function') {
-                                window.appendGroupMessage(
-                                    decryptedContent,
-                                    false, // Always false for received messages
-                                    processedMessage.senderName || 'Unknown User',
-                                    processedMessage.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
-                                    processedMessage.attachments || [], 
-                                    processedMessage.attachmentTypes || [],
-                                    processedMessage.timestamp,
-                                    [] // Add empty array for attachmentNames
-                                );
-                            } else {
-                                // Fallback if appendGroupMessage not available
-                                const messageElement = document.createElement('div');
-                                messageElement.classList.add('message', 'received');
-                                
-                                // Format timestamp
-                                const formattedTime = new Date(processedMessage.timestamp).toLocaleTimeString([], {
-                                    hour: '2-digit', 
-                                    minute: '2-digit'
-                                });
-                                
-                                messageElement.innerHTML = `
-                                    <div class="group-message-header">
-                                        <img src="${processedMessage.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
-                                        <span class="group-sender-name">${processedMessage.senderName || 'Unknown User'}</span>
-                                    </div>
-                                    <div class="message-content">${decryptedContent}</div>
-                                    <div class="message-time">${formattedTime}</div>
-                                `;
-                                
-                                messagesContainer.appendChild(messageElement);
-                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                            }
-                        } else {
-                            // Regular direct messages use appendMessage
-                            if (typeof window.appendMessage === 'function') {
-                                let attachmentNames = [];
-                                if (processedMessage.attachments && processedMessage.attachments.length > 0) {
-                                    attachmentNames = processedMessage.attachments.map(url => {
-                                        const fullFilename = url.split('/').pop();
-                                        const dashIndex = fullFilename.indexOf('-');
-                                        return dashIndex !== -1 ? 
-                                            fullFilename.substring(dashIndex + 1) : 
-                                            fullFilename;
-                                    });
-                                }
-    
-                                window.appendMessage(
-                                    decryptedContent, 
-                                    false, 
-                                    processedMessage.attachments || [],
-                                    processedMessage.attachmentTypes || [],
-                                    processedMessage.timestamp,
-                                    attachmentNames
-                                );
-                            } else {
-                                // Fallback if appendMessage not available
-                                const messageElement = document.createElement('div');
-                                messageElement.classList.add('message', 'received');
-                                
-                                const formattedTime = new Date(processedMessage.timestamp).toLocaleTimeString([], {
-                                    hour: '2-digit', 
-                                    minute: '2-digit'
-                                });
-                                
-                                messageElement.innerHTML = `
-                                    <div class="message-content">${decryptedContent}</div>
-                                    <div class="message-time">${formattedTime}</div>
-                                `;
-                                
-                                messagesContainer.appendChild(messageElement);
-                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                            }
-                        }
-                    }
+                    window.appendMessage(
+                        processedMessage.content, 
+                        processedMessage.senderId === window.currentUserId,
+                        processedMessage.attachments || [], 
+                        processedMessage.attachmentTypes || [],
+                        new Date(processedMessage.timestamp)
+                    );
                 }
             }
-        } catch (error) {
-            console.error('Error processing message:', error);
-            // Handle failure gracefully - show a notification or fallback behavior
         }
+    } catch (error) {
+        console.error('Error processing message:', error);
     }
+}
     
     // Handle new stories (for index.html)
     function handleNewStory(story) {

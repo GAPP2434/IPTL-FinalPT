@@ -52,19 +52,6 @@ const MessageSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    publicKey: {
-        type: Object,  // Store the entire JWK object
-        default: null
-    },
-    encryptionType: {
-        type: String,
-        enum: ['direct', 'group', null],
-        default: null
-    },
-    originalPlainText: {
-        type: String,
-        default: null
-    }
 });
 
 // Create a compound index on senderId and recipientId for faster queries
