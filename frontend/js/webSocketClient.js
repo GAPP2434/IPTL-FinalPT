@@ -18,12 +18,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Connection opened
         window.socket.addEventListener('open', () => {
             console.log('WebSocket connection established');
+            
+            // Send a ping to verify connection works
+            if (window.socket.readyState === WebSocket.OPEN) {
+                try {
+                    // Optional: Send a ping to verify connection
+                    window.socket.send(JSON.stringify({ type: 'ping' }));
+                } catch (e) {
+                    console.error('Error sending ping:', e);
+                }
+            }
         });
         
         // Listen for messages
         window.socket.addEventListener('message', (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log("WebSocket received:", data.type); // Enhanced logging
                 
                 // Handle different message types
                 switch (data.type) {
@@ -48,113 +59,135 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'online_users_list':
                         handleOnlineUsersList(data);
                         break;
+                    case 'group_updated':
+                        console.log("Group update details:", data);
+                        handleGroupUpdated(data);
+                        break;
+                    default:
+                        console.log("Unhandled message type:", data.type);
                 }
             } catch (error) {
-                // Silent error handling
+                console.error("Error handling WebSocket message:", error);
             }
         });
         
         // Handle WebSocket errors
-        window.socket.addEventListener('error', () => {
-            // Silent error handling
+        window.socket.addEventListener('error', (error) => {
+            console.error('WebSocket error:', error);
         });
         
         // Handle WebSocket closure and reconnect
-        window.socket.addEventListener('close', () => {
+        window.socket.addEventListener('close', (event) => {
+            console.log('WebSocket connection closed. Attempting reconnect...');
             // Try to reconnect after 3 seconds
             setTimeout(connectWebSocket, 3000);
         });
     }
     
-    // Add this function to handle the list of online users
-    function handleOnlineUsersList(data) {
-        console.log("Received list of online users:", data.users);
-        window.onlineUsers = data.users || [];
+    function handleGroupUpdated(data) {
+        console.log("GROUP UPDATE RECEIVED - NEW HANDLER:", data);
         
-        // Update all individual user indicators
-        updateAllOnlineIndicators();
-        
-        // Update all group conversations
+        // 1. Force update the message in the conversation preview immediately
         if (window.conversations) {
-            window.conversations.forEach(conversation => {
-                if (conversation.isGroup && conversation.members) {
-                    updateGroupOnlineStatus(conversation);
+            const conversationIndex = window.conversations.findIndex(c => c.userId === data.groupId);
+            if (conversationIndex >= 0) {
+                // Update last message
+                window.conversations[conversationIndex].lastMessage = data.message;
+                
+                // Update other properties
+                if (data.updatedField === 'profilePicture') {
+                    window.conversations[conversationIndex].profilePicture = data.newValue;
+                    
+                    // Force-update profile picture in UI with cache buster
+                    const conversationItem = document.querySelector(`.conversation-item[data-user-id="${data.groupId}"]`);
+                    if (conversationItem) {
+                        const avatar = conversationItem.querySelector('.conversation-avatar');
+                        if (avatar) {
+                            avatar.src = data.newValue + '?t=' + new Date().getTime();
+                        }
+                    }
+                    
+                    // Update chat header if this is the current conversation
+                    if (window.currentRecipient === data.groupId) {
+                        const chatUserImg = document.getElementById('chatUserImg');
+                        if (chatUserImg) {
+                            chatUserImg.src = data.newValue + '?t=' + new Date().getTime();
+                        }
+                    }
+                } 
+                else if (data.updatedField === 'name') {
+                    window.conversations[conversationIndex].name = data.newValue;
+                    
+                    // Update conversation name in UI
+                    const conversationItem = document.querySelector(`.conversation-item[data-user-id="${data.groupId}"]`);
+                    if (conversationItem) {
+                        const nameElement = conversationItem.querySelector('.conversation-name');
+                        if (nameElement) {
+                            nameElement.textContent = data.newValue;
+                        }
+                    }
+                    
+                    // Update chat header if this is the current conversation
+                    if (window.currentRecipient === data.groupId) {
+                        const chatUsername = document.getElementById('chatUsername');
+                        if (chatUsername) {
+                            chatUsername.textContent = data.newValue;
+                        }
+                    }
                 }
-            });
-        }
-    }
-
-    // Add a new function to update all group indicators
-    function updateAllGroupIndicators() {
-        if (window.conversations) {
-            window.conversations.forEach(conversation => {
-                if (conversation.isGroup && conversation.members) {
-                    updateGroupOnlineStatus(conversation);
+                
+                // Save to localStorage
+                localStorage.setItem('conversations', JSON.stringify(window.conversations));
+                
+                // Force re-render conversations
+                if (typeof window.renderConversations === 'function') {
+                    window.renderConversations();
                 }
-            });
-        }
-    }
-
-    // Add this function if it doesn't exist
-    function updateAllOnlineIndicators() {
-        // Update online indicators for all users
-        document.querySelectorAll('.online-indicator[data-user-id]').forEach(indicator => {
-            const userId = indicator.dataset.userId;
-            const isOnline = window.onlineUsers.includes(userId);
-            
-            // Update the class based on online status
-            indicator.classList.remove('online', 'offline');
-            indicator.classList.add(isOnline ? 'online' : 'offline');
-            
-            // Update text status if present
-            const statusElement = indicator.closest('.conversation-item')?.querySelector('.chat-status') ||
-                                indicator.closest('.chat-user-info')?.querySelector('.chat-status');
-            
-            if (statusElement) {
-                statusElement.textContent = isOnline ? 'Online' : 'Offline';
             }
-        });
-    }
-
-    // Connection opened
-    function handleSocketOpen(event) {
-        // Connection established - no need to log
-    }
-    
-    // Handle socket messages
-    function handleSocketMessage(event) {
+        }
+        
+        // 2. Add system message directly to DOM if we're viewing this conversation
+        if (window.currentRecipient === data.groupId) {
+            // Get the messages container
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (messagesContainer) {
+                // Create a system message element - copied from appendSystemMessage implementation
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', 'system-message');
+                
+                // Format the timestamp
+                const formattedTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                messageElement.innerHTML = `
+                    <div class="system-message-content">${data.message}</div>
+                    <div class="message-time">${formattedTime}</div>
+                `;
+                
+                // Add to DOM
+                messagesContainer.appendChild(messageElement);
+                
+                // Force scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                console.log("Successfully added system message to chat:", data.message);
+            } else {
+                console.error("Could not find messages container");
+            }
+        } else {
+            console.log("Not currently viewing the updated group chat");
+        }
+        
+        // 3. Show a notification to the user regardless
         try {
-            const data = JSON.parse(event.data);
-            
-            // Debug line to ensure we're receiving messages
-            console.log("WebSocket message received:", data.type);
-            
-            // Handle different message types
-            switch (data.type) {
-                case 'new_message':
-                    handleNewMessage(data.message);
-                    break;
-                case 'user_status_update':
-                    handleUserStatusUpdate(data);
-                    break;
-                case 'new_story':
-                    handleNewStory(data.story);
-                    break;
-                case 'new_reaction':
-                    handleNewReaction(data.reaction);
-                    break;
-                case 'new_comment':
-                    handleNewComment(data.comment);
-                    break;
-                case 'group-added':
-                    handleGroupAdded(data);
-                    break;
+            // Use the notification system if available
+            if (typeof window.showMessage === 'function') {
+                window.showMessage(data.message, 'info');
             }
-        } catch (error) {
-            console.error("Error handling WebSocket message:", error);
+        } catch (e) {
+            console.error("Error showing notification:", e);
         }
     }
-    
+
     // Add this function to handle group-added events
     function handleGroupAdded(data) {
         console.log("Group notification received:", data);
@@ -178,19 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 500);
         }
-    }
-
-    // Handle WebSocket errors
-    function handleSocketError(error) {
-        // Silent error handling - no console log
-    }
-    
-    // Handle WebSocket closure
-    function handleSocketClose(event) {
-        // Attempt to reconnect after delay
-        setTimeout(() => {
-            connectWebSocket(); // Reconnect
-        }, 5000);
     }
 
     // Add a new handler function for user status updates
@@ -360,203 +380,149 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle new messages (for messages.html)
-    function handleNewMessage(message) {
+    async function handleNewMessage(message) {
         console.log("Handling new message:", message);
+        console.log("Message structure:", JSON.stringify(message));
         
-        if (window.location.pathname.includes('messages.html')) {
-            // Always update the conversation preview
-            updateConversationLocally(message);
+        try {
+            let decryptedContent = message.content;
             
-            // For group messages, the conversation ID is different than regular messages
-            const isGroupMessage = message.isGroupMessage || message.conversationId.startsWith('group:');
-            
-            // Determine which conversation this message belongs to
-            let relevantId;
-            if (isGroupMessage) {
-                // For group messages, the recipient ID is the group ID
-                relevantId = message.recipientId.toString();
-            } else {
-                // For direct messages, it's the sender's ID
-                relevantId = message.senderId.toString();
+            console.log("Message encryption type:", message.encryptionType);
+            console.log("Raw message content:", message.content);
+
+            // Attempt to decrypt the message if encryption is available
+            if (window.messageEncryption && message.encryptionType) {
+                try {
+                    if (message.encryptionType === 'group') {
+                        console.log("Attempting to decrypt group message");
+                        decryptedContent = await window.messageEncryption.decryptGroupMessage(
+                            message.content, 
+                            message.recipientId
+                        );
+                    } else if (message.encryptionType === 'direct') {
+                        console.log("Attempting to decrypt direct message");
+                        console.log("Private key available:", !!window.messageEncryption.keyPair.privateKey);
+                        decryptedContent = await window.messageEncryption.decryptMessage(message.content);
+                    }
+                    console.log("Message decrypted successfully");
+                } catch (decryptError) {
+                    console.error("Decryption failed:", decryptError);
+                    console.error("Decryption error details:", decryptError.stack);
+                    decryptedContent = "[Encrypted message - decryption failed]";
+                }
             }
-            
-            // If the conversation is currently open, append the message to the chat
-            if (window.currentRecipient === relevantId) {
-                const messagesContainer = document.getElementById('messagesContainer');
-                if (messagesContainer) {
-                    if (isGroupMessage) {
-                        // Use appendGroupMessage for group messages
-                        if (typeof window.appendGroupMessage === 'function') {
-                            window.appendGroupMessage(
-                                message.content,
-                                false, // Always false for received messages
-                                message.senderName || 'Unknown User',
-                                message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
-                                message.attachments || [], 
-                                message.attachmentTypes || [],
-                                message.timestamp,
-                                [] // Add empty array for attachmentNames
-                            );
-                        } else {
-                            // Fallback if appendGroupMessage not available
-                            const messageElement = document.createElement('div');
-                            messageElement.classList.add('message', 'received');
-                            
-                            // Format timestamp
-                            const formattedTime = new Date(message.timestamp).toLocaleTimeString([], {
-                                hour: '2-digit', 
-                                minute: '2-digit'
-                            });
-                            
-                            messageElement.innerHTML = `
-                                <div class="group-message-header">
-                                    <img src="${message.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
-                                    <span class="group-sender-name">${message.senderName || 'Unknown User'}</span>
-                                </div>
-                                <div class="message-content">${message.content}</div>
-                                <div class="message-time">${formattedTime}</div>
-                            `;
-                            
-                            messagesContainer.appendChild(messageElement);
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        }
-                    } else {
-                        // Regular direct messages use appendMessage
-                        if (typeof window.appendMessage === 'function') {
-                            let attachmentNames = [];
-                            if (message.attachments && message.attachments.length > 0) {
-                                attachmentNames = message.attachments.map(url => {
-                                    const fullFilename = url.split('/').pop();
-                                    const dashIndex = fullFilename.indexOf('-');
-                                    return dashIndex !== -1 ? 
-                                        fullFilename.substring(dashIndex + 1) : 
-                                        fullFilename;
+    
+            // Create a new message object with decrypted content
+            const processedMessage = {
+                ...message,
+                content: decryptedContent
+            };
+    
+            if (window.location.pathname.includes('messages.html')) {
+                // Always update the conversation preview
+                updateConversationLocally(processedMessage);
+                
+                // For group messages, the conversation ID is different than regular messages
+                const isGroupMessage = processedMessage.isGroupMessage || processedMessage.conversationId.startsWith('group:');
+                
+                // Determine which conversation this message belongs to
+                let relevantId;
+                if (isGroupMessage) {
+                    // For group messages, the recipient ID is the group ID
+                    relevantId = processedMessage.recipientId.toString();
+                } else {
+                    // For direct messages, it's the sender's ID
+                    relevantId = processedMessage.senderId.toString();
+                }
+                
+                // If the conversation is currently open, append the message to the chat
+                if (window.currentRecipient === relevantId) {
+                    const messagesContainer = document.getElementById('messagesContainer');
+                    if (messagesContainer) {
+                        if (isGroupMessage) {
+                            // Use appendGroupMessage for group messages
+                            if (typeof window.appendGroupMessage === 'function') {
+                                window.appendGroupMessage(
+                                    decryptedContent,
+                                    false, // Always false for received messages
+                                    processedMessage.senderName || 'Unknown User',
+                                    processedMessage.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp',
+                                    processedMessage.attachments || [], 
+                                    processedMessage.attachmentTypes || [],
+                                    processedMessage.timestamp,
+                                    [] // Add empty array for attachmentNames
+                                );
+                            } else {
+                                // Fallback if appendGroupMessage not available
+                                const messageElement = document.createElement('div');
+                                messageElement.classList.add('message', 'received');
+                                
+                                // Format timestamp
+                                const formattedTime = new Date(processedMessage.timestamp).toLocaleTimeString([], {
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
                                 });
+                                
+                                messageElement.innerHTML = `
+                                    <div class="group-message-header">
+                                        <img src="${processedMessage.senderAvatar || 'avatars/Avatar_Default_Anonymous.webp'}" class="group-sender-avatar">
+                                        <span class="group-sender-name">${processedMessage.senderName || 'Unknown User'}</span>
+                                    </div>
+                                    <div class="message-content">${decryptedContent}</div>
+                                    <div class="message-time">${formattedTime}</div>
+                                `;
+                                
+                                messagesContainer.appendChild(messageElement);
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
                             }
-
-                            window.appendMessage(
-                                message.content, 
-                                false, 
-                                message.attachments || [],
-                                message.attachmentTypes || [],
-                                message.timestamp,
-                                attachmentNames
-                            );
                         } else {
-                            // Existing fallback code for direct messages
+                            // Regular direct messages use appendMessage
+                            if (typeof window.appendMessage === 'function') {
+                                let attachmentNames = [];
+                                if (processedMessage.attachments && processedMessage.attachments.length > 0) {
+                                    attachmentNames = processedMessage.attachments.map(url => {
+                                        const fullFilename = url.split('/').pop();
+                                        const dashIndex = fullFilename.indexOf('-');
+                                        return dashIndex !== -1 ? 
+                                            fullFilename.substring(dashIndex + 1) : 
+                                            fullFilename;
+                                    });
+                                }
+    
+                                window.appendMessage(
+                                    decryptedContent, 
+                                    false, 
+                                    processedMessage.attachments || [],
+                                    processedMessage.attachmentTypes || [],
+                                    processedMessage.timestamp,
+                                    attachmentNames
+                                );
+                            } else {
+                                // Fallback if appendMessage not available
+                                const messageElement = document.createElement('div');
+                                messageElement.classList.add('message', 'received');
+                                
+                                const formattedTime = new Date(processedMessage.timestamp).toLocaleTimeString([], {
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                });
+                                
+                                messageElement.innerHTML = `
+                                    <div class="message-content">${decryptedContent}</div>
+                                    <div class="message-time">${formattedTime}</div>
+                                `;
+                                
+                                messagesContainer.appendChild(messageElement);
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            }
                         }
                     }
                 }
             }
+        } catch (error) {
+            console.error('Error processing message:', error);
+            // Handle failure gracefully - show a notification or fallback behavior
         }
-    }
-
-    // Add a new function specifically for updating the message preview
-    function updateMessagePreview(message) {
-        const senderId = message.senderId.toString();
-        
-        if (!window.conversations) {
-            console.log("No conversations array found");
-            return;
-        }
-        
-        console.log("Updating preview for message from: " + senderId);
-        
-        // Find the conversation with this sender
-        const conversationIndex = window.conversations.findIndex(c => 
-            c.userId === senderId);
-        
-        // Generate preview text based on attachments
-        let previewText = message.content;
-        let hasAttachments = message.attachments && message.attachments.length > 0;
-        let attachmentType = hasAttachments && message.attachmentTypes && message.attachmentTypes[0];
-        
-        if (hasAttachments) {
-            if (attachmentType === 'image') {
-                previewText = message.content ? `📷 ${message.content}` : "📷 Sent a photo";
-            } else if (attachmentType === 'video') {
-                previewText = message.content ? `🎥 ${message.content}` : "🎥 Sent a video";
-            } else {
-                previewText = message.content ? `📎 ${message.content}` : "📎 Sent an attachment";
-            }
-        } else if (!previewText) {
-            previewText = ""; // Fallback for empty messages
-        }
-        
-        if (conversationIndex >= 0) {
-            // Update existing conversation
-            window.conversations[conversationIndex].lastMessage = previewText;
-            // Save attachment info for persistence
-            window.conversations[conversationIndex].hasAttachments = hasAttachments;
-            window.conversations[conversationIndex].lastAttachmentType = attachmentType;
-            
-            // Only increment unread count if we're not viewing this conversation
-            if (window.currentRecipient !== senderId) {
-                window.conversations[conversationIndex].unreadCount = 
-                    (window.conversations[conversationIndex].unreadCount || 0) + 1;
-            }
-            
-            // Move this conversation to the top (most recent)
-            const conversation = window.conversations.splice(conversationIndex, 1)[0];
-            window.conversations.unshift(conversation);
-            
-            // Find the actual conversation item in the DOM and update its preview text directly
-            const conversationItem = document.querySelector(`.conversation-item[data-user-id="${senderId}"]`);
-            if (conversationItem) {
-                const previewElement = conversationItem.querySelector('.conversation-preview');
-                if (previewElement) {
-                    previewElement.textContent = previewText; // Use the formatted previewText
-                }
-                
-                // Update unread badge if needed
-                if (window.currentRecipient !== senderId) {
-                    let badge = conversationItem.querySelector('.unread-badge');
-                    const unreadCount = conversation.unreadCount;
-                    
-                    if (unreadCount > 0) {
-                        conversationItem.classList.add('unread');
-                        if (badge) {
-                            badge.textContent = unreadCount;
-                        } else {
-                            badge = document.createElement('span');
-                            badge.classList.add('unread-badge');
-                            badge.textContent = unreadCount;
-                            conversationItem.appendChild(badge);
-                        }
-                    }
-                }
-                
-                // If the conversation was already rendered, move it to the top in the DOM
-                const conversationsList = document.getElementById('conversationsList');
-                if (conversationsList && conversationsList.firstChild !== conversationItem) {
-                    conversationsList.removeChild(conversationItem);
-                    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
-                }
-            } else {
-                // If we can't find the DOM element, fall back to re-rendering everything
-                if (typeof window.renderConversations === 'function') {
-                    window.renderConversations();
-                }
-            }
-            
-            // Save to localStorage for persistence
-            localStorage.setItem('conversations', JSON.stringify(window.conversations));
-        } else {
-            // If conversation doesn't exist yet, fetch user info and create it
-            fetchUserAndCreateConversation(senderId, previewText); // Use the formatted previewText
-        }
-    }
-
-    // Add this new function to mark messages as read
-    function markMessageAsRead(senderId) {
-        fetch(`/api/messages/mark-read/${senderId}`, {
-            method: 'PUT',
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .catch(error => {
-            console.error('Error marking messages as read:', error);
-        });
     }
     
     // Handle new stories (for index.html)

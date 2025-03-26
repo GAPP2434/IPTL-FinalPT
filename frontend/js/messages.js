@@ -49,7 +49,15 @@ document.addEventListener('DOMContentLoaded', function() {
     window.onlineUsers = onlineUsers;
 
     // Initialize
-    function init() {
+    async function init() {
+        // Initialize encryption first
+        try {
+            await window.messageEncryption.initialize();
+            console.log("Encryption initialized successfully");
+        } catch (error) {
+            console.error("Error initializing encryption:", error);
+            showMessage('Failed to initialize secure messaging. Some features may not work.', 'error');
+        }
         loadOnlineUsers();
         loadConversations();
         setupEventListeners();
@@ -438,50 +446,112 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load messages for a conversation
     function loadMessages(userId) {
-        // Clear messages container
-        messagesContainer.innerHTML = '';
         showLoading();
+        messagesContainer.innerHTML = '';
         
         fetch(`/api/messages/conversation/${userId}`, {
             credentials: 'include'
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to load messages');
-            }
-            return response.json();
-        })
-        .then(messages => {
+        .then(response => response.json())
+        .then(async data => {
             hideLoading();
             
-            if (!messages.length) {
-                messagesContainer.innerHTML = '<div class="no-messages-yet">No messages yet. Start the conversation!</div>';
-                return;
-            }
+            // Check if data is valid and has messages property
+            const messages = Array.isArray(data) ? data : (data.messages || []);
+
+            console.log("Messages received:", messages.length);
             
-            // Group consecutive messages from the same sender
-            let currentSenderId = null;
-            let messageGroup = [];
-            
-            messages.forEach(message => {
-                // For group messages, display differently
-                if (message.isGroup) {
-                    if (message.isSystemMessage) {
-                        // System messages (like "X created group" or "X added Y to group")
-                        appendSystemMessage(message.content, message.timestamp);
-                    } else {
-                        // Regular group message
-                        appendGroupMessage(
-                            message.content, 
-                            message.isCurrentUser, 
-                            message.senderName || 'Unknown',
-                            message.senderAvatar,
-                            message.attachments || [],
-                            message.attachmentTypes || [],
-                            message.timestamp,
-                            [] // Add empty array as a default for attachmentNames
-                        );
+            // Process messages - add decryption for historical messages
+            for (let i = 0; i < messages.length; i++) {
+                const message = messages[i];
+                
+                // IMPORTANT: Add debug logging
+                if (message.isCurrentUser) {
+                    console.log(`Message #${i} (own): has originalPlainText:`, !!message.originalPlainText);
+                    if (message.originalPlainText) {
+                        console.log("Original text:", message.originalPlainText.substring(0, 20) + "...");
                     }
+                }
+
+                // HANDLE SENT MESSAGES - check for originalPlainText first
+                if (message.isCurrentUser && message.originalPlainText) {
+                    console.log("Using originalPlainText for own message");
+                    message.content = message.originalPlainText;
+                    // Skip the decryption step for our own messages
+                }
+                // TRY TO DECRYPT RECEIVED MESSAGES
+                else if (message.encryptionType && window.messageEncryption && !message.isCurrentUser) {
+                    try {
+                        let decryptedContent = message.content;
+                        
+                        // Improve detection of encrypted format with more detailed logging
+                        const isValidJson = typeof message.content === 'string' && (
+                            message.content.trim().startsWith('{') && 
+                            message.content.trim().endsWith('}')
+                        );
+                        
+                        if (!isValidJson) {
+                            console.log('Message content:', message.content);
+                            console.log('Message encryptionType:', message.encryptionType);
+                            console.log('Content is not in proper JSON format despite having encryptionType flag');
+                            
+                            // Just use the message content as-is since it's not properly encrypted
+                            // This handles legacy or improperly formatted messages
+                        } else {
+                            try {
+                                // Try parsing the JSON first to validate it's proper format
+                                const parsed = JSON.parse(message.content);
+                                
+                                // Check for required encryption fields
+                                if (!parsed.key || !parsed.iv || !parsed.data) {
+                                    console.log('Message has JSON format but missing encryption components');
+                                    // Use content as-is
+                                } else {
+                                    // Now attempt to decrypt with appropriate method
+                                    if (message.encryptionType === 'group') {
+                                        decryptedContent = await window.messageEncryption.decryptGroupMessage(
+                                            message.content, 
+                                            userId // Group ID
+                                        );
+                                    } else if (message.encryptionType === 'direct') {
+                                        decryptedContent = await window.messageEncryption.decryptMessage(
+                                            message.content
+                                        );
+                                    }
+                                    console.log('Successfully decrypted message');
+                                }
+                            } catch (jsonError) {
+                                console.error('Error parsing or validating encrypted content:', jsonError);
+                                // Use content as-is
+                            }
+                        }
+                        
+                        // Update the message content with decrypted version or original
+                        message.content = decryptedContent;
+                    } catch (error) {
+                        console.error("Failed to decrypt historical message:", error);
+                        message.content = "[Encrypted message - unable to decrypt]";
+                    }
+                }
+                // HANDLE OUR OWN MESSAGES THAT DON'T HAVE ORIGINAL TEXT
+                else if (message.isCurrentUser && message.encryptionType) {
+                    // If this is our own sent message but we don't have originalPlainText,
+                    // show a meaningful message instead of the encrypted text
+                    message.content = "[Your encrypted message - original text unavailable]";
+                }
+                
+                // Display the message
+                if (message.isGroupMessage) {
+                    appendGroupMessage(
+                        message.content, 
+                        message.isCurrentUser, 
+                        message.senderName || 'Unknown',
+                        message.senderAvatar,
+                        message.attachments || [],
+                        message.attachmentTypes || [],
+                        message.timestamp,
+                        [] // Default empty array for attachmentNames
+                    );
                 } else {
                     // Regular direct message
                     appendMessage(
@@ -493,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         []
                     );
                 }
-            });
+            }
             
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -653,80 +723,119 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Send a message
-    function sendMessage() {
+    async function sendMessage() {
         const text = messageInput.value.trim();
         
         // Don't send if no text and no attachments
         if (!text && messageAttachments.length === 0) return;
-        
         if (!currentRecipient) return;
         
-        // Create FormData to send both text and files
-        const formData = new FormData();
-        formData.append('recipientId', currentRecipient);
-        formData.append('content', text);
-        
-        // Add all attachments to the FormData
-        messageAttachments.forEach(attachment => {
-            formData.append('attachments', attachment.file);
-        });
-        
-        // Show a temporary version with the attachments in the UI immediately
-        const tempAttachmentUrls = [];
-        const tempAttachmentTypes = [];
-        const tempAttachmentNames = [];
-        
-        if (messageAttachments.length > 0) {
+        try {
+            // Create FormData to send both text and files
+            const formData = new FormData();
+            formData.append('recipientId', currentRecipient);
+            
+            // Add all attachments to the FormData
             messageAttachments.forEach(attachment => {
-                // Create temporary object URLs for immediate display
-                const tempUrl = URL.createObjectURL(attachment.file);
-                tempAttachmentUrls.push(tempUrl);
-                tempAttachmentNames.push(attachment.file.name); // Store the original filename
-                
-                if (attachment.file.type.startsWith('image/')) {
-                    tempAttachmentTypes.push('image');
-                } else if (attachment.file.type.startsWith('video/')) {
-                    tempAttachmentTypes.push('video');
-                } else {
-                    tempAttachmentTypes.push('file');
-                }
+                formData.append('attachments', attachment.file);
             });
-        }
-        
-        // Add to UI immediately (will be replaced when real message comes back from server)
-        if (currentGroup) {
-            appendGroupMessage(text, true, null, null, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
-        } else {
-            appendMessage(text, true, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
-        }
-        
-        // Clear the input and attachments
-        messageInput.value = '';
-        messageAttachments = [];
-        attachmentsPreview.innerHTML = '';
-        attachmentsPreview.style.display = 'none';
-        
-        // Send to server
-        fetch('/api/messages/send', {
-            method: 'POST',
-            credentials: 'include',
-            body: formData // Send FormData instead of JSON
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to send message');
+            
+            // Show a temporary version with the attachments in the UI immediately
+            const tempAttachmentUrls = [];
+            const tempAttachmentTypes = [];
+            const tempAttachmentNames = [];
+            
+            if (messageAttachments.length > 0) {
+                messageAttachments.forEach(attachment => {
+                    // Create temporary object URLs for immediate display
+                    const tempUrl = URL.createObjectURL(attachment.file);
+                    tempAttachmentUrls.push(tempUrl);
+                    tempAttachmentNames.push(attachment.file.name); // Store the original filename
+                    
+                    if (attachment.file.type.startsWith('image/')) {
+                        tempAttachmentTypes.push('image');
+                    } else if (attachment.file.type.startsWith('video/')) {
+                        tempAttachmentTypes.push('video');
+                    } else {
+                        tempAttachmentTypes.push('file');
+                    }
+                });
             }
-            return response.json();
-        })
-        .then(data => {
-            // Update conversation with new message
-            updateConversationWithNewMessage(currentRecipient, text, true, tempAttachmentUrls, tempAttachmentTypes);
-        })
-        .catch(error => {
-            console.error('Error sending message:', error);
-            // Show error to user
-            showMessage('Failed to send message. Please try again.', 'error');
-        });
+            
+            // Encrypt message text if encryption is available
+            if (window.messageEncryption) {
+                try {
+                    // Make sure to store the original text BEFORE encryption
+                    const originalText = text; 
+                    formData.append('originalContent', originalText);
+                    
+                    let encryptedText;
+                    let encryptionType;
+                    
+                    if (currentGroup) {
+                        // Group message encryption
+                        encryptedText = await window.messageEncryption.encryptGroupMessage(text, currentRecipient);
+                        encryptionType = 'group';
+                    } else {
+                        // Direct message encryption
+                        encryptedText = await window.messageEncryption.encryptMessage(text, currentRecipient);
+                        encryptionType = 'direct';
+                    }
+                    
+                    // Send encrypted message
+                    formData.append('content', encryptedText);
+                    formData.append('encryptionType', encryptionType);
+                    console.log("Message encrypted successfully");
+                    console.log("Including originalContent:", originalText);
+                } catch (encryptError) {
+                    console.error('Encryption failed, falling back to plain text:', encryptError);
+                    formData.append('content', text); // Fallback to unencrypted
+                    // You might want to notify the user that encryption failed
+                    showMessage('Message sent unencrypted due to encryption error', 'warning');
+                }
+            } else {
+                // Fallback to unencrypted if encryption not available
+                formData.append('content', text);
+            }
+
+            // Add to UI immediately (will be replaced when real message comes back from server)
+            if (currentGroup) {
+                appendGroupMessage(text, true, null, null, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
+            } else {
+                appendMessage(text, true, tempAttachmentUrls, tempAttachmentTypes, new Date(), tempAttachmentNames);
+            }
+            
+            // Clear the input and attachments
+            messageInput.value = '';
+            messageAttachments = [];
+            attachmentsPreview.innerHTML = '';
+            attachmentsPreview.style.display = 'none';
+            
+            // Send to server
+            fetch('/api/messages/send', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData // Send FormData instead of JSON
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update conversation with new message
+                updateConversationWithNewMessage(currentRecipient, text, true, tempAttachmentUrls, tempAttachmentTypes);
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+                // Show error to user
+                showMessage('Failed to send message. Please try again.', 'error');
+            });
+        } catch (error) {
+            console.error('Encryption error:', error);
+            showMessage('Failed to encrypt message. Please try again.', 'error');
+        }
     }
 
     // Expose loadConversations to window for WebSocket updates
@@ -739,7 +848,43 @@ document.addEventListener('DOMContentLoaded', function() {
     window.currentRecipient = null;
     window.updateAllOnlineStatus = updateAllOnlineStatus; // Add this line
     window.isGroupOnline = isGroupOnline; // Add this line
+    window.appendSystemMessage = appendSystemMessage; 
+    window.showMessage = showMessage;
     
+    // Listen for group update events from WebSocket
+window.addEventListener('groupUpdate', function(event) {
+    const data = event.detail;
+    console.log("Group update event received:", data);
+    
+    // Update conversation with the system message
+    if (data.groupId && data.message) {
+        // Update the conversation preview with system message
+        const conversationIndex = conversations.findIndex(c => c.userId === data.groupId);
+        if (conversationIndex >= 0) {
+            conversations[conversationIndex].lastMessage = data.message;
+            
+            // Update other fields based on update type
+            if (data.updatedField === 'profilePicture') {
+                conversations[conversationIndex].profilePicture = data.newValue;
+            } 
+            else if (data.updatedField === 'name') {
+                conversations[conversationIndex].name = data.newValue;
+            }
+            
+            // Save updated conversations
+            localStorage.setItem('conversations', JSON.stringify(conversations));
+            
+            // Force re-render
+            renderConversations();
+        }
+        
+        // If currently viewing this conversation, add the system message to the chat
+        if (currentRecipient === data.groupId) {
+            appendSystemMessage(data.message, data.timestamp);
+        }
+    }
+});
+
     // Update conversation with new message (local state)
     function updateConversationWithNewMessage(userId, text, isSent = true, attachments = [], attachmentTypes = []) {
         const conversationIndex = conversations.findIndex(c => c.userId === userId);
@@ -1201,7 +1346,7 @@ function validateGroupForm() {
 }
 
     // Create group chat
-    function createGroupChat() {
+    async function createGroupChat() {
         const groupName = groupNameInput.value.trim();
         
         if (!groupName) {
@@ -1220,25 +1365,48 @@ function validateGroupForm() {
         
         showLoading();
         
-        fetch('/api/messages/create-group', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
+        try {
+            let encryptedKeys = {};
+            
+            // If encryption is available, generate and encrypt group keys
+            if (window.messageEncryption) {
+                // Generate a group encryption key
+                const groupKey = await window.messageEncryption.generateGroupKey();
+                
+                // Encrypt the group key for each member
+                for (const memberId of memberIds) {
+                    encryptedKeys[memberId] = await window.messageEncryption.encryptGroupKey(groupKey, memberId);
+                }
+                
+                // Also encrypt for the current user
+                encryptedKeys[currentUser._id] = await window.messageEncryption.encryptGroupKey(groupKey, currentUser._id);
+            }
+            
+            // Send request with or without encryption
+            const requestBody = {
                 name: groupName,
                 members: memberIds
-            })
-        })
-        .then(response => {
+            };
+            
+            // Only include encrypted keys if we have them
+            if (Object.keys(encryptedKeys).length > 0) {
+                requestBody.encryptedKeys = encryptedKeys;
+            }
+            
+            const response = await fetch('/api/messages/create-group', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(requestBody)
+            });
+            
             if (!response.ok) {
                 throw new Error('Failed to create group chat');
             }
-            return response.json();
-        })
-        .then(groupChat => {
-            hideLoading();
+            
+            const groupChat = await response.json();
             
             // Close the modal
             groupChatModal.style.display = 'none';
@@ -1260,12 +1428,12 @@ function validateGroupForm() {
             
             // Show success message
             showMessage('Group chat created successfully', 'success');
-        })
-        .catch(error => {
-            hideLoading();
+        } catch (error) {
             console.error('Error creating group chat:', error);
             showMessage('Failed to create group chat. Please try again.', 'error');
-        });
+        } finally {
+            hideLoading();
+        }
     }
 
     // Toggle add members section
