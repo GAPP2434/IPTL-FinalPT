@@ -871,47 +871,47 @@ function createPostElement(post) {
 }
 
 // Listen for comment submissions
-document.addEventListener('click', async (event) => {
-    if (event.target.classList.contains('send-comment-button')) {
-        const postId = event.target.dataset.postId;
-        const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
-        const commentText = commentInput.value.trim();
+// document.addEventListener('click', async (event) => {
+//     if (event.target.classList.contains('send-comment-button')) {
+//         const postId = event.target.dataset.postId;
+//         const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
+//         const commentText = commentInput.value.trim();
 
-        if (!commentText) {
-            alert('Please enter a comment.');
-            return;
-        }
+//         if (!commentText) {
+//             alert('Please enter a comment.');
+//             return;
+//         }
 
-        try {
-            const response = await fetch(`/api/posts/${postId}/comments`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ comment: commentText })
-            });
+//         try {
+//             const response = await fetch(`/api/posts/${postId}/comments`, {
+//                 method: 'POST',
+//                 credentials: 'include',
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 },
+//                 body: JSON.stringify({ comment: commentText })
+//             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add comment');
-            }
+//             if (!response.ok) {
+//                 const errorData = await response.json();
+//                 throw new Error(errorData.message || 'Failed to add comment');
+//             }
 
-            const newComment = await response.json();
-            const commentList = document.getElementById(`commentList-${postId}`);
-            const commentElement = document.createElement('div');
-            commentElement.classList.add('comment');
-            commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${newComment.comment}`;
-            commentList.appendChild(commentElement);
+//             const newComment = await response.json();
+//             const commentList = document.getElementById(`commentList-${postId}`);
+//             const commentElement = document.createElement('div');
+//             commentElement.classList.add('comment');
+//             commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${newComment.comment}`;
+//             commentList.appendChild(commentElement);
 
-            // Clear the input field
-            commentInput.value = '';
-        } catch (error) {
-            console.error('Error adding comment:', error);
-            alert(`Failed to add comment: ${error.message}`);
-        }
-    }
-});
+//             // Clear the input field
+//             commentInput.value = '';
+//         } catch (error) {
+//             console.error('Error adding comment:', error);
+//             alert(`Failed to add comment: ${error.message}`);
+//         }
+//     }
+// });
 
 async function processMentions(text) {
     // Find all @mentions using regex
@@ -946,6 +946,7 @@ async function processMentions(text) {
 
   document.addEventListener('click', async (event) => {
     if (event.target.classList.contains('send-comment-button')) {
+        event.stopPropagation();
         const postId = event.target.dataset.postId;
         const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
         const commentText = commentInput.value.trim();
