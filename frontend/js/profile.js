@@ -192,25 +192,124 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to fetch user profile data
 function fetchUserProfile() {
-    fetch('/api/users/profile', {
+    // Get userId from URL parameter if it exists
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+    
+    // Create API endpoint URL based on whether we're viewing another user's profile or our own
+    const apiUrl = userId ? 
+        `/api/users/profile?userId=${userId}` : 
+        '/api/users/profile';
+    
+    // Add debugging to check what's happening
+    console.log("Fetching profile with URL:", apiUrl);
+    
+    fetch(apiUrl, {
         credentials: 'include'
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to load profile: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(user => {
+        // Debug the received user data
+        console.log("Received profile data:", user);
+        
+        // Update basic profile info
         document.getElementById('userName').textContent = user.name;
-        document.getElementById('userBio').textContent = user.bio || 'No bio available';
         document.getElementById('profilePicture').src = user.profilePicture;
         
-        // Update follower/following counts
-        document.getElementById('followersCount').textContent = 
-            `${user.followersCount || 0} Followers`;
-        document.getElementById('followingCount').textContent = 
-            `${user.followingCount || 0} Following`;
+        // Hide edit button if it's not the user's own profile
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        if (editProfileBtn) {
+            editProfileBtn.style.display = user.isOwnProfile ? 'block' : 'none';
+        }
+        
+        // Show follow/unfollow button if it's not the user's own profile
+        if (!user.isOwnProfile) {
+            // Remove any existing follow buttons to avoid duplicates
+            const existingActions = document.querySelector('.profile-actions');
+            if (existingActions) {
+                existingActions.remove();
+            }
+            
+            const userActions = document.createElement('div');
+            userActions.className = 'profile-actions';
+            
+            // Create the follow/unfollow button based on whether user is already following
+            const followButton = document.createElement('button');
+            followButton.className = user.youFollow ? 
+                'profile-button unfollow-button' : 
+                'profile-button follow-button';
+            followButton.textContent = user.youFollow ? 'Unfollow' : 'Follow';
+            followButton.dataset.userId = userId || user._id;
+            
+            userActions.appendChild(followButton);
+            
+            // Insert the actions into the user-details-section
+            const userDetailsSection = document.querySelector('.user-details-section');
+            if (userDetailsSection && userDetailsSection.querySelector('.user-info')) {
+                userDetailsSection.querySelector('.user-info').appendChild(userActions);
+            }
+            
+            // Attach event listener to the follow/unfollow button
+            attachFollowButtonListeners();
+        }
         
         if (user.coverPhoto) {
             document.querySelector('.cover-photo-section').style.backgroundImage = `url('${user.coverPhoto}')`;
             document.querySelector('.cover-photo-section').style.backgroundSize = 'cover';
             document.querySelector('.cover-photo-section').style.backgroundPosition = 'center';
+        }
+        
+        // Check if profile is private and not the logged-in user's profile
+        if (user.isPrivateProfile && !user.isOwnProfile && !user.youFollow) {
+            // Show private profile message
+            document.getElementById('userBio').textContent = 'This profile is private';
+            
+            // Disable follower/following counts clicks
+            document.getElementById('followersCount').style.pointerEvents = 'none';
+            document.getElementById('followingCount').style.pointerEvents = 'none';
+            
+            // Hide posts section
+            document.querySelector('.posts-section').style.display = 'none';
+            
+            // Remove any existing private notice first
+            const existingNotice = document.querySelector('.private-profile-notice');
+            if (existingNotice) {
+                existingNotice.remove();
+            }
+            
+            // Add a private profile notice
+            const privateNotice = document.createElement('div');
+            privateNotice.className = 'private-profile-notice';
+            privateNotice.innerHTML = `
+                <div class="private-icon"><i class="fas fa-lock"></i></div>
+                <p>This account is private</p>
+                <p class="private-description">Follow this account to see their content</p>
+            `;
+            document.querySelector('.user-details-section').appendChild(privateNotice);
+        } else {
+            // Regular profile display for public or own profile
+            document.getElementById('userBio').textContent = user.bio || 'No bio available';
+            
+            // Show posts section that might have been hidden
+            const postsSection = document.querySelector('.posts-section');
+            if (postsSection) {
+                postsSection.style.display = 'block';
+            }
+            
+            // Update follower/following counts
+            document.getElementById('followersCount').textContent = 
+                `${user.followersCount || 0} Followers`;
+            document.getElementById('followingCount').textContent = 
+                `${user.followingCount || 0} Following`;
+                
+            // Make follower/following links clickable
+            document.getElementById('followersCount').style.pointerEvents = 'auto';
+            document.getElementById('followingCount').style.pointerEvents = 'auto';
         }
     })
     .catch(error => {
@@ -260,8 +359,17 @@ function openFollowModal(type) {
     // Show loading state
     followModalList.innerHTML = '<div class="loading-message">Loading...</div>';
     
+    // Get userId from URL parameter if it exists
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+    
+    // Create API endpoint URL based on whether we're viewing another user's profile or our own
+    const apiUrl = userId ? 
+        `/api/users/${type}?userId=${userId}` : 
+        `/api/users/${type}`;
+    
     // Fetch and display the data
-    fetch(`/api/users/${type}`, {
+    fetch(apiUrl, {
         credentials: 'include'
     })
     .then(response => {
@@ -300,15 +408,25 @@ function renderFollowList(users, type) {
         }
         
         userElement.innerHTML = `
-            <img src="${user.profilePicture}" alt="${user.name}" class="follow-avatar">
-            <div class="follow-info">
-                <div class="follow-name">${user.name}</div>
-                <div class="follow-bio">${user.bio || ''}</div>
+            <div class="follow-profile-link" data-user-id="${user._id}">
+                <img src="${user.profilePicture}" alt="${user.name}" class="follow-avatar">
+                <div class="follow-info">
+                    <div class="follow-name">${user.name}</div>
+                    <div class="follow-bio">${user.bio || ''}</div>
+                </div>
             </div>
             <div class="follow-action">
                 ${actionButton}
             </div>
         `;
+        
+        // Add click event for profile navigation
+        const profileLink = userElement.querySelector('.follow-profile-link');
+        if (profileLink) {
+            profileLink.addEventListener('click', () => {
+                window.location.href = `profile.html?userId=${user._id}`;
+            });
+        }
         
         followModalList.appendChild(userElement);
     });

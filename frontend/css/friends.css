@@ -122,6 +122,20 @@
     margin-left: 15px;
 }
 
+.friend-profile-link {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.friend-profile-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
 .follow-button, .unfollow-button {
     padding: 8px 15px;
     background-color: #000;

@@ -166,10 +166,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         div.innerHTML = `
-            <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
-            <div class="friend-info">
-                <div class="friend-name">${user.name}</div>
-                <div class="friend-bio">${user.bio || ''}</div>
+            <div class="friend-profile-link" data-user-id="${user._id}">
+                <img src="${user.profilePicture}" alt="${user.name}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">${user.name}</div>
+                    <div class="friend-bio">${user.bio || ''}</div>
+                </div>
             </div>
             <div class="friend-action">
                 ${actionButton}
@@ -192,7 +194,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Add event listener for profile link
+        const profileLink = div.querySelector('.friend-profile-link');
+        if (profileLink) {
+            profileLink.addEventListener('click', () => {
+                navigateToUserProfile(user._id);
+            });
+        }
+        
         return div;
+    }
+    
+    function navigateToUserProfile(userId) {
+        window.location.href = `profile.html?userId=${userId}`;
     }
     
     // Search Function
