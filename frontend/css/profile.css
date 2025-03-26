@@ -432,3 +432,10 @@
 .follow-profile-link:hover {
     background-color: rgba(0, 0, 0, 0.05);
 }
+
+.private-profile-icon {
+    font-size: 0.8rem;
+    margin-left: 8px;
+    color: #666;
+    vertical-align: middle;
+}

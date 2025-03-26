@@ -79,20 +79,35 @@ function followUser(userId, button, callbacks = {}) {
         return response.json();
     })
     .then(data => {
-        // Create unfollow button to replace the follow button
-        const unfollowButton = document.createElement('button');
-        unfollowButton.classList.add('follow-button', 'unfollow-button');
-        unfollowButton.dataset.userId = userId;
-        unfollowButton.textContent = 'Unfollow';
-        
-        unfollowButton.addEventListener('click', function() {
-            unfollowUser(userId, this, callbacks);
-        });
-        
-        button.replaceWith(unfollowButton);
-        
-        // Show success message
-        showMessage('You are now following this user', 'success');
+        // Check if this was a direct follow or a request
+        if (data.requestSent) {
+            // It was a follow request
+            const requestSentButton = document.createElement('button');
+            requestSentButton.classList.add('follow-button', 'request-sent-button');
+            requestSentButton.dataset.userId = userId;
+            requestSentButton.textContent = 'Request Sent';
+            requestSentButton.disabled = true;
+            
+            button.replaceWith(requestSentButton);
+            
+            // Show success message - CHANGED TO "Follow Request Sent"
+            showMessage('Follow request sent', 'success');
+        } else {
+            // Normal follow for public profile
+            const unfollowButton = document.createElement('button');
+            unfollowButton.classList.add('follow-button', 'unfollow-button');
+            unfollowButton.dataset.userId = userId;
+            unfollowButton.textContent = 'Unfollow';
+            
+            unfollowButton.addEventListener('click', function() {
+                unfollowUser(userId, this, callbacks);
+            });
+            
+            button.replaceWith(unfollowButton);
+            
+            // Show success message
+            showMessage('You are now following this user', 'success');
+        }
         
         // Call the success callback if provided
         if (callbacks.onSuccess) {
@@ -196,31 +211,47 @@ function setupSearch(options) {
         inputElement,       // Search input element
         buttonElement,      // Search button element
         endpoint,           // API endpoint to call
-        minChars = 2,       // Minimum characters to trigger search
-        debounceTime = 300, // Debounce time in ms
+        minChars = 1,       // Minimum characters to trigger search
+        debounceTime = 100, // Debounce time in ms
         renderResults,      // Function to render results
-        clearResults        // Function to clear results
+        clearResults,
+        onEmptySearch        // Function to clear results
     } = options;
     
+    if (!inputElement || !buttonElement || !endpoint || !renderResults) {
+        console.error('Missing required parameters for search setup');
+        return;
+    }
+    
     // Input event with debounce
-    inputElement.addEventListener('input', debounce(function() {
+    inputElement.addEventListener('input', window.searchUtils.debounce(function() {
         const query = inputElement.value.trim();
+        
         if (query.length >= minChars) {
             searchUsers(query);
         } else if (query.length === 0) {
-            clearResults();
+            if (onEmptySearch) {
+                onEmptySearch(); // Call the onEmptySearch callback for empty input
+            } else if (clearResults) {
+                clearResults();
+            }
         }
     }, debounceTime));
     
     // Button click
-    if (buttonElement) {
-        buttonElement.addEventListener('click', () => {
-            const query = inputElement.value.trim();
-            if (query) {
-                searchUsers(query);
+    buttonElement.addEventListener('click', function() {
+        const query = inputElement.value.trim();
+        
+        if (query.length >= minChars) {
+            searchUsers(query);
+        } else if (query.length === 0) {
+            if (onEmptySearch) {
+                onEmptySearch(); // Call the onEmptySearch callback for empty input
+            } else if (clearResults) {
+                clearResults();
             }
-        });
-    }
+        }
+    });
     
     // Enter key press
     inputElement.addEventListener('keypress', (e) => {
@@ -234,7 +265,12 @@ function setupSearch(options) {
     
     // Search function
     function searchUsers(query) {
-        if (!query.trim()) return;
+        if (!query.trim()) {
+            if (onEmptySearch) {
+                onEmptySearch();
+            }
+            return;
+        }
         
         fetch(`${endpoint}?q=${encodeURIComponent(query)}`, {
             credentials: 'include'

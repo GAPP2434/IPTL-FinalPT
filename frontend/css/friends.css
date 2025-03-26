@@ -238,3 +238,101 @@
     font-family: 'Markazi', serif;
     font-size: 1.2rem;
 }
+
+/* Add styles for requests tab */
+
+.requests-container {
+    padding: 20px 0;
+}
+
+.requests-container h3 {
+    font-family: 'MonsterHunter', serif;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.requests-list {
+    margin-bottom: 30px;
+}
+
+.request-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.request-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.accept-button {
+    padding: 6px 12px;
+    background-color: #285b29;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-family: 'Markazi', serif;
+}
+
+.decline-button, .cancel-button {
+    padding: 6px 12px;
+    background-color: #721c24;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-family: 'Markazi', serif;
+}
+
+.accept-button:hover {
+    background-color: #1e451f;
+}
+
+.decline-button:hover, .cancel-button:hover {
+    background-color: #5a171d;
+}
+
+.request-status {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.no-requests-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Add style for request sent button */
+.request-sent-button {
+    background-color: #6c757d !important;
+    cursor: default !important;
+    opacity: 0.8;
+}
+
+.request-sent-button:hover {
+    background-color: #6c757d !important;
+}
+
+.private-profile-icon {
+    font-size: 0.8rem;
+    margin-left: 5px;
+    color: #666;
+    vertical-align: middle;
+}
+
+.friend-name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}

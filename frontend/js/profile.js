@@ -218,8 +218,17 @@ function fetchUserProfile() {
         console.log("Received profile data:", user);
         
         // Update basic profile info
-        document.getElementById('userName').textContent = user.name;
+        // Update basic profile info
+        const usernameEl = document.getElementById('userName');
+        usernameEl.textContent = user.name;
         document.getElementById('profilePicture').src = user.profilePicture;
+        
+        if (user.isPrivateProfile) {
+            const lockIcon = document.createElement('i');
+            lockIcon.className = 'fas fa-lock private-profile-icon';
+            lockIcon.title = 'Private Profile';
+            usernameEl.appendChild(lockIcon);
+        }
         
         // Hide edit button if it's not the user's own profile
         const editProfileBtn = document.getElementById('editProfileBtn');
@@ -407,11 +416,18 @@ function renderFollowList(users, type) {
             actionButton = `<button class="follow-button unfollow-button" data-user-id="${user._id}">Unfollow</button>`;
         }
         
+        // Create private profile indicator if applicable
+        const privateIndicator = user.isPrivateProfile ? 
+            '<i class="fas fa-lock private-profile-icon" title="Private Profile"></i>' : '';
+        
         userElement.innerHTML = `
             <div class="follow-profile-link" data-user-id="${user._id}">
                 <img src="${user.profilePicture}" alt="${user.name}" class="follow-avatar">
                 <div class="follow-info">
-                    <div class="follow-name">${user.name}</div>
+                    <div class="follow-name">
+                        ${user.name}
+                        ${privateIndicator}
+                    </div>
                     <div class="follow-bio">${user.bio || ''}</div>
                 </div>
             </div>
