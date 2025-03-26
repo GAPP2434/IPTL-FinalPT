@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-       // Create WebSocket connection with explicit admin path
+        // Create WebSocket connection with explicit admin path
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         adminSocket = new WebSocket(`${wsProtocol}//${window.location.host}/admin`);
         
@@ -83,7 +83,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Admin WebSocket authenticated successfully");
         } else {
             console.error("Admin WebSocket authentication failed:", data.message);
-            // Disconnect if not authenticated
             adminSocket.close();
         }
     }
@@ -97,27 +96,49 @@ document.addEventListener('DOMContentLoaded', function() {
             showBanModal(data.reason || "Your account has been banned by an administrator.");
         }
         
-        // If on admin panel, update the user list
+        // If on admin panel, update the user list immediately
         if (window.location.pathname.includes('adminPanel.html')) {
-            if (typeof window.updateUserStatus === 'function') {
-                window.updateUserStatus(data.userId, 'banned');
+            // Update UI directly without having to wait for a server response
+            if (window.updateUserStatusInUI) {
+                window.updateUserStatusInUI(data.userId, 'banned');
+            }
+            
+            // Show success message
+            if (window.showMessage) {
+                window.showMessage(`User ${data.username} has been banned`, 'success');
+            }
+            
+            // Update internal users array if function exists
+            if (window.updateUserInArray) {
+                window.updateUserInArray(data.userId, { status: 'banned' });
             }
         }
     }
     
-    // Handle user unbanned event
+    // Handle user unbanned event - IMPROVED
     function handleUserUnbanned(data) {
         console.log("User unbanned:", data);
         
-        // If on admin panel, update the user list
+        // If on admin panel, update the user list immediately
         if (window.location.pathname.includes('adminPanel.html')) {
-            if (typeof window.updateUserStatus === 'function') {
-                window.updateUserStatus(data.userId, 'active');
+            // Use the standard updateUserStatusInUI function for consistency
+            if (window.updateUserStatusInUI) {
+                window.updateUserStatusInUI(data.userId, 'active');
+            }
+            
+            // Show success message in admin panel
+            if (window.showMessage) {
+                window.showMessage(`User ${data.username || 'User'} has been unbanned`, 'success');
+            }
+            
+            // Update internal users array if it exists
+            if (window.updateUserInArray) {
+                window.updateUserInArray(data.userId, { status: 'active' });
             }
         }
     }
     
-    // Handle user suspended event
+    // Handle user suspended event - IMPROVED
     function handleUserSuspended(data) {
         console.log("User suspended:", data);
         
@@ -126,10 +147,21 @@ document.addEventListener('DOMContentLoaded', function() {
             showSuspensionModal(data.reason || "Your account has been temporarily suspended.");
         }
         
-        // If on admin panel, update the user list
+        // If on admin panel, update the user list immediately
         if (window.location.pathname.includes('adminPanel.html')) {
-            if (typeof window.updateUserStatus === 'function') {
-                window.updateUserStatus(data.userId, 'suspended');
+            // Use the standard updateUserStatusInUI function for consistency
+            if (window.updateUserStatusInUI) {
+                window.updateUserStatusInUI(data.userId, 'suspended');
+            }
+            
+            // Show success message in admin panel
+            if (window.showMessage) {
+                window.showMessage(`User ${data.username || 'User'} has been suspended`, 'success');
+            }
+            
+            // Update internal users array if it exists
+            if (window.updateUserInArray) {
+                window.updateUserInArray(data.userId, { status: 'suspended' });
             }
         }
     }
@@ -146,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Show ban modal
+    // Show ban modal with improved size and reason display
     function showBanModal(message) {
         // Create modal if it doesn't exist
         let banModal = document.getElementById('banModal');
@@ -199,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Show suspension modal
+    // Show suspension modal with improved size and reason display
     function showSuspensionModal(message) {
         // Create modal if it doesn't exist
         let suspensionModal = document.getElementById('suspensionModal');

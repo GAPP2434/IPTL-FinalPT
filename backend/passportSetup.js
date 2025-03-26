@@ -5,8 +5,48 @@ const User = require('./models/Users');
 const dotenv = require("dotenv");
 const path = require('path');
 const fs = require('fs');
-
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcryptjs');
 dotenv.config();
+
+passport.use(new LocalStrategy(
+  {
+    usernameField: 'username', // The field name for username in your login form
+    passwordField: 'password'  // The field name for password in your login form
+  },
+  async function(username, password, done) {
+    try {
+      // Try to find the user by username (name field in your schema)
+      let user = await User.findOne({ name: username });
+      
+      // If not found by username, try email
+      if (!user) {
+        user = await User.findOne({ email: username });
+      }
+      
+      // If user not found with either username or email
+      if (!user) {
+        return done(null, false, { message: 'Invalid username or password' });
+      }
+      
+      // If user found but it's a Google account without password
+      if (user.googleId && !user.password) {
+        return done(null, false, { message: 'Please login with Google' });
+      }
+      
+      // Validate password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return done(null, false, { message: 'Invalid username or password' });
+      }
+      
+      // Success, return the user
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  }
+));
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,

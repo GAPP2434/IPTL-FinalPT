@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadUsers();
         loadSecurityLogs();
         loadAnalyticsData();
+        setupStatusObserver();
     }
     
     // Check if the user has admin access
@@ -96,6 +97,42 @@ document.addEventListener('DOMContentLoaded', function() {
         securitySeverityFilter.addEventListener('change', filterSecurityLogs);
     }
     
+    function setupStatusObserver() {
+        // Create a MutationObserver to update user statuses if DOM changes
+        const userTableBody = document.getElementById('userTableBody');
+        if (!userTableBody) return;
+        
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'childList') {
+                    // Check each added node
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1 && node.tagName === 'TR' && node.dataset.userId) {
+                            const userId = node.dataset.userId;
+                            const userIndex = users.findIndex(u => u._id === userId);
+                            
+                            if (userIndex !== -1) {
+                                const status = users[userIndex].status;
+                                const statusCell = node.querySelector('.user-status');
+                                
+                                if (statusCell) {
+                                    statusCell.classList.remove('status-active', 'status-banned', 'status-suspended');
+                                    statusCell.classList.add(`status-${status}`);
+                                    statusCell.textContent = status;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        
+        observer.observe(userTableBody, {
+            childList: true,
+            subtree: true
+        });
+    }
+
     // Load users
     function loadUsers() {
         showLoading();
@@ -194,12 +231,21 @@ document.addEventListener('DOMContentLoaded', function() {
         usersToRender.forEach(user => {
             const row = document.createElement('tr');
             
+            // Add data-user-id attribute to the row
+            row.dataset.userId = user._id;
+            
             // Format date
             const joinDate = new Date(user.createdAt);
             const formattedDate = joinDate.toLocaleDateString();
             
             // Create status class
             const statusClass = `status-${user.status}`;
+            
+            // Determine button icons and titles based on user status
+            const banButtonIcon = user.status === 'banned' ? 'fa-undo' : 'fa-ban';
+            const banButtonTitle = user.status === 'banned' ? 'Unban User' : 'Ban User';
+            const suspendButtonIcon = user.status === 'suspended' ? 'fa-play' : 'fa-pause';
+            const suspendButtonTitle = user.status === 'suspended' ? 'Reactivate User' : 'Suspend User';
             
             row.innerHTML = `
                 <td><img src="${user.profilePicture}" alt="${user.name}" class="user-avatar"></td>
@@ -209,25 +255,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td><span class="user-status ${statusClass}">${user.status}</span></td>
                 <td>${formattedDate}</td>
                 <td class="user-actions">
-                    <button class="edit-btn" data-user-id="${user._id}" title="Edit User">
+                    <button class="action-btn edit-btn" data-user-id="${user._id}" title="Edit User">
                         <i class="fas fa-edit"></i>
                     </button>
-                    ${user.status !== 'suspended' ? 
-                        `<button class="suspend-btn" data-user-id="${user._id}" title="Suspend User">
-                            <i class="fas fa-pause"></i>
-                        </button>` : 
-                        `<button class="suspend-btn" data-user-id="${user._id}" title="Reactivate User">
-                            <i class="fas fa-play"></i>
-                        </button>`
-                    }
-                    ${user.status !== 'banned' ? 
-                        `<button class="ban-btn" data-user-id="${user._id}" title="Ban User">
-                            <i class="fas fa-ban"></i>
-                        </button>` : 
-                        `<button class="ban-btn" data-user-id="${user._id}" title="Unban User">
-                            <i class="fas fa-undo"></i>
-                        </button>`
-                    }
+                    <button class="action-btn suspend-btn" data-user-id="${user._id}" title="${suspendButtonTitle}">
+                        <i class="fas ${suspendButtonIcon}"></i>
+                    </button>
+                    <button class="action-btn ban-btn" data-user-id="${user._id}" title="${banButtonTitle}">
+                        <i class="fas ${banButtonIcon}"></i>
+                    </button>
                 </td>
             `;
             
@@ -235,6 +271,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Add event listeners to action buttons
+        attachActionButtonHandlers();
+    }
+    
+    // Create a separate function to attach event handlers to action buttons
+    function attachActionButtonHandlers() {
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const userId = button.dataset.userId;
@@ -266,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Render security logs
     function renderSecurityLogs(logsToRender) {
         const securityLogTableBody = document.getElementById('securityLogTableBody');
@@ -369,17 +410,30 @@ document.addEventListener('DOMContentLoaded', function() {
     function suspendUser(userId) {
         const user = users.find(u => u._id === userId);
         if (!user) return;
-        
+    
         showConfirmModal(
             'Suspend User',
             `Are you sure you want to suspend user "${user.name}"?`,
             () => {
-                // Call API to suspend user
-                updateUserStatus(userId, 'suspended', () => {
-                    user.status = 'suspended';
-                    renderUsers(users);
-                    showMessage(`User ${user.name} has been suspended.`, 'success');
-                });
+                // Get reason via prompt
+                const reason = prompt('Enter reason for suspension (optional):');
+                
+                // Get duration with clear format guidance
+                const duration = prompt('Enter suspension duration (format: 1h = 1 hour, 3d = 3 days, 30m = 30 minutes):', '24h');
+    
+                // Immediately update UI to show suspended status
+                updateUserStatusInUI(userId, 'suspended');
+                
+                // Show success message
+                showMessage(`User ${user.name} has been suspended.`, 'success');
+                
+                // Send suspend command via WebSocket
+                if (window.adminWs) {
+                    window.adminWs.suspendUser(userId, reason, duration);
+                } else {
+                    // Fallback to REST API if WebSocket not available
+                    updateUserStatus(userId, 'suspended');
+                }
             }
         );
     }
@@ -387,17 +441,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function reactivateUser(userId) {
         const user = users.find(u => u._id === userId);
         if (!user) return;
-        
+    
         showConfirmModal(
             'Reactivate User',
             `Are you sure you want to reactivate user "${user.name}"?`,
             () => {
-                // Call API to reactivate user
-                updateUserStatus(userId, 'active', () => {
-                    user.status = 'active';
-                    renderUsers(users);
-                    showMessage(`User ${user.name} has been reactivated.`, 'success');
-                });
+                // Immediately update UI to show active status
+                updateUserStatusInUI(userId, 'active');
+                
+                // Show success message
+                showMessage(`User ${user.name} has been reactivated.`, 'success');
+                
+                // Send reactivate command via WebSocket
+                if (window.adminWs) {
+                    window.adminWs.suspendUser(userId, 'Reactivated by admin', '0h'); // Immediate reactivation
+                } else {
+                    // Fallback to REST API if WebSocket not available
+                    updateUserStatus(userId, 'active');
+                }
             }
         );
     }
@@ -405,22 +466,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function banUser(userId) {
         const user = users.find(u => u._id === userId);
         if (!user) return;
-        
+    
         showConfirmModal(
             'Ban User',
-            `Are you sure you want to ban user "${user.name}"? This action is severe.`,
+            `Are you sure you want to ban user "${user.name}"?`,
             () => {
-                // Use admin WebSocket to ban user
+                // Get reason via prompt
+                const reason = prompt('Enter reason for banning (optional):');
+    
+                // Immediately update UI to show banned status
+                updateUserStatusInUI(userId, 'banned');
+                
+                // Show success message
+                showMessage(`User ${user.name} has been banned.`, 'success');
+                
+                // Send ban command via WebSocket
                 if (window.adminWs) {
-                    const reason = prompt('Enter reason for banning (optional):');
-                    window.adminWs.banUser(userId, reason);
+                    window.adminWs.banUser(userId, reason);  // <-- Call the WebSocket function
                 } else {
-                    // Fallback to REST API
-                    updateUserStatus(userId, 'banned', () => {
-                        user.status = 'banned';
-                        renderUsers(users);
-                        showMessage(`User ${user.name} has been banned.`, 'success');
-                    });
+                    // Fallback to REST API if WebSocket not available
+                    updateUserStatus(userId, 'banned');
                 }
             }
         );
@@ -429,21 +494,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function unbanUser(userId) {
         const user = users.find(u => u._id === userId);
         if (!user) return;
-        
+    
         showConfirmModal(
             'Unban User',
             `Are you sure you want to unban user "${user.name}"?`,
             () => {
-                // Use admin WebSocket to unban user
+                // Immediately update UI to show active status
+                updateUserStatusInUI(userId, 'active');
+                
+                // Show success message
+                showMessage(`User ${user.name} has been unbanned.`, 'success');
+                
+                // Send unban command via WebSocket
                 if (window.adminWs) {
                     window.adminWs.unbanUser(userId);
                 } else {
-                    // Fallback to REST API
-                    updateUserStatus(userId, 'active', () => {
-                        user.status = 'active';
-                        renderUsers(users);
-                        showMessage(`User ${user.name} has been unbanned.`, 'success');
-                    });
+                    // Fallback to REST API if WebSocket not available
+                    updateUserStatus(userId, 'active');
                 }
             }
         );
@@ -471,6 +538,50 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error updating user status:', error);
             showMessage('Failed to update user status. Please try again.', 'error');
         });
+    }
+
+    function updateUserStatusInUI(userId, newStatus) {
+        // Update data in the users array
+        const userIndex = users.findIndex(u => u._id === userId);
+        if (userIndex !== -1) {
+            users[userIndex].status = newStatus;
+        }
+        
+        // Find the user row in the table
+        const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+        if (!userRow) return;
+        
+        // Update status cell
+        const statusCell = userRow.querySelector('.user-status');
+        if (statusCell) {
+            // Remove all status classes and add the new one
+            statusCell.classList.remove('status-active', 'status-banned', 'status-suspended');
+            statusCell.classList.add(`status-${newStatus}`);
+            statusCell.textContent = newStatus;
+        }
+        
+        // Update action buttons based on new status
+        const banBtn = userRow.querySelector('.ban-btn');
+        if (banBtn) {
+            if (newStatus === 'banned') {
+                banBtn.innerHTML = '<i class="fas fa-undo"></i>';
+                banBtn.title = 'Unban User';
+            } else {
+                banBtn.innerHTML = '<i class="fas fa-ban"></i>';
+                banBtn.title = 'Ban User';
+            }
+        }
+        
+        const suspendBtn = userRow.querySelector('.suspend-btn');
+        if (suspendBtn) {
+            if (newStatus === 'suspended') {
+                suspendBtn.innerHTML = '<i class="fas fa-play"></i>';
+                suspendBtn.title = 'Reactivate User';
+            } else {
+                suspendBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                suspendBtn.title = 'Suspend User';
+            }
+        }
     }
     
     // Utility functions
@@ -563,7 +674,26 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error checking user role:', error);
         });
     }
-    
+
+    // Add this function to update users array when changed via WebSocket
+    function updateUserInArray(userId, updateData) {
+        if (!users) return;
+        
+        const userIndex = users.findIndex(u => u._id === userId);
+        if (userIndex !== -1) {
+            users[userIndex] = { ...users[userIndex], ...updateData };
+        }
+    }
+
+    // Expose the function globally
+    window.showMessage = showMessage;
+    window.updateUserStatusInUI = updateUserStatusInUI;
+    window.updateUserInArray = function(userId, updateData) {
+        const userIndex = users.findIndex(u => u._id === userId);
+        if (userIndex !== -1) {
+            users[userIndex] = { ...users[userIndex], ...updateData };
+        }
+    };
     // Initialize
     init();
     updateAdminButton();
