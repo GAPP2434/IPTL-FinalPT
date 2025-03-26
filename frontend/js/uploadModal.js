@@ -811,12 +811,23 @@ function createPostElement(post) {
     postElement.classList.add('blog-post');
     postElement.dataset.postId = post._id;
 
-    const postDate = new Date(post.timestamp);
-    const formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    let userName, userAvatar, usernameColor, postDate, formattedDate;
 
-    const userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
-    const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
-    const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
+    if (post.isRepost && post.originalPostId) {
+        // Use original post's user information for reposts
+        userName = post.originalPostId.userId.name || 'Anonymous';
+        userAvatar = post.originalPostId.userId.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
+        usernameColor = '#a7c957';
+        postDate = new Date(post.originalPostId.timestamp);
+    } else {
+        // Use current post's user information
+        userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
+        userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
+        usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
+        postDate = new Date(post.timestamp);
+    }
+
+    formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     let repostInfo = '';
     if (post.isRepost && post.repostedBy) {
