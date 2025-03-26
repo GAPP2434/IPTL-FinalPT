@@ -221,6 +221,7 @@ router.get('/conversations', isAuthenticated, async (req, res) => {
 });
 
 // Get messages for a specific conversation
+// Get messages for a specific conversation
 router.get('/conversation/:userId', isAuthenticated, async (req, res) => {
     try {
         const currentUserId = req.user._id;
@@ -259,6 +260,12 @@ router.get('/conversation/:userId', isAuthenticated, async (req, res) => {
             // Add isCurrentUser flag for easier client-side rendering
             messageObj.isCurrentUser = message.senderId.toString() === currentUserId.toString();
             messageObj.isGroup = isGroup;
+            
+            // Include original plaintext for the sender's messages
+            if (messageObj.isCurrentUser) {
+                console.log(`Message ID ${message._id}: originalPlainText = ${message.originalPlainText ? 'exists' : 'missing'}`);
+                messageObj.originalPlainText = message.originalPlainText;
+            }
             
             if (isGroup && !message.isSystemMessage) {
                 // For group messages, add sender name
@@ -299,8 +306,19 @@ router.post('/send', isAuthenticated, (req, res) => {
         }
 
         try {
-            const { recipientId, content } = req.body;
+            const { recipientId, content, encryptionType } = req.body;
+            // Fix the originalContent handling by converting array to string if needed
+            const originalContent = Array.isArray(req.body.originalContent) 
+                ? req.body.originalContent[0]
+                : req.body.originalContent;
             
+            console.log("Received message data:", {
+                recipientId,
+                contentLength: content ? content.length : 0,
+                encryptionType,
+                hasOriginalContent: !!originalContent
+            });
+
             if (!recipientId) {
                 return res.status(400).json({ message: 'Recipient ID is required' });
             }
@@ -348,11 +366,21 @@ router.post('/send', isAuthenticated, (req, res) => {
                 read: false,
                 isGroupMessage: isGroup,
                 attachments: attachmentUrls,
-                attachmentTypes: attachmentTypes
+                attachmentTypes: attachmentTypes,
+                encryptionType: encryptionType,
+                // Use the fixed originalContent value
+                originalPlainText: originalContent || null
             });
             
             await newMessage.save();
             
+            // Modify the response for the sender
+            const senderMessageData = {
+                ...newMessage.toObject(),
+                isCurrentUser: true,
+                originalPlainText: originalContent || content // Use fixed value
+            };
+
             // Broadcast using WebSocket
             if (global.wss) {
                 // Create the message data to send - include attachments
@@ -368,7 +396,8 @@ router.post('/send', isAuthenticated, (req, res) => {
                         read: false,
                         isGroupMessage: isGroup,
                         attachments: attachmentUrls,
-                        attachmentTypes: attachmentTypes
+                        attachmentTypes: attachmentTypes,
+                        encryptionType: encryptionType
                     }
                 };
                 
@@ -402,7 +431,8 @@ router.post('/send', isAuthenticated, (req, res) => {
                 }
             }
             
-            res.status(201).json(newMessage);
+            // Send back senderMessageData instead of newMessage
+            res.status(201).json(senderMessageData);
             
         } catch (error) {
             console.error('Error sending message:', error);
@@ -971,4 +1001,47 @@ router.post('/group/:groupId/remove-member', isAuthenticated, async (req, res) =
     }
 });
 
+// Store user's public key
+router.post('/register-key', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { publicKey } = req.body;
+        
+        if (!publicKey) {
+            return res.status(400).json({ message: 'Public key is required' });
+        }
+        
+        // Update user document with public key
+        await User.findByIdAndUpdate(userId, {
+            publicKey: publicKey
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error registering public key:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get a user's public key
+router.get('/public-key/:userId', isAuthenticated, async (req, res) => {
+    console.log('Public key request received for user:', req.params.userId);
+    try {
+        const userId = req.params.userId;
+        
+        const user = await User.findById(userId).select('publicKey');
+        console.log('User found:', user ? 'Yes' : 'No');
+        
+        if (!user || !user.publicKey) {
+            console.log('Public key not available for user:', userId);
+            return res.status(404).json({ message: 'Public key not found' });
+        }
+        
+        console.log('Returning public key for user:', userId);
+        res.json({ publicKey: user.publicKey });
+    } catch (error) {
+        console.error('Error fetching public key:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 module.exports = router;

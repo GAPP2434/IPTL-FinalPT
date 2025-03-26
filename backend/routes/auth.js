@@ -123,11 +123,12 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid username or password' });
         }
         
-        // Use passport to login the user (session-based auth)
         req.login(user, (err) => {
             if (err) {
                 return res.status(500).json({ message: 'Error during login' });
             }
+            
+            // Include needsEncryptionSetup flag in the SAME response
             return res.json({ 
                 success: true, 
                 user: {
@@ -135,7 +136,8 @@ router.post('/login', async (req, res) => {
                     name: user.name, 
                     email: user.email,
                     profilePicture: user.profilePicture 
-                } 
+                },
+                needsEncryptionSetup: !user.publicKey
             });
         });
     } catch (err) {

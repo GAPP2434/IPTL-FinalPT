@@ -49,6 +49,10 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    publicKey: {
+        type: Object, // Store the entire JWK object
+        default: null
+    },
     resetPasswordToken: String,
     resetPasswordExpires: Date
 });

@@ -51,6 +51,19 @@ const MessageSchema = new mongoose.Schema({
     attachmentTypes: {
         type: [String],
         default: []
+    },
+    publicKey: {
+        type: Object,  // Store the entire JWK object
+        default: null
+    },
+    encryptionType: {
+        type: String,
+        enum: ['direct', 'group', null],
+        default: null
+    },
+    originalPlainText: {
+        type: String,
+        default: null
     }
 });
 

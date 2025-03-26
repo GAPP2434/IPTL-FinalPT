@@ -25,6 +25,11 @@ const GroupChatSchema = new mongoose.Schema({
     profilePicture: {
         type: String,
         default: 'avatars/group-default.png'
+    },
+    encryptedKeys: {
+        type: Map,
+        of: String,
+        default: {}
     }
 });
 
