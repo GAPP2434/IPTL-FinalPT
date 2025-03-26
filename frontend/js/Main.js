@@ -1,5 +1,28 @@
+<<<<<<< Updated upstream
 import { initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
 import { editedImageDataUrl, editedVideoBlob, editedAudioBlob, loggedInUsername } from './uploadModal.js';
+=======
+import {initializeReactionCounts, updateReactionCounts, initializeComments, updateComments } from './ReactionAndComments.js';
+import {editedImageDataUrl, editedVideoBlob,editedAudioBlob} from './uploadModal.js';
+import { addStories } from './Main.js';
+
+//Variables
+    export const storiesContainer = document.getElementById('storiesContainer');
+    export const storyViewer = document.getElementById('storyViewer');
+    export const storyViewerContent = document.getElementById('storyViewerContent');
+    export const storyViewerTitle = document.getElementById('storyViewerTitle');
+    export const progressBar = document.getElementById('progressBar');
+    export let storyQueue = [];
+    export let currentStoryIndex = 0;
+    export let progressTimeout;
+    export let reactionCounts = {};
+    export let comments = {};
+    export let isPaused = false;
+    export let remainingTime = 0;
+    export let startTime = 0;
+    export let elapsedTime = 0;
+    export let audioElement = null;
+>>>>>>> Stashed changes
 
 // Variables
 export const storiesContainer = document.getElementById('storiesContainer');
@@ -34,6 +57,7 @@ export function fetchAndDisplayStories() {
     .then(response => response.json())
     .then(stories => {
         const storiesContainer = document.getElementById('storiesContainer');
+<<<<<<< Updated upstream
         const addStoryButton = document.getElementById('addButton'); // Get the Add Story button
 
         storiesContainer.innerHTML = ''; // Clear existing stories
@@ -42,11 +66,19 @@ export function fetchAndDisplayStories() {
         stories.forEach((story, index) => {
             const storyElement = document.createElement('div');
             storyElement.classList.add('story');
-            storyElement.innerHTML = `
-                <div class="story-content">
-                    <img src="${story.mediaUrl}" alt="Story Media" style="width: 100%; height: auto;">
-                </div>
-            `;
+            if (story.mediaUrl.endsWith('.mp4')) {
+                storyElement.innerHTML = `
+                    <div class="story-content">
+                        <video src="${story.mediaUrl}" alt="Story Media" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" muted></video>
+                    </div>
+                `;
+            } else {
+                storyElement.innerHTML = `
+                    <div class="story-content">
+                        <img src="${story.mediaUrl}" alt="Story Media" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    </div>
+                `;
+            }
             storyElement.addEventListener('click', () => showStory(index)); // Add click event listener
             storiesContainer.appendChild(storyElement);
             storyQueue.push({
@@ -54,6 +86,155 @@ export function fetchAndDisplayStories() {
                 type: story.mediaUrl.endsWith('.mp4') ? 'video' : 'image',
                 src: story.mediaUrl,
                 hasAudio: !!story.audioStartTime
+=======
+        const files = Array.from(mediaInput.files);
+        const storyTitle = storyTitleInput.value.trim();
+        const storyDescription = storyDescriptionInput.value.trim();
+        const storyUsername = storyUsernameInput.value.trim();
+        const uploadDate = new Date().toLocaleString();
+    
+        if (files.length === 0) {
+            alert('Please select at least one image or video.');
+            return;
+        }
+    
+        files.forEach((file, index) => {
+            const formData = new FormData();
+            formData.append('title', storyTitle);
+            formData.append('description', storyDescription);
+            formData.append('username', storyUsername);
+            formData.append('mediaUrl', URL.createObjectURL(file));
+    
+            fetch('/api/stories', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Story added:', data);
+                // Update the DOM with the new story
+                const storyElement = document.createElement('div');
+                storyElement.classList.add('story');
+                storyElement.innerHTML = `
+                    <div class="story-header">
+                        <span class="story-username">${data.username}</span>
+                        <span class="story-date">${new Date(data.uploadDate).toLocaleString()}</span>
+                    </div>
+                    <div class="story-content">
+                        <img src="${data.mediaUrl}" alt="Story Media">
+                        <p>${data.title}</p>
+                        <p>${data.description}</p>
+                    </div>
+                `;
+                storiesContainer.appendChild(storyElement);
+            })
+            .catch(error => {
+                console.error('Error adding story:', error);
+            });
+        });
+    }
+    
+    export function preloadAudio() {
+        console.log('Preloading audio for stories...');
+        storyQueue.forEach((story, index) => {
+            if (story.hasAudio) {
+                console.log(`Preloading audio for story ${index}: ${story.audioUrl}`);
+                const audio = new Audio(story.audioUrl);
+                audio.id = `audio-${index}`;
+                audio.volume = 0.5;
+                audio.preload = 'auto';
+                audio.src = story.audioUrl; // Ensure the audio source is set
+                document.body.appendChild(audio);
+            }
+        });
+    }
+      
+    export function showStory(index) {
+        const footer = document.querySelector('.footer');
+        const storyViewerTitle = document.getElementById('storyViewerTitle');
+        const storyViewerDescription = document.getElementById('storyViewerDescription');
+        const storyViewerUsername = document.getElementById('storyViewerUsername');
+        const volumeSlider = document.getElementById('volumeSlider');
+    
+        if (index < 0 || index >= storyQueue.length) {
+            storyViewer.classList.remove('active');
+            footer.classList.remove('hidden');
+            clearTimeout(progressTimeout);
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+                audioElement.src = ''; // Clear the audio source
+                audioElement = null;
+            }
+            volumeSlider.style.display = 'none'; // Hide the volume slider
+            return;
+        }
+    
+        currentStoryIndex = index;
+        const story = storyQueue[index];
+        console.log(`Showing story ${index}:`, story);
+        storyViewerContent.innerHTML = '';
+    
+        storyViewerTitle.textContent = story.title;
+        storyViewerDescription.textContent = story.description;
+        storyViewerUsername.textContent = `Uploaded by ${story.username} on ${story.uploadDate}`;
+    
+        isPaused = false;
+        remainingTime = 0;
+        startTime = 0;
+        elapsedTime = 0;
+    
+        storyViewerContent.addEventListener('click', togglePauseStory);
+    
+        if (story.type === 'image') {
+            const img = document.createElement('img');
+            img.src = story.src;
+            storyViewerContent.appendChild(img);
+    
+            img.onload = () => {
+                clearTimeout(progressTimeout);
+                remainingTime = 5000;
+                startTime = Date.now();
+                updateProgressBar(remainingTime, () => {
+                    showStory(index + 1);
+                });
+            };
+        } else if (story.type === 'video') {
+            const video = document.createElement('video');
+            video.src = story.src;
+            video.autoplay = true;
+            video.muted = story.hasAudio; // Mute the video if it has integrated audio
+            storyViewerContent.appendChild(video);
+            console.log(`Video element created with src: ${story.src}, muted: ${video.muted}`);
+    
+            video.onloadedmetadata = () => {
+                clearTimeout(progressTimeout);
+                remainingTime = Math.min(video.duration, 15) * 1000;
+                startTime = Date.now();
+                updateProgressBar(remainingTime, () => {
+                    showStory(index + 1);
+                });
+            };
+    
+            video.ontimeupdate = () => {
+                if (video.currentTime >= 15) {
+                    video.pause();
+                    if (storyViewerContent.contains(video)) {
+                        storyViewerContent.removeChild(video);
+                    }
+                    showStory(index + 1);
+                }
+            };
+    
+            volumeSlider.value = 0.5; // Reset to middle position
+            volumeSlider.style.display = 'block'; // Ensure the volume slider is visible
+            volumeSlider.style.transform = 'rotate(270deg)'; // Rotate the slider
+            updateVolumeSliderBackground(volumeSlider);
+    
+            volumeSlider.addEventListener('input', () => {
+                video.volume = volumeSlider.value;
+                updateVolumeSliderBackground(volumeSlider);
+>>>>>>> Stashed changes
             });
         });
     })
@@ -106,17 +287,19 @@ export function addStories(audioStartTime) {
             // Update the DOM with the new story
             const storyElement = document.createElement('div');
             storyElement.classList.add('story');
-            storyElement.innerHTML = `
-                <div class="story-header">
-                    <span class="story-username">${data.username}</span>
-                    <span class="story-date">${new Date(data.uploadDate).toLocaleString()}</span>
-                </div>
-                <div class="story-content">
-                    <img src="${data.mediaUrl}" alt="Story Media">
-                    <p>${data.title}</p>
-                    <p>${data.description}</p>
-                </div>
-            `;
+            if (data.mediaUrl.endsWith('.mp4')) {
+                storyElement.innerHTML = `
+                    <div class="story-content">
+                        <video src="${data.mediaUrl}" alt="Story Media" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);" muted></video>
+                    </div>
+                `;
+            } else {
+                storyElement.innerHTML = `
+                    <div class="story-content">
+                        <img src="${data.mediaUrl}" alt="Story Media" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    </div>
+                `;
+            }
             storiesContainer.appendChild(storyElement);
             storyQueue.push({
                 ...data,
@@ -144,6 +327,24 @@ export function preloadAudio() {
             document.body.appendChild(audio);
         }
     });
+}
+
+export function updateProgressBar(duration, callback) {
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.transition = 'none'; // Reset the transition
+    progressBar.style.width = '0%'; // Reset the width
+
+    // Force a reflow to apply the reset styles
+    progressBar.offsetHeight;
+
+    // Apply the new transition and width
+    progressBar.style.transition = `width ${duration}ms linear`;
+    progressBar.style.width = '100%';
+
+    progressTimeout = setTimeout(() => {
+        progressBar.style.width = '0%';
+        callback();
+    }, duration);
 }
 
 export function showStory(index) {

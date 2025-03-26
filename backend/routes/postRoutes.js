@@ -45,51 +45,45 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
+// Create a new post
 router.post('/create', isAuthenticated, upload.single('media'), async (req, res) => {
     try {
-        const { content, displayName, reactions } = req.body;
+        const { content, displayName } = req.body;
         const userId = req.user._id;
-
-        // Initialize post object
+        
+        // Create a new post
         const newPost = new Post({
             userId,
             content,
-            displayName: displayName || undefined,
-            timestamp: new Date(),
-            reactions: {
-                like: reactions?.like || 0,
-                love: reactions?.love || 0,
-                haha: reactions?.haha || 0,
-                wow: reactions?.wow || 0,
-                sad: reactions?.sad || 0,
-                angry: reactions?.angry || 0,
-                favorite: reactions?.favorite || 0
-            }
+            displayName: displayName || undefined, // Use displayName if provided
+            timestamp: new Date()
         });
-
-        // If media was uploaded, add its path
+        
+        // If media was uploaded, add its path to the post
         if (req.file) {
-            let mediaPath = req.file.path.replace(/\\/g, '/'); // Normalize path
+            let mediaPath = req.file.path;
             
-            // Extract relevant media path if stored inside 'frontend/'
+            // Convert backslashes to forward slashes for consistency
+            mediaPath = mediaPath.replace(/\\/g, '/');
+            
+            // Extract just the part after 'frontend/'
             const pathParts = mediaPath.split('frontend/');
             if (pathParts.length > 1) {
                 mediaPath = pathParts[1];
             }
-
+            
             newPost.media = mediaPath;
         }
-
+        
         // Save post to database
         await newPost.save();
-
+        
         res.status(201).json(newPost);
     } catch (error) {
         console.error('Error creating post:', error);
         res.status(500).json({ message: 'Server error during post creation' });
     }
 });
-
 
 // Get all posts
 router.get('/', async (req, res) => {
@@ -99,15 +93,8 @@ router.get('/', async (req, res) => {
             .populate('userId', 'name profilePicture')
             .sort({ timestamp: -1 })
             .limit(50); // Limit to 50 posts for performance
-
-        // Include the post ID in the response data
-        const postData = posts.map((post) => ({
-            ...post,
-            postId: post._id,
-            reactions: post.reactions,
-          }));
         
-        res.json(postData);
+        res.json(posts);
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ message: 'Server error' });

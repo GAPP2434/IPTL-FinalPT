@@ -14,6 +14,7 @@ const wss = new WebSocket.Server({ server });
 const onlineUsers = new Set();
 global.wss = wss;
 require("./passportSetup");
+const storiesRoutes = require('./routes/storiesRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -184,8 +185,12 @@ function broadcastToAll(data) {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/messages', require('./routes/messagesRoutes'));
+<<<<<<< Updated upstream
 app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api/stories', require('./routes/storiesRoutes'));
+=======
+app.use('/api/stories', storiesRoutes);
+>>>>>>> Stashed changes
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));

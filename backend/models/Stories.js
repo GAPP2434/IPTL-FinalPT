@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 const mongoose = require("mongoose");
 
 const StorySchema = new mongoose.Schema({
@@ -32,3 +33,16 @@ const StorySchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model("Story", StorySchema);
+=======
+const mongoose = require('mongoose');
+
+const storySchema = new mongoose.Schema({
+    title: String,
+    description: String,
+    username: String,
+    mediaUrl: String,
+    uploadDate: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('Story', storySchema);
+>>>>>>> Stashed changes
