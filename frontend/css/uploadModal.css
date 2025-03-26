@@ -353,9 +353,9 @@
 }
 
 .like-button {
-    background-color: #4CAF50; /* green background */
+    background-color: #645631; /* green background */
     color: #fff; /* white text */
-    border: none; /* no border */
+    border: 2px solid black; /* add a black border */
     padding: 10px 20px; /* add some padding */
     font-size: 16px; /* increase font size */
     cursor: pointer; /* change cursor to pointer */
@@ -363,7 +363,7 @@
   }
   
   .like-button:hover {
-    background-color: #3e8e41; /* darker green on hover */
+    background-color: #32392a; /* darker green on hover */
   }
 
 #previewContainer {
