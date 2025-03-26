@@ -665,16 +665,12 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         if (!response.ok) {
             throw new Error('Failed to get user information');
         }
-
-        if (!blogPostText) {
-            formData.append('content', ''); // or some default value
-          }
         
         const user = await response.json();
         
         // Create a FormData object to handle the file upload
         const formData = new FormData();
-        formData.append('content', blogPostText || '');
+        formData.append('content', blogPostText);
         
         // Get optional username if provided, otherwise use the user's name
         const blogPostUsername = document.getElementById('blog-post-username-input').value.trim();
@@ -686,15 +682,6 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         if (blogPostImage) {
             formData.append('media', blogPostImage);
         }
-
-        // Add reactions to the formData object
-        formData.append('reactions.like', 0); // default value
-        formData.append('reactions.love', 0); // default value
-        formData.append('reactions.haha', 0); // default value
-        formData.append('reactions.wow', 0); // default value
-        formData.append('reactions.sad', 0); // default value
-        formData.append('reactions.angry', 0); // default value
-        formData.append('reactions.favorite', 0); // default value
         
         // Send the post data to the server
         const saveResponse = await fetch('/api/posts/create', {
@@ -785,47 +772,37 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
 //Function to fetch all posts and display them
 function fetchAndDisplayPosts() {
     fetch('/api/posts', {
-      credentials: 'include',
+        credentials: 'include'
     })
-      .then((response) => {
+    .then(response => {
         if (!response.ok) {
-          throw new Error('Failed to load posts');
+            throw new Error('Failed to load posts');
         }
         return response.json();
-      })
-      .then((postData) => {
+    })
+    .then(posts => {
         const blogPosts = document.getElementById('blog-posts');
-  
+        
         // Clear existing posts
         blogPosts.innerHTML = '';
-  
+        
+        if (posts.length === 0) {
+            blogPosts.innerHTML = '<div class="no-posts-message">No posts yet. Be the first to share!</div>';
+            return;
+        }
+        
         // Display posts in descending order (newest first)
-        postData.forEach((post) => {
-          const postElement = createPostElement(post);
-          blogPosts.appendChild(postElement);
-  
-          // Display reactions
-          const reactionsElement = document.createElement('div');
-          reactionsElement.classList.add('reactions-container'); // Class for Styling this div
-          reactionsElement.innerHTML = `
-            <span>Like: ${post.reactions.like}</span>
-            <span>Love: ${post.reactions.love}</span>
-            <span>Haha: ${post.reactions.haha}</span>
-            <span>Wow: ${post.reactions.wow}</span>
-            <span>Sad: ${post.reactions.sad}</span>
-            <span>Angry: ${post.reactions.angry}</span>
-            <span>Favorite: ${post.reactions.favorite}</span>
-          `;
-          postElement.appendChild(reactionsElement);
+        posts.forEach(post => {
+            const postElement = createPostElement(post);
+            blogPosts.appendChild(postElement);
         });
-      })
-      .catch((error) => {
+    })
+    .catch(error => {
         console.error('Error fetching posts:', error);
-        document.getElementById('blog-posts').innerHTML = `
-          <div class="error-message">Failed to load posts. Please refresh the page.</div>
-        `;
-      });
-  }
+        document.getElementById('blog-posts').innerHTML = 
+            '<div class="error-message">Failed to load posts. Please refresh the page.</div>';
+    });
+}
 
 // Function to create a post element
 function createPostElement(post) {
