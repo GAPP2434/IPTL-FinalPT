@@ -809,8 +809,8 @@ function fetchAndDisplayPosts() {
 function createPostElement(post) {
     const postElement = document.createElement('div');
     postElement.classList.add('blog-post');
-    postElement.dataset.postId = post._id;
-    
+    postElement.dataset.postId = post._id; // Use post._id instead of savedPost._id
+
     // Format the timestamp
     const postDate = new Date(post.timestamp);
     const formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
@@ -833,23 +833,21 @@ function createPostElement(post) {
                 <div class="timestamp">on ${formattedDate}</div>
             </div>
         </div>
-        <button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>
+        <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
     `;
 
     if (post.content) {
         postContent += `<p>${post.content}</p>`;
-        postContent += `<button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>`;
-
     }
 
     if (post.media) {
         postContent += `<img src="${post.media}" alt="Post image">`;
-        postContent += `<button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>`;
     }
 
     postElement.innerHTML = postContent;
     return postElement;
 }
+
 
 // Listen for Post Reactions
 document.addEventListener('click', async (event) => {
