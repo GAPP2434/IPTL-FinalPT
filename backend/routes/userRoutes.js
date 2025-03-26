@@ -752,4 +752,18 @@ router.get('/profile', isAuthenticated, async (req, res) => {
     }
 });
 
+router.get('/check-username/:username', isAuthenticated, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const user = await User.findOne({ 
+            name: { $regex: new RegExp(`^${username}$`, 'i') }
+        });
+        
+        res.json({ exists: !!user });
+    } catch (error) {
+        console.error('Error checking username:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

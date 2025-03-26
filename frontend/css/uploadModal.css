@@ -586,3 +586,13 @@
     font-weight: bold;
     margin-right: 5px;
 }
+
+.user-mention {
+    color: #0095f6;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  
+  .user-mention:hover {
+    text-decoration: underline;
+  }

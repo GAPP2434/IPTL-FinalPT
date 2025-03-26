@@ -913,6 +913,93 @@ document.addEventListener('click', async (event) => {
     }
 });
 
+async function processMentions(text) {
+    // Find all @mentions using regex
+    const mentions = text.match(/@(\w+)/g);
+    
+    if (!mentions) return text;
+  
+    // Check each mention against the database
+    const processedText = await Promise.all(mentions.map(async (mention) => {
+      const username = mention.substring(1); // Remove @ symbol
+      try {
+        const response = await fetch(`/api/users/check-username/${username}`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.exists) {
+          // If user exists, replace with styled span
+          return text.replace(mention, 
+            `<span class="user-mention" data-username="${username}">@${username}</span>`
+          );
+        }
+        return text;
+      } catch (error) {
+        console.error('Error checking mention:', error);
+        return text;
+      }
+    }));
+  
+    return processedText[0];
+  }
+
+  document.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('send-comment-button')) {
+        const postId = event.target.dataset.postId;
+        const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
+        const commentText = commentInput.value.trim();
+
+        if (!commentText) {
+            alert('Please enter a comment.');
+            return;
+        }
+
+        try {
+            // Process mentions before sending
+            const processedComment = await processMentions(commentText);
+
+            const response = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    comment: processedComment,
+                    originalText: commentText // Store original text for editing
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to add comment');
+            }
+
+            const newComment = await response.json();
+            const commentList = document.getElementById(`commentList-${postId}`);
+            const commentElement = document.createElement('div');
+            commentElement.classList.add('comment');
+            commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${processedComment}`;
+            commentList.appendChild(commentElement);
+
+            // Clear the input field
+            commentInput.value = '';
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            alert(`Failed to add comment: ${error.message}`);
+        }
+    }
+});
+
+document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('user-mention')) {
+        const username = event.target.dataset.username;
+        // Navigate to user profile
+        window.location.href = `/profile.html?username=${username}`;
+    }
+});
+
 // Listen for Post Reactions
 document.addEventListener('click', async (event) => {
     if (event.target.classList.contains('like-button')) {
