@@ -27,12 +27,7 @@ const PostSchema = new mongoose.Schema({
     },
     reactions: {
         like: { type: Number, default: 0 },
-        love: { type: Number, default: 0 },
-        haha: { type: Number, default: 0 },
-        wow: { type: Number, default: 0 },
-        sad: { type: Number, default: 0 },
-        angry: { type: Number, default: 0 },
-        favorite: { type: Number, default: 0 }
+        likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }] // Stores user IDs who liked the post
     }
 });
 

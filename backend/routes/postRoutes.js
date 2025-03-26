@@ -101,4 +101,38 @@ router.get('/', async (req, res) => {
     }
 });
 // WHAT??????????
+
+// Like or unlike a post
+router.post('/like/:postId', isAuthenticated, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user._id;
+
+        const post = await Post.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        const alreadyLiked = post.reactions.likedBy.includes(userId);
+
+        if (alreadyLiked) {
+            // Unlike the post
+            post.reactions.likedBy = post.reactions.likedBy.filter(id => id.toString() !== userId.toString());
+            post.reactions.like -= 1;
+        } else {
+            // Like the post
+            post.reactions.likedBy.push(userId);
+            post.reactions.like += 1;
+        }
+
+        await post.save();
+        res.json({ message: alreadyLiked ? "Unliked post" : "Liked post", likes: post.reactions.like });
+
+    } catch (error) {
+        console.error("Error updating likes:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+
 module.exports = router;

@@ -721,6 +721,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
                 <div class="timestamp">on ${blogPostTimestamp}</div>
             </div>
         </div>
+        <button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>
         `;
         
         if (blogPostText) {
@@ -832,19 +833,46 @@ function createPostElement(post) {
                 <div class="timestamp">on ${formattedDate}</div>
             </div>
         </div>
+        <button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>
     `;
 
     if (post.content) {
         postContent += `<p>${post.content}</p>`;
+        postContent += `<button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>`;
+
     }
 
     if (post.media) {
         postContent += `<img src="${post.media}" alt="Post image">`;
+        postContent += `<button class="like-button" data-post-id="${savedPost._id}">👍 ${savedPost.reactions.like}</button>`;
     }
 
     postElement.innerHTML = postContent;
     return postElement;
 }
+
+// Listen for Post Reactions
+document.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('like-button')) {
+        const postId = event.target.dataset.postId;
+
+        try {
+            const response = await fetch(`/api/posts/like/${postId}`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to like/unlike post");
+            }
+
+            const result = await response.json();
+            event.target.textContent = `👍 ${result.likes}`;
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+});
 
 
 // Get the floating post button and modal elements
