@@ -809,23 +809,16 @@ function fetchAndDisplayPosts() {
 function createPostElement(post) {
     const postElement = document.createElement('div');
     postElement.classList.add('blog-post');
-    postElement.dataset.postId = post._id; // Use post._id instead of savedPost._id
+    postElement.dataset.postId = post._id;
 
-    // Format the timestamp
     const postDate = new Date(post.timestamp);
     const formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    // Get user data
     const userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
-    
-    // Determine the color based on whether displayName exists
     const usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
-
-    // Get user avatar
     const userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
 
-    // Create post HTML
-    let postContent = `
+    postElement.innerHTML = `
         <div class="post-header">
             <span class="avatar" style="background-image: url(${userAvatar})"></span>
             <div class="post-info">
@@ -833,20 +826,17 @@ function createPostElement(post) {
                 <div class="timestamp">on ${formattedDate}</div>
             </div>
         </div>
-        <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
+        <div class="post-content">
+            ${post.content ? `<p>${post.content}</p>` : ''}
+            ${post.media ? `<img src="${post.media}" alt="Post image">` : ''}
+        </div>
+        <div class="post-footer">
+            <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
+        </div>
     `;
-
-    if (post.content) {
-        postContent += `<p>${post.content}</p>`;
-    }
-
-    if (post.media) {
-        postContent += `<img src="${post.media}" alt="Post image">`;
-    }
-
-    postElement.innerHTML = postContent;
     return postElement;
 }
+
 
 
 // Listen for Post Reactions

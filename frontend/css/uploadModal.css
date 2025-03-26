@@ -352,6 +352,20 @@
     justify-content: center;
 }
 
+.like-button {
+    background-color: #4CAF50; /* green background */
+    color: #fff; /* white text */
+    border: none; /* no border */
+    padding: 10px 20px; /* add some padding */
+    font-size: 16px; /* increase font size */
+    cursor: pointer; /* change cursor to pointer */
+    border-radius: 5px; /* add some rounded corners */
+  }
+  
+  .like-button:hover {
+    background-color: #3e8e41; /* darker green on hover */
+  }
+
 #previewContainer {
     flex: 1;
     max-width: 300px; /* Maximum width for the preview container */
