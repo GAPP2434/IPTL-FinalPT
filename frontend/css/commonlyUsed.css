@@ -17,7 +17,7 @@
 .header {
     background-color: #333;
     color: white;
-    padding: 15px 0; 
+    padding: 10px 0; 
     text-align: center;
     opacity: 0.9;
     background-image: url('../images/mhwi-banner.png');
@@ -26,57 +26,132 @@
     position: relative;
 }
 
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Logo styling */
 .logo {
-    margin: 20px;
+    flex: 1;
+    text-align: left;
+    margin-left: -15px; /* Pull slightly left to visually align */
+}
+
+/* Make logo clickable */
+.logo a {
+    text-decoration: none;
+    display: inline-block;
 }
 
 .GatheringHub {
     font-family: 'MonsterHunter', sans-serif;
-    font-size: 100px;
-    letter-spacing: 9px;
+    font-size: 44px; /* Smaller size */
+    letter-spacing: 4px;
     color: #a49884;
-    text-shadow: 20px 15px #000000, 0px 10px #000000, 10px 0px #000000, 0px -1px #000000;
+    text-shadow: 10px 7px #000000, 0px 5px #000000, 5px 0px #000000, 0px -1px #000000;
+    margin: 5px 0;
+}
+
+.header-nav {
+    display: flex;
+    justify-content: center;
+    flex: 2;
+    gap: 30px;
+}
+
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    color: #aca06d;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.nav-icon i {
+    font-size: 1.2rem;
+}
+
+.nav-icon:hover {
+    background-color: rgba(0, 0, 0, 0.6);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.nav-icon.active {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.nav-icon:active {
+    transform: translateY(-2px) scale(0.95);
+}
+
+/* Tooltip styling for nav icons */
+.nav-icon:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    font-family: 'Markazi', serif;
+    z-index: 101;
+}
+
+.nav-icon-img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    filter: brightness(0) saturate(100%) invert(74%) sepia(29%) saturate(463%) hue-rotate(12deg) brightness(89%) contrast(87%);
+    transition: filter 0.3s ease, transform 0.2s ease;
+}
+
+.nav-icon:hover .nav-icon-img {
+    filter: brightness(0) saturate(100%) invert(87%) sepia(23%) saturate(3022%) hue-rotate(358deg) brightness(101%) contrast(103%);
+    transform: rotate(-10deg) scale(1.1);
+}
+
+.nav-icon.active .nav-icon-img {
+    filter: brightness(0) saturate(100%) invert(80%) sepia(57%) saturate(1122%) hue-rotate(358deg) brightness(104%) contrast(102%);
+}
+
+/* Admin panel button styling */
+#adminPanelButton {
+    background-color: rgba(255, 0, 0, 0.3);
+}
+
+#adminPanelButton:hover {
+    background-color: rgba(255, 0, 0, 0.6);
 }
 
 /* 3. User controls (profile button, dropdown, logout button) */
 .user-controls {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-.dropdown {
-    position: relative;
-    display: inline-block;
-    margin-right: 10px;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: #e4ddc9;
-    background-image: url('../images/mhwi-paper.png');
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    z-index: 1;
-    border-radius: 5px;
-}
-
-.dropdown-content a {
-    color: #333;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    font-family: 'Markazi', serif;
-}
-
-.dropdown-content a:hover {
-    background-color: rgba(0,0,0,0.1);
-}
-
-.dropdown:hover .dropdown-content {
-    display: block;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex: 1;
+    gap: 15px;
 }
 
 /* 4. Footer styling */
@@ -119,6 +194,10 @@
 
 .message.success {
     background-color: #4CAF50;
+}
+
+.message.info {
+    background-color: #17a2b8; /* Info blue color */
 }
 
 /* 6. Keep the existing Loading Modal CSS */
@@ -330,22 +409,31 @@
 }
 
 /* 8. Responsive styles */
-@media (max-width: 768px) {
-    .modal-content {
-        width: 80%;
+@media screen and (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        gap: 10px;
     }
     
-    .GatheringHub {
-        font-size: 60px;
+    .header-nav {
+        order: 3;
+        width: 100%;
+        justify-content: space-around;
     }
     
     .user-controls {
-        position: relative;
-        top: 0;
-        right: 0;
-        display: flex;
+        order: 2;
+        width: 100%;
         justify-content: center;
-        margin-top: 10px;
+    }
+    
+    .logo {
+        order: 1;
+        text-align: center;
+    }
+    
+    .GatheringHub {
+        font-size: 32px;
     }
 }
 

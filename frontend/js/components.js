@@ -11,8 +11,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('.messages-button').classList.add('active');
             } else if (currentPage === 'index.html' || currentPage === '') {
                 document.querySelector('.home-button').classList.add('active');
+            } else if (currentPage === 'friends.html') {
+                document.querySelector('.friends-button').classList.add('active');
             } else if (currentPage === 'profile.html') {
                 document.querySelector('.profile-button').classList.add('active');
+            } else if (currentPage === 'settings.html') {
+                document.querySelector('.settings-button').classList.add('active');
             }
             
             // Add event listeners for logout and profile buttons
@@ -29,23 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Logout error:', error);
                     window.location.href = 'login.html';
                 });
-            });
-            
-            document.getElementById('profileButton').addEventListener('click', function() {
-                document.getElementById('profileDropdown').classList.toggle('show');
-            });
-            
-            // Close dropdown when clicking outside
-            window.addEventListener('click', function(event) {
-                if (!event.target.matches('.profile-button')) {
-                    const dropdowns = document.getElementsByClassName('dropdown-content');
-                    for (let i = 0; i < dropdowns.length; i++) {
-                        const openDropdown = dropdowns[i];
-                        if (openDropdown.classList.contains('show')) {
-                            openDropdown.classList.remove('show');
-                        }
-                    }
-                }
             });
         })
         .catch(error => {
@@ -305,13 +292,15 @@ function checkAdminAccess() {
     })
     .then(response => response.json())
     .then(user => {
-        const adminButton = document.getElementById('adminPanelButton');
-        if (adminButton) {
-            adminButton.style.display = user && user.role === 'admin' ? 'inline-block' : 'none';
+        if (user.isAdmin) {
+            const adminPanelButton = document.getElementById('adminPanelButton');
+            if (adminPanelButton) {
+                adminPanelButton.style.display = 'flex';
+            }
         }
     })
     .catch(error => {
-        console.error('Error checking admin access:', error);
+        console.error('Failed to check admin status:', error);
     });
 }
 

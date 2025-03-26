@@ -319,15 +319,21 @@ router.post('/follow', isAuthenticated, async (req, res) => {
         
         // If profile is private, send a follow request instead of following directly
         if (userToFollow.isPrivateProfile) {
+            console.log(`Sending follow request from ${currentUserId} to private profile ${userId}`);
+            
             // Add to followRequestsSent for current user
-            await User.findByIdAndUpdate(currentUserId, {
+            const updateResult1 = await User.findByIdAndUpdate(currentUserId, {
                 $addToSet: { followRequestsSent: userId }
-            });
+            }, { new: true });
+            
+            console.log(`Updated current user followRequestsSent:`, updateResult1.followRequestsSent);
             
             // Add to followRequestsReceived for the other user
-            await User.findByIdAndUpdate(userId, {
+            const updateResult2 = await User.findByIdAndUpdate(userId, {
                 $addToSet: { followRequestsReceived: currentUserId }
-            });
+            }, { new: true });
+            
+            console.log(`Updated target user followRequestsReceived:`, updateResult2.followRequestsReceived);
             
             return res.json({ 
                 success: true, 
@@ -394,16 +400,28 @@ router.get('/follow-requests/received', isAuthenticated, async (req, res) => {
 router.get('/follow-requests/sent', isAuthenticated, async (req, res) => {
     try {
         const userId = req.user._id;
+        console.log(`Getting sent requests for user: ${userId}`);
         
         // Find user with populated follow requests
-        const user = await User.findById(userId)
-            .populate('followRequestsSent', '_id name profilePicture bio isPrivateProfile');
+        const user = await User.findById(userId);
         
         if (!user) {
+            console.log("User not found when fetching sent requests");
             return res.status(404).json({ message: 'User not found' });
         }
         
-        const requestsWithInfo = user.followRequestsSent.map(recipient => {
+        console.log(`User has ${user.followRequestsSent.length} sent requests`);
+        
+        // Populate the sent requests
+        const populatedUser = await User.findById(userId)
+            .populate('followRequestsSent', '_id name profilePicture bio isPrivateProfile');
+            
+        if (!populatedUser) {
+            console.log("Failed to populate user's sent requests");
+            return res.status(500).json({ message: 'Failed to load sent requests' });
+        }
+        
+        const requestsWithInfo = populatedUser.followRequestsSent.map(recipient => {
             return {
                 _id: recipient._id,
                 name: recipient.name,
@@ -413,6 +431,7 @@ router.get('/follow-requests/sent', isAuthenticated, async (req, res) => {
             };
         });
         
+        console.log(`Returning ${requestsWithInfo.length} formatted sent requests`);
         res.json(requestsWithInfo || []);
         
     } catch (error) {
@@ -526,12 +545,16 @@ router.get('/recommended', isAuthenticated, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
+        // Convert the arrays to string IDs for proper comparison
+        const followingIds = currentUser.following.map(id => id.toString());
+        const requestSentIds = currentUser.followRequestsSent.map(id => id.toString());
+        
         // Get users that the current user is not already following and hasn't sent requests to
         const recommendedUsers = await User.find({
             $and: [
                 { _id: { $ne: currentUserId } }, // Exclude current user
-                { _id: { $nin: currentUser.following } }, // Exclude users already being followed
-                { _id: { $nin: currentUser.followRequestsSent } } // Exclude users with pending requests
+                { _id: { $nin: followingIds } }, // Exclude users already being followed
+                { _id: { $nin: requestSentIds } } // Exclude users with pending requests
             ]
         })
         .select('_id name profilePicture bio isPrivateProfile')

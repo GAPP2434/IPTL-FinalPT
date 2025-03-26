@@ -1,18 +1,47 @@
-<div class="logo">
-    <h1 class="GatheringHub">Gathering Hub</h1>
-</div>
-<div class="user-controls">
-    <!-- Make sure this is hidden by default -->
-    <a href="adminPanel.html" class="header-button admin-panel-button" id="adminPanelButton" style="display: none;">Admin Panel</a>
-    <a href="index.html" class="header-button home-button">Home</a>
-    <a href="friends.html" class="header-button friends-button">Friends</a>
-    <a href="messages.html" class="header-button messages-button">Messages</a>
-    <div class="dropdown">
-        <button id="profileButton" class="header-button profile-button">Profile</button>
-        <div id="profileDropdown" class="dropdown-content">
-            <a href="profile.html">Go to Profile</a>
-        </div>
+<div class="header-container">
+    <!-- Left side: Logo -->
+    <div class="logo">
+        <a href="index.html">
+            <h1 class="GatheringHub">Gathering Hub</h1>
+        </a>
     </div>
-    <a href="settings.html" class="header-button settings-button">Settings</a>
-    <button id="logoutButton" class="header-button logout-button">Logout</button>
+    
+    <!-- Middle: Navigation Icons -->
+    <nav class="header-nav">
+        <a href="index.html" class="nav-icon home-button" title="Home">
+            <img src="images/home.png" alt="Home" class="nav-icon-img">
+        </a>
+        <a href="explore.html" class="nav-icon explore-button" title="Explore">
+            <img src="images/explore.png" alt="Explore" class="nav-icon-img">
+        </a>
+        <a href="friends.html" class="nav-icon friends-button" title="Friends">
+            <img src="images/friends.png" alt="Friends" class="nav-icon-img">
+        </a>
+        <a href="messages.html" class="nav-icon messages-button" title="Messages">
+            <img src="images/message.png" alt="Messages" class="nav-icon-img">
+        </a>
+    </nav>
+    
+    <!-- Right side: User controls -->
+    <div class="user-controls">
+        <!-- Admin Panel button (hidden by default) -->
+        <a href="adminPanel.html" class="nav-icon admin-panel-button" id="adminPanelButton" style="display: none;" title="Admin Panel">
+            <i class="fas fa-shield-alt"></i>
+        </a>
+        
+        <!-- Profile Button (now just a direct link) -->
+        <a href="profile.html" class="nav-icon profile-button" id="profileButton" title="Profile">
+            <img src="images/profile.png" alt="Profile" class="nav-icon-img">
+        </a>
+        
+        <!-- Settings Button -->
+        <a href="settings.html" class="nav-icon settings-button" title="Settings">
+            <img src="images/setting.png" alt="Settings" class="nav-icon-img">
+        </a>
+        
+        <!-- Logout Button -->
+        <button id="logoutButton" class="nav-icon logout-button" title="Logout">
+            <img src="images/logout.png" alt="Logout" class="nav-icon-img">
+        </button>
+    </div>
 </div>

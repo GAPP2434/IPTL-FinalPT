@@ -11,8 +11,34 @@ document.addEventListener('DOMContentLoaded', function() {
     // State
     let currentUser = { _id: null };
     
+    function checkElementsExist() {
+        console.log("Checking critical DOM elements...");
+        const elements = [
+            { id: 'requests-tab', desc: 'Requests Tab' },
+            { id: 'sent-requests-list', desc: 'Sent Requests List' },
+            { id: 'received-requests-list', desc: 'Received Requests List' },
+            { id: 'followers-tab', desc: 'Followers Tab' },
+            { id: 'discover-tab', desc: 'Discover Tab' },
+            { id: 'following-tab', desc: 'Following Tab' }
+        ];
+        
+        let allExist = true;
+        elements.forEach(el => {
+            const domElement = document.getElementById(el.id);
+            console.log(`${el.desc} (${el.id}): ${domElement ? 'exists' : 'MISSING'}`);
+            if (!domElement) allExist = false;
+        });
+        
+        return allExist;
+    }
+
     // Initialize
     function init() {
+
+        const elementsExist = checkElementsExist();
+        if (!elementsExist) {
+            console.error("Some critical elements are missing from the DOM");
+        }
         setupEventListeners();
         loadFollowers();
         loadFollowing();
@@ -35,6 +61,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Tab switching
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
+                // Show panel loading state for requests tab
+                if (button.dataset.tab === 'requests') {
+                    const receivedList = document.getElementById('received-requests-list');
+                    const sentList = document.getElementById('sent-requests-list');
+                    
+                    if (receivedList) receivedList.innerHTML = '<div class="loading-message">Loading requests...</div>';
+                    if (sentList) sentList.innerHTML = '<div class="loading-message">Loading requests...</div>';
+                }
+                
                 // Remove active class from all tabs
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 tabPanels.forEach(panel => panel.classList.remove('active'));
@@ -42,22 +77,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add active class to clicked tab
                 button.classList.add('active');
                 const tabId = button.dataset.tab + '-tab';
-                document.getElementById(tabId).classList.add('active');
+                const tabPanel = document.getElementById(tabId);
                 
-                // Load data based on tab
-                if (button.dataset.tab === 'discover') {
-                    // Clear search input
-                    userSearchInput.value = '';
+                if (tabPanel) {
+                    tabPanel.classList.add('active');
                     
-                    // Check if search input is empty
-                    if (!userSearchInput.value.trim()) {
-                        loadRecommendedUsers();
+                    // Load data based on tab
+                    if (button.dataset.tab === 'discover') {
+                        // Clear search input
+                        userSearchInput.value = '';
+                        
+                        // Check if search input is empty
+                        if (!userSearchInput.value.trim()) {
+                            loadRecommendedUsers();
+                        }
+                        // Check if we need to refresh the discover tab
+                        else if (button.dataset.needsRefresh === 'true') {
+                            loadRecommendedUsers();
+                            button.dataset.needsRefresh = 'false';
+                        }
+                    } else if (button.dataset.tab === 'requests') {
+                        // Always reload requests when switching to requests tab
+                        loadFollowRequests();
                     }
-                    // Check if we need to refresh the discover tab
-                    else if (button.dataset.needsRefresh === 'true') {
-                        loadRecommendedUsers();
-                        button.dataset.needsRefresh = 'false';
-                    }
+                } else {
+                    console.error(`Tab panel with id ${tabId} not found`);
                 }
             });
         });
@@ -94,6 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load sent follow requests
     function loadSentRequests() {
+        console.log("Loading sent follow requests...");
+        
         fetch('/api/users/follow-requests/sent', {
             credentials: 'include'
         })
@@ -104,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(requests => {
+            console.log("Received sent requests:", requests);
             renderSentRequests(requests);
         })
         .catch(error => {
@@ -181,9 +228,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderSentRequests(requests) {
         const requestsList = document.getElementById('sent-requests-list');
         
-        if (!requestsList) return;
-        
-        if (requests.length === 0) {
+        if (!requestsList) {
+            console.error("sent-requests-list element not found in the DOM");
+            return;
+        }
+        console.log("Rendering sent requests:", requests);
+        if (!Array.isArray(requests) || requests.length === 0) {
             requestsList.innerHTML = '<div class="no-requests-message">No sent requests</div>';
             return;
         }
@@ -191,6 +241,10 @@ document.addEventListener('DOMContentLoaded', function() {
         requestsList.innerHTML = '';
         
         requests.forEach(user => {
+            if (!user || !user._id) {
+                console.error("Invalid user object in sent requests:", user);
+                return;
+            }
             const requestElement = document.createElement('div');
             requestElement.classList.add('request-item');
             requestElement.dataset.userId = user._id;
@@ -573,6 +627,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function updateRequestsBadge() {
+        // First check if we need to reload the requests tab
+        fetch('/api/users/follow-requests/sent', {
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(requests => {
+            // Update the badge or indicator if needed
+            const requestsTab = document.querySelector('.tab-button[data-tab="requests"]');
+            if (requestsTab) {
+                if (requests.length > 0) {
+                    // Add or update badge
+                    let badge = requestsTab.querySelector('.requests-badge');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'requests-badge';
+                        requestsTab.appendChild(badge);
+                    }
+                    badge.textContent = requests.length;
+                } else {
+                    // Remove badge if no requests
+                    const badge = requestsTab.querySelector('.requests-badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error updating requests badge:', error);
+        });
+    }
+
     // Follow user
     function followUser(userId, elementToUpdate) {
         fetch('/api/users/follow', {
@@ -585,81 +672,100 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Failed to follow user');
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Failed to follow user');
+                });
             }
             return response.json();
         })
         .then(data => {
-            // Update UI
-            const followButton = elementToUpdate.querySelector('.follow-button');
-            if (followButton) {
-                if (data.requestSent) {
-                    // It was a follow request
-                    const requestSentButton = document.createElement('button');
-                    requestSentButton.classList.add('follow-button', 'request-sent-button');
-                    requestSentButton.dataset.userId = userId;
-                    requestSentButton.textContent = 'Request Sent';
-                    requestSentButton.disabled = true;
-                    
-                    followButton.replaceWith(requestSentButton);
-                    
-                    // Show success message
-                    showMessage('Follow request sent', 'success');
-                    
-                    // Remove user from recommended/discover list if we're in the discover tab
-                    const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
-                    if (discoverTab && discoverTab.classList.contains('active')) {
-                        // Wait a moment before removing to let the user see what happened
-                        setTimeout(() => {
-                            const parentItem = elementToUpdate.closest('.friend-item');
-                            if (parentItem) {
-                                parentItem.remove();
-                                
-                                // Check if the list is now empty
-                                checkEmptyDiscoverList();
-                            }
-                        }, 1500);
-                    }
-                } else {
-                    // Normal follow for public profile
-                    const unfollowButton = document.createElement('button');
-                    unfollowButton.classList.add('unfollow-button');
-                    unfollowButton.dataset.userId = userId;
-                    unfollowButton.textContent = 'Unfollow';
-                    
-                    unfollowButton.addEventListener('click', () => {
-                        unfollowUser(userId, elementToUpdate);
-                    });
-                    
-                    followButton.replaceWith(unfollowButton);
-                    
-                    // Show success message
-                    showMessage('You are now following this user', 'success');
-                    
-                    // Remove user from recommended/discover list if we're in the discover tab
-                    const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
-                    if (discoverTab && discoverTab.classList.contains('active')) {
-                        // Wait a moment before removing to let the user see what happened
-                        setTimeout(() => {
-                            const parentItem = elementToUpdate.closest('.friend-item');
-                            if (parentItem) {
-                                parentItem.remove();
-                                
-                                // Check if the list is now empty
-                                checkEmptyDiscoverList();
-                            }
-                        }, 1500);
-                    }
-                }
+            // Update UI for successful response
+            if (data.requestSent) {
+                // Follow request for private profile
+                replaceWithRequestSentButton(userId, elementToUpdate);
+                showMessage('Follow request sent', 'success');
+                
+                // Load the sent requests to refresh the Requests tab
+                loadSentRequests();
+            } else {
+                // Regular follow for public profile
+                replaceWithUnfollowButton(userId, elementToUpdate);
+                showMessage('You are now following this user', 'success');
             }
             
-            // Reload following list
+            // Cleanup/reload as needed
+            updateRequestsBadge();
+            handleDiscoverListUpdate(elementToUpdate);
             loadFollowing();
         })
         .catch(error => {
             console.error('Error following user:', error);
+            
+            // Handle specific error cases
+            if (error.message) {
+                if (error.message.includes('request already sent')) {
+                    // Request was already sent, update UI accordingly
+                    replaceWithRequestSentButton(userId, elementToUpdate);
+                    showMessage('A follow request was already sent to this user', 'info');
+                    return;
+                } else if (error.message.includes('Already following')) {
+                    // Already following, update UI accordingly
+                    replaceWithUnfollowButton(userId, elementToUpdate);
+                    showMessage(error.message, 'info');
+                    return;
+                }
+            }
+            
+            // Default error case
             showMessage('Failed to follow user. Please try again.', 'error');
         });
+        
+        // Helper function to replace button with Request Sent
+        function replaceWithRequestSentButton(userId, container) {
+            const followButton = container.querySelector('.follow-button');
+            if (followButton) {
+                const requestSentButton = document.createElement('button');
+                requestSentButton.classList.add('follow-button', 'request-sent-button');
+                requestSentButton.dataset.userId = userId;
+                requestSentButton.textContent = 'Request Sent';
+                requestSentButton.disabled = true;
+                followButton.replaceWith(requestSentButton);
+            }
+        }
+        
+        // Helper function to replace button with Unfollow
+        function replaceWithUnfollowButton(userId, container) {
+            const followButton = container.querySelector('.follow-button');
+            if (followButton) {
+                const unfollowButton = document.createElement('button');
+                unfollowButton.classList.add('unfollow-button');
+                unfollowButton.dataset.userId = userId;
+                unfollowButton.textContent = 'Unfollow';
+                
+                unfollowButton.addEventListener('click', () => {
+                    unfollowUser(userId, container);
+                });
+                
+                followButton.replaceWith(unfollowButton);
+            }
+        }
+        
+        // Helper function to handle discover list updates
+        function handleDiscoverListUpdate(container) {
+            const discoverTab = document.querySelector('.tab-button[data-tab="discover"]');
+            if (discoverTab && discoverTab.classList.contains('active')) {
+                // Wait a moment before removing to let the user see what happened
+                setTimeout(() => {
+                    const parentItem = container.closest('.friend-item');
+                    if (parentItem) {
+                        parentItem.remove();
+                        
+                        // Check if the list is now empty
+                        checkEmptyDiscoverList();
+                    }
+                }, 1500);
+            }
+        }
     }
 
     function checkEmptyDiscoverList() {
