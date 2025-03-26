@@ -138,10 +138,7 @@ export function addStories(audioStartTime) {
 
             // Update click event listeners for all stories
             const storyElements = storiesContainer.querySelectorAll('.story');
-            storyElements.forEach((element, index) => {
-                element.removeEventListener('click', () => showStory(index));
-                element.addEventListener('click', () => showStory(index));
-            });
+            storyElement.addEventListener('click', () => showStory(index)); // Add click event listener
         })
         .catch(error => {
             console.error('Error adding story:', error);
