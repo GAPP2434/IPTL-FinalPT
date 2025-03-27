@@ -34,43 +34,64 @@
                 <div id="users-tab" class="tab-panel active">
                     <h2>User Management</h2>
                     
-                    <div class="admin-controls">
-                        <div class="search-container">
-                            <input type="text" id="userSearchInput" placeholder="Search users...">
-                            <button id="userSearchButton"><i class="fas fa-search"></i></button>
-                        </div>
-                        <div class="filter-container">
-                            <select id="userStatusFilter">
-                                <option value="all">All Statuses</option>
-                                <option value="active">Active</option>
-                                <option value="suspended">Suspended</option>
-                                <option value="banned">Banned</option>
-                            </select>
-                            <select id="userRoleFilter">
-                                <option value="all">All Roles</option>
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
+                    <div class="subtabs">
+                        <button class="subtab-button active" data-subtab="user-management">User Management</button>
+                        <button class="subtab-button" data-subtab="reported-posts">Reports by Users</button>
                     </div>
-                    
-                    <div class="table-container">
-                        <table class="user-table">
-                            <thead>
-                                <tr>
-                                    <th>Avatar</th>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Joined</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userTableBody">
-                                <!-- User data will be populated here -->
-                            </tbody>
-                        </table>
+
+                    <div class="subtab-content">
+                        <!-- User Management Subtab -->
+                        <div id="user-management-content" class="subtab-panel active">
+                            <div class="admin-controls">
+                                <div class="search-container">
+                                    <input type="text" id="userSearchInput" placeholder="Search users...">
+                                    <button id="userSearchButton"><i class="fas fa-search"></i></button>
+                                </div>
+                                <div class="filter-container">
+                                    <select id="userStatusFilter">
+                                        <option value="all">All Statuses</option>
+                                        <option value="active">Active</option>
+                                        <option value="suspended">Suspended</option>
+                                        <option value="banned">Banned</option>
+                                    </select>
+                                    <select id="userRoleFilter">
+                                        <option value="all">All Roles</option>
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="user-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Avatar</th>
+                                            <th>Username</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Joined</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userTableBody">
+                                        <!-- User data will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Reported Posts Subtab -->
+                        <div id="reported-posts-content" class="subtab-panel">
+                            <h3>Posts Reported by Users</h3>
+                            <div class="reported-posts-container">
+                                <div id="reportedPostsList" class="reported-posts-list">
+                                    <!-- Reported posts will be loaded here -->
+                                    <div class="loading-message">Loading reported posts...</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

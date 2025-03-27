@@ -112,16 +112,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear existing posts
             explorePosts.innerHTML = '';
             
-            if (posts.length === 0) {
+            // Filter out blocked posts
+            const blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+            const visiblePosts = posts.filter(post => !blockedPosts.includes(post.id));
+            
+            if (visiblePosts.length === 0) {
                 explorePosts.innerHTML = '<div class="no-posts-message">No new posts to explore. Check back later!</div>';
                 return;
             }
             
             // Display posts in descending order (newest first)
-            posts.forEach(post => {
+            visiblePosts.forEach(post => {
                 const postElement = createPostElement(post);
-                explorePosts.appendChild(postElement);
+                if (postElement) {  // Only add if not null (not blocked)
+                    explorePosts.appendChild(postElement);
+                }
             });
+
         })
         .catch(error => {
             hideLoading();
@@ -139,6 +146,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
         
+        const blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+        if (blockedPosts.includes(post.id)) {
+            return null; // Skip rendering this post entirely
+        }
+
         try {
             const postDate = new Date(post.createdAt).toLocaleDateString('en-US', {
                 year: 'numeric',

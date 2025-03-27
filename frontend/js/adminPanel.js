@@ -95,6 +95,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Security log filters
         securitySeverityFilter.addEventListener('change', filterSecurityLogs);
+
+        // Add event listeners for subtabs
+        document.querySelectorAll('.subtab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all subtabs
+                document.querySelectorAll('.subtab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelectorAll('.subtab-panel').forEach(panel => {
+                    panel.classList.remove('active');
+                });
+                
+                // Add active class to clicked subtab
+                button.classList.add('active');
+                const subtabId = button.dataset.subtab + '-content';
+                document.getElementById(subtabId).classList.add('active');
+                
+                // Load data for reported posts tab if selected
+                if (button.dataset.subtab === 'reported-posts') {
+                    loadReportedPosts();
+                }
+            });
+        });
     }
     
     function setupStatusObserver() {
@@ -683,6 +706,252 @@ document.addEventListener('DOMContentLoaded', function() {
         if (userIndex !== -1) {
             users[userIndex] = { ...users[userIndex], ...updateData };
         }
+    }
+
+    function loadReportedPosts() {
+        const reportedPostsList = document.getElementById('reportedPostsList');
+        reportedPostsList.innerHTML = '<div class="loading-message">Loading reported posts...</div>';
+        
+        fetch('/api/posts/reports', {
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load reported posts');
+            }
+            
+            // Check if content type is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                // Session might have expired
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = 'login.html'; // Redirect to login
+                    throw new Error('Session expired');
+                }
+                throw new Error('Unexpected response format');
+            }
+            
+            return response.json();
+        })
+        .then(reportedPosts => {
+            if (!reportedPosts || reportedPosts.length === 0) {
+                reportedPostsList.innerHTML = '<div class="no-reports-message">No reported posts to review.</div>';
+                return;
+            }
+            
+            renderReportedPosts(reportedPosts);
+        })
+        .catch(error => {
+            console.error('Error loading reported posts:', error);
+            
+            if (error.message === 'Session expired') {
+                reportedPostsList.innerHTML = '<div class="error-message">Your session has expired. Please <a href="login.html">log in</a> again.</div>';
+            } else {
+                reportedPostsList.innerHTML = '<div class="error-message">Failed to load reported posts. Please try again.</div>';
+            }
+        });
+    }
+
+    function renderReportedPosts(reportedPosts) {
+        const reportedPostsList = document.getElementById('reportedPostsList');
+        reportedPostsList.innerHTML = '';
+        
+        reportedPosts.forEach(post => {
+            const postElement = document.createElement('div');
+            postElement.classList.add('reported-post-item');
+            postElement.dataset.postId = post.postId;
+            
+            // Create media HTML if post has an image
+            const mediaHtml = post.media ? 
+                `<img src="${post.media}" alt="Post image" class="reported-post-image">` : '';
+            
+            // Create reports list HTML
+            const reportsHtml = post.reports.map(report => {
+                const reportDate = new Date(report.date).toLocaleString();
+                const reportStatus = report.status === 'dismissed' ? 
+                    '<span class="report-status dismissed">(Dismissed)</span>' : '';
+                
+                return `
+                    <div class="report-item" data-report-id="${report.id}">
+                        <div class="report-info">
+                            <strong>Reported by:</strong> ${report.reportedBy.name} on ${reportDate} ${reportStatus}
+                        </div>
+                        <div class="report-reason">
+                            <strong>Reason:</strong> ${report.reason}
+                        </div>
+                        ${report.status !== 'dismissed' ? 
+                            `<button class="dismiss-single-report-btn" data-report-id="${report.id}">
+                                Dismiss this report
+                            </button>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Create post HTML
+            postElement.innerHTML = `
+                <div class="reported-post-header">
+                    <div class="reported-post-user">
+                        <img src="${post.userAvatar}" alt="${post.username}" class="reported-post-avatar">
+                        <div class="reported-post-user-info">
+                            <div class="reported-post-username">${post.username}</div>
+                            <div class="reported-post-timestamp">${new Date(post.timestamp).toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="reported-post-content">
+                    <p>${post.content}</p>
+                    ${mediaHtml}
+                </div>
+                <div class="report-list">
+                    <h4>Reports (${post.reports.length}):</h4>
+                    ${reportsHtml}
+                </div>
+                <div class="report-actions">
+                    <button class="report-action-btn dismiss-report-btn" data-post-id="${post.postId}">Ignore All Reports</button>
+                    <button class="report-action-btn remove-post-btn" data-post-id="${post.postId}">Remove Post</button>
+                </div>
+            `;
+            
+            reportedPostsList.appendChild(postElement);
+        });
+        
+        // Add event listeners for action buttons
+        attachReportActionHandlers();
+    }
+
+    function attachReportActionHandlers() {
+        // Remove post button
+        document.querySelectorAll('.remove-post-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const postId = button.dataset.postId;
+                showConfirmModal(
+                    'Remove Post',
+                    'Are you sure you want to remove this post? The user will be notified that their post violated community guidelines.',
+                    () => removeReportedPost(postId)
+                );
+            });
+        });
+        
+        // Ignore all reports button
+        document.querySelectorAll('.dismiss-report-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const postId = button.dataset.postId;
+                showConfirmModal(
+                    'Ignore Reports',
+                    'Are you sure you want to ignore all reports for this post?',
+                    () => dismissAllReports(postId)
+                );
+            });
+        });
+        
+        // Dismiss single report button
+        document.querySelectorAll('.dismiss-single-report-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const reportId = button.dataset.reportId;
+                const postId = button.closest('.reported-post-item').dataset.postId;
+                dismissSingleReport(postId, reportId);
+            });
+        });
+    }
+
+    function removeReportedPost(postId) {
+        fetch(`/api/posts/reports/${postId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to remove post');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Remove the post element from the DOM
+            const postElement = document.querySelector(`.reported-post-item[data-post-id="${postId}"]`);
+            if (postElement) {
+                postElement.remove();
+            }
+            
+            // Check if no more reported posts
+            const reportedPostsList = document.getElementById('reportedPostsList');
+            if (reportedPostsList.children.length === 0) {
+                reportedPostsList.innerHTML = '<div class="no-reports-message">No reported posts to review.</div>';
+            }
+            
+            showMessage('Post removed successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error removing post:', error);
+            showMessage('Failed to remove post. Please try again.', 'error');
+        });
+    }
+
+    function dismissAllReports(postId) {
+        // Get all report IDs for this post
+        const postElement = document.querySelector(`.reported-post-item[data-post-id="${postId}"]`);
+        if (!postElement) return;
+        
+        const reportElements = postElement.querySelectorAll('.report-item');
+        const reportIds = Array.from(reportElements).map(el => el.dataset.reportId);
+        
+        // Create promises for all dismissal requests
+        const dismissPromises = reportIds.map(reportId => {
+            return fetch(`/api/posts/reports/${postId}/dismiss/${reportId}`, {
+                method: 'PUT',
+                credentials: 'include'
+            });
+        });
+        
+        // Execute all promises
+        Promise.all(dismissPromises)
+            .then(() => {
+                // Remove the post element from the DOM
+                postElement.remove();
+                
+                // Check if no more reported posts
+                const reportedPostsList = document.getElementById('reportedPostsList');
+                if (reportedPostsList.children.length === 0) {
+                    reportedPostsList.innerHTML = '<div class="no-reports-message">No reported posts to review.</div>';
+                }
+                
+                showMessage('All reports dismissed successfully', 'success');
+            })
+            .catch(error => {
+                console.error('Error dismissing reports:', error);
+                showMessage('Failed to dismiss reports. Please try again.', 'error');
+            });
+    }
+
+    function dismissSingleReport(postId, reportId) {
+        fetch(`/api/posts/reports/${postId}/dismiss/${reportId}`, {
+            method: 'PUT',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to dismiss report');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update the report item in the DOM
+            const reportElement = document.querySelector(`.report-item[data-report-id="${reportId}"]`);
+            if (reportElement) {
+                const dismissButton = reportElement.querySelector('.dismiss-single-report-btn');
+                if (dismissButton) dismissButton.remove();
+                
+                const reportInfo = reportElement.querySelector('.report-info');
+                if (reportInfo) {
+                    reportInfo.innerHTML += ' <span class="report-status dismissed">(Dismissed)</span>';
+                }
+            }
+            
+            showMessage('Report dismissed successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error dismissing report:', error);
+            showMessage('Failed to dismiss report. Please try again.', 'error');
+        });
     }
 
     // Expose the function globally

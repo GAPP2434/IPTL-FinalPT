@@ -443,4 +443,132 @@ router.get('/user/:userId?', isAuthenticated, async (req, res) => {
     }
 });
 
+// Add this route to handle post reporting
+router.post('/report', isAuthenticated, async (req, res) => {
+    try {
+        const { postId, reason } = req.body;
+        const reportedBy = req.user._id;
+        
+        // Create a new report entry in your database
+        // Example using your Posts model:
+        await Post.findByIdAndUpdate(postId, {
+            $push: { reports: { userId: reportedBy, reason, date: new Date() } }
+        });
+        
+        // Optionally notify admins about a new report
+        
+        res.status(200).json({ success: true, message: 'Post reported successfully' });
+    } catch (error) {
+        console.error('Error reporting post:', error);
+        res.status(500).json({ success: false, message: 'Failed to report post' });
+    }
+});
+
+// Get all reported posts for admin review
+router.get('/reports', isAuthenticated, async (req, res) => {
+    try {
+        // First check if the user is an admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+        }
+        
+        // Find all posts that have reports
+        const reportedPosts = await Post.find({ 'reports.0': { $exists: true } })
+            .populate('userId', 'name profilePicture email')
+            .populate('reports.userId', 'name profilePicture')
+            .sort({ 'reports.date': -1 });
+            
+        const formattedReports = reportedPosts.map(post => {
+            return {
+                postId: post._id,
+                content: post.content,
+                media: post.media,
+                userId: post.userId._id,
+                username: post.userId.name,
+                userEmail: post.userId.email,
+                userAvatar: post.userId.profilePicture,
+                timestamp: post.timestamp,
+                reports: post.reports.map(report => ({
+                    id: report._id,
+                    reportedBy: report.userId ? {
+                        id: report.userId._id,
+                        name: report.userId.name,
+                        avatar: report.userId.profilePicture
+                    } : { name: 'Unknown User' },
+                    reason: report.reason,
+                    date: report.date,
+                    status: report.status
+                }))
+            };
+        });
+        
+        res.json(formattedReports);
+    } catch (error) {
+        console.error('Error fetching reported posts:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Remove a reported post
+router.delete('/reports/:postId', isAuthenticated, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+        }
+        
+        const { postId } = req.params;
+        const post = await Post.findById(postId);
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        
+        // Store user ID for notification
+        const postOwnerId = post.userId;
+        
+        // Delete the post
+        await Post.findByIdAndDelete(postId);
+        
+        // Add a notification for the user
+        await User.findByIdAndUpdate(postOwnerId, {
+            $push: {
+                notifications: {
+                    type: 'post_removed',
+                    message: 'Your post was removed due to community guidelines violation.',
+                    date: new Date()
+                }
+            }
+        });
+        
+        res.json({ success: true, message: 'Post removed successfully' });
+    } catch (error) {
+        console.error('Error removing reported post:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Dismiss a report
+router.put('/reports/:postId/dismiss/:reportId', isAuthenticated, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+        }
+        
+        const { postId, reportId } = req.params;
+        
+        // Update report status to dismissed
+        await Post.updateOne(
+            { _id: postId, "reports._id": reportId },
+            { $set: { "reports.$.status": "dismissed" } }
+        );
+        
+        res.json({ success: true, message: 'Report dismissed successfully' });
+    } catch (error) {
+        console.error('Error dismissing report:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

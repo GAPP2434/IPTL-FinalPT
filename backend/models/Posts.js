@@ -61,6 +61,19 @@ const PostSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
+    reports: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reason: String,
+        date: Date,
+        status: {
+            type: String,
+            enum: ['pending', 'reviewed', 'dismissed'],
+            default: 'pending'
+        }
+    }],
     comments: [CommentSchema]
 });
 

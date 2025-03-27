@@ -7,14 +7,18 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(user => {
         window.currentUserId = user._id;
+        console.log('Current user ID set to:', window.currentUserId);
+        
+        // Only initialize after we have the user ID
+        fetchUserProfile();
+        fetchUserPosts();
     })
     .catch(error => {
         console.error('Error fetching current user:', error);
+        // Still fetch profile/posts but warn about possible menu issues
+        fetchUserProfile();
+        fetchUserPosts();
     });
-
-    // Initialize the profile page
-    fetchUserProfile();
-    fetchUserPosts();
 
     // Add click event handler for post menus
     document.addEventListener('click', function(event) {
@@ -245,6 +249,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+function blockPost(postId) {
+    // Hide the post from the current view
+    const post = document.querySelector(`.blog-post[data-post-id="${postId}"]`);
+    if (post) {
+        post.style.display = 'none';
+        
+        // Store the blocked post ID in localStorage (user-specific)
+        let blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+        if (!blockedPosts.includes(postId)) {
+            blockedPosts.push(postId);
+            localStorage.setItem('blockedPosts', JSON.stringify(blockedPosts));
+        }
+        
+        showMessage('Post hidden from your feed', 'success');
+    }
+}
+
 // Improve fetchUserPosts with better response handling
 function fetchUserPosts() {
     console.log('✅ fetchUserPosts started');
@@ -312,6 +333,10 @@ function fetchUserPosts() {
             posts = [];
         }
         
+        // Filter out posts that the current user has hidden
+        const blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+        posts = posts.filter(post => !blockedPosts.includes(post.id));
+        
         if (posts.length === 0) {
             postsContainer.innerHTML = '<div class="empty-posts-message">No posts yet</div>';
             return;
@@ -357,6 +382,29 @@ function createPostElement(post) {
         return null;
     }
     
+    let isOwnPost = false;
+
+        // First try to get userId from profile page context if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileUserId = urlParams.get('userId');
+        
+        if (!profileUserId && post.userId) {
+            // If we're on our own profile (no userId in URL), then posts are ours
+            isOwnPost = true;
+        } else if (window.currentUserId && post.userId) {
+            // Compare IDs if we have currentUserId from global context
+            isOwnPost = String(post.userId) === String(window.currentUserId);
+        }
+    // Add debugging to see ID comparisons
+    console.log('Post user ID:', post.userId);
+    console.log('Current user ID:', window.currentUserId);
+    console.log('Comparison result:', String(post.userId) === String(window.currentUserId));
+    
+    const blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+    if (blockedPosts.includes(post.id)) {
+        return null; // Skip rendering this post entirely
+    }
+
     try {
         const postDate = new Date(post.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -393,7 +441,7 @@ function createPostElement(post) {
                 <div class="post-menu">
                     <i class="fas fa-ellipsis-v post-menu-icon"></i>
                     <div class="post-menu-dropdown">
-                        ${post.userId === window.currentUserId ? `
+                        ${post.userId && window.currentUserId && String(post.userId).trim() === String(window.currentUserId).trim() ? `
                             <div class="post-menu-item edit-post" data-post-id="${post.id}">
                                 <i class="fas fa-edit"></i> Edit Post
                             </div>
@@ -1024,4 +1072,264 @@ function copyToClipboard(text) {
     showMessage('Link copied to clipboard!', 'success');
 }
 
+}
+
+function loadReportedPosts() {
+    const reportedPostsList = document.getElementById('reportedPostsList');
+    reportedPostsList.innerHTML = '<div class="loading-message">Loading reported posts...</div>';
+    
+    fetch('/api/posts/reports', {
+        credentials: 'include',
+        headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        console.log('Reports response status:', response.status);
+        
+        // Check for auth errors first
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('auth-check-failed');
+        }
+        
+        // Try to get content type
+        const contentType = response.headers.get('content-type');
+        console.log('Reports response content-type:', contentType);
+        
+        // If content type is JSON, parse as JSON
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        }
+        
+        // If not JSON, inspect the response text and try to convert if possible
+        return response.text().then(text => {
+            console.log('Reports response preview:', text.substring(0, 100));
+            
+            // Check if it's HTML (likely login page)
+            if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                throw new Error('auth-check-failed');
+            }
+            
+            // Try to parse as JSON anyway (sometimes Content-Type is wrong)
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                console.error('Failed to parse response as JSON:', err);
+                throw new Error('invalid-response-format');
+            }
+        });
+    })
+    .then(reportedPosts => {
+        if (!reportedPosts || reportedPosts.length === 0) {
+            reportedPostsList.innerHTML = '<div class="no-reports-message">No reported posts to review.</div>';
+            return;
+        }
+        
+        renderReportedPosts(reportedPosts);
+    })
+    .catch(error => {
+        console.error('Error loading reported posts:', error);
+        
+        if (error.message === 'auth-check-failed') {
+            reportedPostsList.innerHTML = '<div class="error-message">Your session has expired. Please <a href="login.html">log in</a> again.</div>';
+        } else if (error.message === 'invalid-response-format') {
+            reportedPostsList.innerHTML = '<div class="error-message">Server returned an invalid response format. Please try again later.</div>';
+        } else {
+            reportedPostsList.innerHTML = '<div class="error-message">Failed to load reported posts. Please try again.</div>';
+        }
+    });
+}
+
+function editPost(postId) {
+    // Show loading indicator
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        const loadingText = loadingModal.querySelector('.loading-content p');
+        if (loadingText) loadingText.textContent = 'Loading post content...';
+        loadingModal.style.display = 'flex';
+    }
+    
+    // Fetch the post content from the server
+    fetch(`/api/posts/${postId}`, {
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch post data');
+        return response.json();
+    })
+    .then(post => {
+        // Hide loading indicator
+        if (loadingModal) loadingModal.style.display = 'none';
+        
+        // Get the post submission modal
+        const postModal = document.getElementById('postSubmissionModal');
+        if (!postModal) {
+            throw new Error('Post modal not found');
+        }
+        
+        // Populate the modal with existing content
+        const contentInput = document.getElementById('blog-post-input');
+        if (contentInput) contentInput.value = post.content || '';
+        
+        // Update character counter if it exists
+        const contentCounter = document.getElementById('postContentCounter');
+        if (contentCounter) {
+            contentCounter.textContent = `${(post.content || '').length}/250`;
+        }
+        
+        // Store the post ID for update operation
+        postModal.dataset.editPostId = postId;
+        
+        // Open the modal
+        postModal.style.display = 'block';
+        
+        // Modify the submit button to indicate editing
+        const submitButton = document.getElementById('send-blog-post-button');
+        if (submitButton) {
+            submitButton.textContent = 'Update Post';
+            
+            // Store original event handler
+            if (!submitButton.dataset.originalClick) {
+                submitButton.dataset.originalClick = submitButton.onclick;
+            }
+            
+            // Set new event handler for updating
+            submitButton.onclick = function() {
+                updatePost(postId);
+            };
+        }
+    })
+    .catch(error => {
+        // Hide loading indicator
+        if (loadingModal) loadingModal.style.display = 'none';
+        
+        console.error('Error fetching post for editing:', error);
+        showMessage('Failed to load post for editing. Please try again.', 'error');
+    });
+}
+
+function deletePost(postId) {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+        return; // User cancelled deletion
+    }
+    
+    // Show loading indicator
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        const loadingText = loadingModal.querySelector('.loading-content p');
+        if (loadingText) loadingText.textContent = 'Deleting post...';
+        loadingModal.style.display = 'flex';
+    }
+
+    // Send delete request
+    fetch(`/api/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to delete post');
+        return response.json();
+    })
+    .then(() => {
+         // Hide loading indicator
+    if (loadingModal) loadingModal.style.display = 'none';
+    
+    // Remove the post from the UI
+    const postElement = document.querySelector(`.blog-post[data-post-id="${postId}"]`);
+    if (postElement) {
+        postElement.remove();
+    }
+    
+    // Show success message
+    showMessage('Post deleted successfully', 'success');
+    
+    // Check if there are no posts left
+    const postsContainer = document.getElementById('userPosts');
+    if (postsContainer && !postsContainer.querySelector('.blog-post')) {
+        postsContainer.innerHTML = '<div class="empty-posts-message">No posts yet</div>';
+    }
+})
+.catch(error => {
+    // Hide loading indicator
+    if (loadingModal) loadingModal.style.display = 'none';
+    
+    console.error('Error deleting post:', error);
+    showMessage('Failed to delete post. Please try again.', 'error');
+});
+}
+
+// Function to handle post update
+function updatePost(postId) {
+    const postContent = document.getElementById('blog-post-input').value.trim();
+    
+    if (!postContent) {
+        showMessage('Post content cannot be empty', 'error');
+        return;
+    }
+    
+    // Show loading indicator
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        const loadingText = loadingModal.querySelector('.loading-content p');
+        if (loadingText) loadingText.textContent = 'Updating post...';
+        loadingModal.style.display = 'flex';
+    }
+    
+    // Store the content for immediate UI update
+    const updatedContent = postContent;
+    
+    // Send update request
+    fetch(`/api/posts/${postId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ content: postContent })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to update post');
+        return response.json();
+    })
+    .then(data => {
+        // Hide loading indicator
+        if (loadingModal) loadingModal.style.display = 'none';
+        
+        // Close the modal
+        const postModal = document.getElementById('postSubmissionModal');
+        if (postModal) postModal.style.display = 'none';
+        
+        // Reset the submit button
+        const submitButton = document.getElementById('send-blog-post-button');
+        if (submitButton) {
+            submitButton.textContent = 'Post';
+            if (submitButton.dataset.originalClick) {
+                submitButton.onclick = new Function(submitButton.dataset.originalClick);
+                delete submitButton.dataset.originalClick;
+            }
+        }
+        
+        // Update the post content directly in the DOM
+        const postElement = document.querySelector(`.blog-post[data-post-id="${postId}"] .post-content`);
+        if (postElement) {
+            postElement.textContent = updatedContent;
+        }
+        
+        // Only now clear the input
+        document.getElementById('blog-post-input').value = '';
+        
+        // Show success message
+        showMessage('Post updated successfully', 'success');
+        
+        // Refresh posts to update any other data
+        fetchUserPosts();
+    })
+    .catch(error => {
+        // Hide loading indicator
+        if (loadingModal) loadingModal.style.display = 'none';
+        
+        console.error('Error updating post:', error);
+        showMessage('Failed to update post. Please try again.', 'error');
+    });
 }

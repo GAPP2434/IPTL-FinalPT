@@ -752,12 +752,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         // Create a FormData object to handle the file upload
         const formData = new FormData();
         formData.append('content', blogPostText);
-        
-        // Get optional username if provided, otherwise use the user's name
-        const blogPostUsername = document.getElementById('blog-post-username-input').value.trim();
-        if (blogPostUsername) {
-            formData.append('displayName', blogPostUsername);
-        }
+
         
         // Add image file if present
         if (blogPostImage) {
@@ -853,7 +848,6 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         blogPostImageInput.value = '';
         document.getElementById('file-names').textContent = 'No file selected';
         document.getElementById('postContentCounter').textContent = '0/250';
-        document.getElementById('blog-post-username-input').value = '';
         
         // Close the modal
         document.getElementById('postSubmissionModal').style.display = 'none';
@@ -896,20 +890,25 @@ function fetchAndDisplayPosts() {
         // Clear existing posts
         blogPosts.innerHTML = '';
         
+         // Filter out blocked posts
+         const blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+         const visiblePosts = posts.filter(post => !blockedPosts.includes(post.id));
+
         if (!Array.isArray(posts) || posts.length === 0) {
             blogPosts.innerHTML = '<div class="no-posts-message">No posts from people you follow. Start following more users or check the explore page!</div>';
             return;
         }
         
-        console.log(`Rendering ${posts.length} posts on home page`);
-        
         // Display posts in descending order (newest first)
-        posts.forEach(post => {
+        visiblePosts.forEach(post => {
             const postElement = createPostElement(post);
             if (postElement) {
                 blogPosts.appendChild(postElement);
             }
         });
+
+        console.log(`Rendering ${posts.length} posts on home page`);
+        
     })
     .catch(error => {
         // Hide loading indicator if available
