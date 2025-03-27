@@ -157,71 +157,6 @@ footer {
     background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
 }
 
-.messages-main, .friends-main, .profile-main {
-  background:
-    radial-gradient(#645631 3px, transparent 4px),
-    radial-gradient(#645631 3px, transparent 4px),
-    linear-gradient(#32392a 4px, transparent 0),
-    linear-gradient(45deg, transparent 74px, transparent 75px, #645631 75px, #645631 76px, transparent 77px, transparent 109px),
-    linear-gradient(-45deg, transparent 75px, transparent 76px, #645631 76px, #645631 77px, transparent 78px, transparent 109px),
-    #32392a;
-    background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
-    background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
-}
-
-/*Blog Post Styling*/
-  .blog-post, .post-container, #postSubmissionModal {
-    background-image: url('../images/mhwi-paper.png');
-    /*background-color: #f5f8fa;*/
-    border: 1px solid #ccd6dd;
-    border-radius: 16px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 50%;
-    padding: 20px;
-    margin: 20px auto;
-    word-wrap: break-word; /* Ensure long text wraps to a new line */
-  }
-  
-  /*Blog Post Inner Styling*/
-  /*
-  .blog-post h3 {
-    font-weight: bold;
-    font-size: 24px; /* Make the story title bigger
-    margin-top: 0;
-  }
-  */
-  .post-header {
-    display: flex;
-    align-items: center;
-  }
-
-  .post-header h5 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: bold;
-  }
-
-  .post-username {
-    font-weight: bold;
-    text-shadow: -1px 0px #000, 0px 1px #000, 1px 0px #000, 0px -1px #000;
-
-  }
-
-  .blog-post p {
-    font-size: 0.8em;
-    margin-bottom: 10px;
-  }
-
-  .blog-post img {
-    max-width: 100%;
-    max-height: 480px;
-    object-fit: contain;
-    margin: 1% auto;
-    display: block;
-    border: 2px solid black;
-    border-radius: 8px;
-  }
-  
   .blog-post small {
     font-size: 16px;
     color: #666;
@@ -231,29 +166,6 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  .blog-post .post-header .username {
-    font-weight: bold;
-    /*text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.2);*/
-    text-shadow: -1px 0px #000, 0px 1px #000, 1px 0px #000, 0px -1px #000;
-  }
-  
-  .blog-post .post-header .timestamp {
-    font-size: 0.7em;
-    color: #666;
-  }
-
-  .avatar {
-    display: inline-block;
-    width: 60px;
-    height: 60px;
-    border-width: 3px;
-    border-style: solid;
-    border-radius: 50%;
-    background-size: cover;
-    background-position: center;
-    margin-right: 10px;
   }
 
 /*Blog Uploading Container*/

@@ -22,12 +22,27 @@ window.openUploadModal = openUploadModal;
 document.addEventListener('DOMContentLoaded', function() {
     fetchAndDisplayPosts();
     
-    // Add a section heading to clearly label the posts area
+    // Get the blog container
     const blogContainer = document.querySelector('.blog-container');
+    
+    // Create the home posts container
+    const homePostsContainer = document.createElement('div');
+    homePostsContainer.className = 'home-posts-container';
+    
+    // Create the fancy heading for "Hunter Posts"
     const postsHeading = document.createElement('h2');
     postsHeading.textContent = 'Hunter Posts';
-    postsHeading.classList.add('section-heading');
-    blogContainer.insertBefore(postsHeading, blogContainer.firstChild);
+    postsHeading.className = 'section-heading';
+    
+    // Move the blog container into the home posts container
+    if (blogContainer && blogContainer.parentNode) {
+        // Insert the home-posts-container where the blog-container was
+        blogContainer.parentNode.insertBefore(homePostsContainer, blogContainer);
+        
+        // Move blog container into home posts container
+        homePostsContainer.appendChild(postsHeading);
+        homePostsContainer.appendChild(blogContainer);
+    }
 
     // Add event listener for the upload button
     document.getElementById('addButton').addEventListener('click', openUploadModal);
@@ -772,7 +787,12 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
 
 //Function to fetch all posts and display them
 function fetchAndDisplayPosts() {
-    fetch('/api/posts', {
+    // Show loading indicator if available
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) loadingModal.style.display = 'block';
+    
+    // Fetch posts from followed users and self
+    fetch('/api/posts/following', {
         credentials: 'include'
     })
     .then(response => {
@@ -782,92 +802,302 @@ function fetchAndDisplayPosts() {
         return response.json();
     })
     .then(posts => {
+        // Hide loading indicator if available
+        if (loadingModal) loadingModal.style.display = 'none';
+        
         const blogPosts = document.getElementById('blog-posts');
+        if (!blogPosts) {
+            console.error('Blog posts container not found');
+            return;
+        }
         
         // Clear existing posts
         blogPosts.innerHTML = '';
         
-        if (posts.length === 0) {
-            blogPosts.innerHTML = '<div class="no-posts-message">No posts yet. Be the first to share!</div>';
+        if (!Array.isArray(posts) || posts.length === 0) {
+            blogPosts.innerHTML = '<div class="no-posts-message">No posts from people you follow. Start following more users or check the explore page!</div>';
             return;
         }
+        
+        console.log(`Rendering ${posts.length} posts on home page`);
         
         // Display posts in descending order (newest first)
         posts.forEach(post => {
             const postElement = createPostElement(post);
-            blogPosts.appendChild(postElement);
+            if (postElement) {
+                blogPosts.appendChild(postElement);
+            }
         });
     })
     .catch(error => {
+        // Hide loading indicator if available
+        if (loadingModal) loadingModal.style.display = 'none';
+        
         console.error('Error fetching posts:', error);
-        document.getElementById('blog-posts').innerHTML = 
-            '<div class="error-message">Failed to load posts. Please refresh the page.</div>';
+        const blogPosts = document.getElementById('blog-posts');
+        if (blogPosts) {
+            blogPosts.innerHTML = '<div class="error-message">Failed to load posts. Please refresh the page.</div>';
+        }
     });
 }
 
 // Function to create a post element
 function createPostElement(post) {
-    const postElement = document.createElement('div');
-    postElement.classList.add('blog-post');
-    postElement.dataset.postId = post._id;
+    if (!post || !post.id) {
+        console.error('Invalid post object:', post);
+        return null;
+    }
+    
+    try {
+        const postDate = new Date(post.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const postDiv = document.createElement('div');
+        postDiv.className = 'blog-post';
+        postDiv.dataset.postId = post.id;
+        
+        // Ensure we have valid data with fallbacks
+        const username = post.username || 'Anonymous';
+        const userId = post.userId || '#';
+        const avatarSrc = post.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
+        const content = post.content || '';
+        const likes = post.likes || 0;
+        const comments = post.comments || 0;
+        const userLiked = post.userLiked || false;
+        
+        // Create the HTML for the post with proper structure for avatar
+        let postHTML = `
+            <div class="post-header">
+                <img src="${avatarSrc}" alt="${username}" class="post-avatar" onclick="window.location.href='profile.html?userId=${userId}'">
+                <div>
+                    <h5 class="post-username" onclick="window.location.href='profile.html?userId=${userId}'">${username}</h5>
+                    <span class="post-date">${postDate}</span>
+                </div>
+            </div>
+            <div class="post-content">${content}</div>
+        `;
+        
+        // Add image if available
+        if (post.imageUrl) {
+            postHTML += `<div class="post-image-container"><img src="${post.imageUrl}" alt="Post image" class="post-image"></div>`;
+        }
+        
+        // Add post actions with Font Awesome icons - matching explore.html
+        postHTML += `
+            <div class="post-actions">
+                <button class="post-action ${userLiked ? 'liked' : ''}" onclick="likePost('${post.id}', this)">
+                    <i class="fas fa-thumbs-up"></i>
+                    <span class="like-count">${likes}</span>
+                </button>
+                <button class="post-action" onclick="toggleComments('${post.id}')">
+                    <i class="fas fa-comment"></i>
+                    <span>${comments}</span>
+                </button>
+                <button class="post-action" onclick="sharePost('${post.id}')">
+                    <i class="fas fa-share"></i>
+                    <span>Share</span>
+                </button>
+                <button class="post-action" onclick="repostPost('${post.id}')">
+                    <i class="fas fa-retweet"></i>
+                    <span>Repost</span>
+                </button>
+            </div>
+            <div class="post-comments" id="comments-${post.id}" style="display: none;">
+                <div class="comments-container" id="comments-container-${post.id}"></div>
+                <div class="comment-form">
+                    <input type="text" placeholder="Write a comment..." id="comment-input-${post.id}" class="comment-input-field">
+                    <button class="send-comment-button" onclick="postComment('${post.id}')">Post</button>
+                </div>
+            </div>
+        `;
+        
+        postDiv.innerHTML = postHTML;
+        return postDiv;
+    } catch (error) {
+        console.error('Error creating post element:', error);
+        return null;
+    }
+}
 
-    let userName, userAvatar, usernameColor, postDate, formattedDate;
+// Add these global functions for handling likes and comments
+window.likePost = function(postId, button) {
+    fetch(`/api/posts/like/${postId}`, {
+        method: 'POST',
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const likeButton = button;
+        const likeCount = likeButton.querySelector('.like-count');
+        
+        if (data.message === 'Liked post') {
+            likeButton.classList.add('liked');
+        } else {
+            likeButton.classList.remove('liked');
+        }
+        
+        likeCount.textContent = data.likes;
+    })
+    .catch(error => {
+        console.error('Error liking post:', error);
+        showMessage('Failed to like post. Please try again.', 'error');
+    });
+};
 
-    if (post.isRepost && post.originalPostId) {
-        // Use original post's user information for reposts
-        userName = post.originalPostId.userId.name || 'Anonymous';
-        userAvatar = post.originalPostId.userId.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
-        usernameColor = '#a7c957';
-        postDate = new Date(post.originalPostId.timestamp);
+window.toggleComments = function(postId) {
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    const commentsContainer = document.getElementById(`comments-container-${postId}`);
+    
+    if (commentsDiv.style.display === 'none') {
+        commentsDiv.style.display = 'block';
+        
+        // Fetch comments if not loaded yet
+        if (commentsContainer.innerHTML === '') {
+            fetch(`/api/posts/${postId}/comments`, {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(comments => {
+                if (comments.length === 0) {
+                    commentsContainer.innerHTML = '<div class="no-comments">No comments yet</div>';
+                } else {
+                    commentsContainer.innerHTML = '';
+                    comments.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment';
+                        commentDiv.innerHTML = `
+                            <div class="comment-user">${comment.username}</div>
+                            <div class="comment-text">${comment.comment}</div>
+                        `;
+                        commentsContainer.appendChild(commentDiv);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching comments:', error);
+                commentsContainer.innerHTML = '<div class="error">Failed to load comments</div>';
+            });
+        }
     } else {
-        // Use current post's user information
-        userName = post.displayName || (post.userId ? post.userId.name : 'Anonymous');
-        userAvatar = post.userId && post.userId.profilePicture ? post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp';
-        usernameColor = post.displayName ? '#e37f8a' : '#a7c957';
-        postDate = new Date(post.timestamp);
+        commentsDiv.style.display = 'none';
     }
+};
 
-    formattedDate = `${postDate.toLocaleDateString()} | ${postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+window.postComment = function(postId) {
+    const commentInput = document.getElementById(`comment-input-${postId}`);
+    const comment = commentInput.value.trim();
+    
+    if (!comment) return;
+    
+    fetch(`/api/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ comment })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Add new comment to the comments container
+        const commentsContainer = document.getElementById(`comments-container-${postId}`);
+        
+        // Remove "no comments" message if present
+        const noComments = commentsContainer.querySelector('.no-comments');
+        if (noComments) {
+            commentsContainer.removeChild(noComments);
+        }
+        
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment';
+        commentDiv.innerHTML = `
+            <div class="comment-user">${data.username}</div>
+            <div class="comment-text">${data.comment}</div>
+        `;
+        commentsContainer.appendChild(commentDiv);
+        
+        // Clear input
+        commentInput.value = '';
+        
+        // Update comment count
+        const commentButton = document.querySelector(`.post-action[onclick="toggleComments('${postId}')"]`);
+        const commentCount = commentButton.querySelector('span');
+        commentCount.textContent = parseInt(commentCount.textContent) + 1;
+    })
+    .catch(error => {
+        console.error('Error posting comment:', error);
+        showMessage('Failed to post comment. Please try again.', 'error');
+    });
+};
 
-    let repostInfo = '';
-    if (post.isRepost && post.repostedBy) {
-        const reposterName = post.repostedBy.name || 'Anonymous';
-        repostInfo = `<div class="repost-info">Reposted by ${reposterName}</div>`;
+function showMessage(message, type) {
+    const messageContainer = document.getElementById('message-container');
+    const messageElement = document.getElementById('message');
+    
+    if (messageContainer && messageElement) {
+        messageElement.textContent = message;
+        messageElement.className = 'message ' + type;
+        messageContainer.style.display = 'flex';
+        
+        setTimeout(() => {
+            messageContainer.style.display = 'none';
+        }, 3000);
     }
+}
 
-    postElement.innerHTML = `
-        ${repostInfo}
-        <div class="post-header">
-            <span class="avatar" style="background-image: url(${userAvatar})"></span>
-            <div class="post-info">
-                <div class="username" style="color: ${usernameColor}">${userName}</div>
-                <div class="timestamp">on ${formattedDate}</div>
-            </div>
-        </div>
-        <div class="post-content">
-            ${post.content ? `<p>${post.content}</p>` : ''}
-            ${post.media ? `<img src="${post.media}" alt="Post image">` : ''}
-        </div>
-        <div class="post-footer">
-            <button class="like-button" data-post-id="${post._id}">👍 ${post.reactions ? post.reactions.like : 0}</button>
-            <button class="share-button" data-post-id="${post._id}">🔗 Share</button>
-            <button class="repost-button" data-post-id="${post._id}">🔁 Repost</button>
-         </div>
-        <div class="comment-section">
-            <div class="comment-input">
-                <input type="text" class="comment-input-field" placeholder="Add a comment..." data-post-id="${post._id}">
-                <button class="send-comment-button" data-post-id="${post._id}">Send</button>
-            </div>
-            <div class="comment-list" id="commentList-${post._id}">
-                ${(Array.isArray(post.comments) ? post.comments : []).map(comment => `
-                    <div class="comment">
-                        <span class="username">${comment.username}:</span> ${comment.comment}
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-    return postElement;
+// Add these functions if they don't exist
+window.sharePost = function(postId) {
+    const postUrl = `${window.location.origin}/post/${postId}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Check out this post on Gathering Hub',
+            url: postUrl
+        }).catch(err => {
+            console.error('Error sharing:', err);
+            // Fallback to clipboard copy
+            copyToClipboard(postUrl);
+        });
+    } else {
+        // Fallback for browsers that don't support navigator.share
+        copyToClipboard(postUrl);
+    }
+};
+
+window.repostPost = function(postId) {
+    fetch(`/api/posts/repost/${postId}`, {
+        method: 'POST',
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to repost');
+        }
+        return response.json();
+    })
+    .then(data => {
+        showMessage('Post reposted successfully!', 'success');
+        // Refresh posts to show the repost
+        fetchAndDisplayPosts();
+    })
+    .catch(error => {
+        console.error('Error reposting:', error);
+        showMessage('Failed to repost. Please try again.', 'error');
+    });
+};
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showMessage('Link copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showMessage('Failed to copy link. Please try again.', 'error');
+    });
 }
 
 // Listen for comment submissions

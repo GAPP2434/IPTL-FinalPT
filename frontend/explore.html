@@ -5,35 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explore - Gathering Hub</title>
-    <link rel="stylesheet" href="css/Main.css">
+    <link rel="stylesheet" href="css/uploadModal.css">
+    <link rel="stylesheet" href="css/friends.css">
     <link rel="stylesheet" href="css/commonlyUsed.css">
+    <link rel="stylesheet" href="css/explore.css"> <!-- Add this line -->
     <script src="js/authCheck.js"></script>
     <script src="js/components.js"></script>
     <script src="js/webSocketClient.js"></script>
+    <script src="js/explore.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        .explore-container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 20px;
-            background-color: #e4ddc9;
-            background-image: url('images/mhwi-paper.png');
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .explore-icon {
-            font-size: 60px;
-            color: #8c7a68;
-            margin-bottom: 20px;
-        }
-        
-        .explore-message {
-            font-family: 'Markazi', serif;
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-        }
-    </style>
 </head>
 <body>
     <header class="header"></header>
@@ -41,13 +21,14 @@
     <!-- Main Content -->
     <main>
         <div class="explore-container">
-            <div class="explore-icon">
-                <i class="fas fa-compass"></i>
+            <h1>Explore New Hunters</h1>
+            <div class="explore-description">
+                <p>Discover posts from hunters you haven't followed yet</p>
             </div>
-            <h1>Explore</h1>
-            <div class="explore-message">
-                <p>This feature is coming soon!</p>
-                <p>Stay tuned for updates.</p>
+            
+            <!-- Posts container -->
+            <div class="blog-container">
+                <div id="explore-posts"></div>
             </div>
         </div>
     </main>
@@ -55,6 +36,26 @@
     <!-- Message container for notifications -->
     <div id="message-container" class="message-container">
         <div id="message" class="message"></div>
+    </div>
+    
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="modal">
+        <div class="loading-content">
+            <img src="images/loadingScreen.png" alt="Loading..." class="loader-image">
+            <p>Loading posts...</p>
+        </div>
+    </div>
+
+    <!-- Ban Notification Modal -->
+    <div id="banModal" class="modal">
+        <div class="modal-content ban-modal-content">
+            <h2>Account Banned</h2>
+            <p id="banMessage">Your account has been banned by an administrator. You can no longer access the website.</p>
+            <p>If you believe this was done in error, please contact support.</p>
+            <div class="modal-actions">
+                <button id="banConfirmButton" class="confirm-button">Confirm</button>
+            </div>
+        </div>
     </div>
     
     <footer class="footer"></footer>

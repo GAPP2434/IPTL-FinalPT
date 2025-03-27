@@ -209,4 +209,155 @@ router.post('/:postId/comments', isAuthenticated, async (req, res) => {
     }
 });
 
+router.get('/following', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log(`[DEBUG] /following - Request from user ID: ${userId}`);
+        
+        // Get the list of users this person follows
+        const currentUser = await User.findById(userId).select('following');
+        
+        if (!currentUser) {
+            console.log(`[DEBUG] /following - User ${userId} not found in database`);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        console.log(`[DEBUG] /following - User ${userId} follows ${currentUser.following.length} users`);
+        console.log(`[DEBUG] /following - Following IDs: ${currentUser.following.join(', ')}`);
+        
+        // Get posts from followed users AND the user's own posts
+        const posts = await Post.find({
+            $or: [
+                { userId: { $in: currentUser.following } },
+                { userId: userId } // Include the user's own posts
+            ]
+        })
+        .sort({ timestamp: -1 })
+        .populate('userId', 'name profilePicture')
+        .limit(50);
+        
+        console.log(`[DEBUG] /following - Found ${posts.length} posts from followed users and self`);
+        
+        // Format posts with better error handling
+        const formattedPosts = [];
+        
+        for (const post of posts) {
+            // Skip any null/undefined posts
+            if (!post) {
+                console.log(`[DEBUG] /following - Encountered null post, skipping`);
+                continue;
+            }
+            
+            try {
+                console.log(`[DEBUG] /following - Processing post ID: ${post._id}`);
+                console.log(`[DEBUG] /following - Post belongs to user: ${post.userId ? post.userId._id : 'unknown'}`);
+                console.log(`[DEBUG] /following - Post user details: ${JSON.stringify({
+                    name: post.userId ? post.userId.name : 'unknown',
+                    profilePicture: post.userId ? post.userId.profilePicture : 'unknown'
+                })}`);
+                
+                formattedPosts.push({
+                    id: post._id,
+                    content: post.content || '',
+                    imageUrl: post.media || null,
+                    createdAt: post.timestamp || new Date(),
+                    likes: post.reactions && post.reactions.likedBy ? post.reactions.likedBy.length : 0,
+                    comments: post.comments ? post.comments.length : 0,
+                    userLiked: post.reactions && post.reactions.likedBy ? 
+                        post.reactions.likedBy.some(id => id.toString() === userId.toString()) : false,
+                    username: post.userId ? post.userId.name : (post.displayName || 'Anonymous'),
+                    profilePicture: post.userId && post.userId.profilePicture ? 
+                        post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
+                    userId: post.userId ? post.userId._id : null
+                });
+            } catch (formatError) {
+                console.error(`[DEBUG] /following - Error formatting post ${post._id}:`, formatError);
+                // Skip problematic posts instead of returning undefined entries
+            }
+        }
+        
+        console.log(`[DEBUG] /following - Successfully formatted ${formattedPosts.length} posts`);
+        res.json(formattedPosts);
+    } catch (error) {
+        console.error('[DEBUG] /following - Error fetching followed posts:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get posts from users the current user is NOT following (for Explore page)
+router.get('/explore', isAuthenticated, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log(`[DEBUG] /explore - Request from user ID: ${userId}`);
+        
+        // Get the list of users this person follows
+        const currentUser = await User.findById(userId).select('following');
+        
+        if (!currentUser) {
+            console.log(`[DEBUG] /explore - User ${userId} not found in database`);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        console.log(`[DEBUG] /explore - User ${userId} follows ${currentUser.following.length} users`);
+        
+        // Create a list of users to exclude (followed users and self)
+        const excludeUsers = [...currentUser.following, userId];
+        console.log(`[DEBUG] /explore - Excluding ${excludeUsers.length} users from results`);
+        
+        // Get posts from users NOT being followed
+        const posts = await Post.find({
+            userId: { $nin: excludeUsers }
+        })
+        .sort({ timestamp: -1 })
+        .populate('userId', 'name profilePicture')
+        .limit(50);
+        
+        console.log(`[DEBUG] /explore - Found ${posts.length} posts from non-followed users`);
+        
+        // Format posts with better error handling
+        const formattedPosts = [];
+        
+        for (const post of posts) {
+            // Skip any null/undefined posts
+            if (!post) {
+                console.log(`[DEBUG] /explore - Encountered null post, skipping`);
+                continue;
+            }
+            
+            try {
+                console.log(`[DEBUG] /explore - Processing post ID: ${post._id}`);
+                console.log(`[DEBUG] /explore - Post belongs to user: ${post.userId ? post.userId._id : 'unknown'}`);
+                console.log(`[DEBUG] /explore - Post user details: ${JSON.stringify({
+                    name: post.userId ? post.userId.name : 'unknown',
+                    profilePicture: post.userId ? post.userId.profilePicture : 'unknown'
+                })}`);
+                
+                formattedPosts.push({
+                    id: post._id,
+                    content: post.content || '',
+                    imageUrl: post.media || null,
+                    createdAt: post.timestamp || new Date(),
+                    likes: post.reactions && post.reactions.likedBy ? post.reactions.likedBy.length : 0,
+                    comments: post.comments ? post.comments.length : 0,
+                    userLiked: post.reactions && post.reactions.likedBy ? 
+                        post.reactions.likedBy.some(id => id.toString() === userId.toString()) : false,
+                    username: post.userId ? post.userId.name : (post.displayName || 'Anonymous'),
+                    profilePicture: post.userId && post.userId.profilePicture ? 
+                        post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
+                    userId: post.userId ? post.userId._id : null
+                });
+            } catch (formatError) {
+                console.error(`[DEBUG] /explore - Error formatting post ${post._id}:`, formatError);
+                // Skip problematic posts instead of returning undefined entries
+            }
+        }
+        
+        console.log(`[DEBUG] /explore - Successfully formatted ${formattedPosts.length} posts`);
+        res.json(formattedPosts);
+    } catch (error) {
+        console.error('[DEBUG] /explore - Error fetching explore posts:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
