@@ -782,11 +782,26 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
         const blogPostTimestamp = `${currentTime.toLocaleDateString()} | ${currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
         
         // Add the blog post to the list of blog posts
-        const blogPosts = document.getElementById('blog-posts');
-        const newBlogPost = document.createElement('div');
-        newBlogPost.classList.add('blog-post');
-        newBlogPost.dataset.postId = savedPost._id; // Add the post ID as a data attribute
+        const postForRendering = {
+            id: savedPost._id,
+            content: savedPost.content,
+            imageUrl: savedPost.media, 
+            createdAt: savedPost.timestamp || new Date(),
+            likes: 0,
+            comments: 0,
+            userLiked: false,
+            username: user.name,
+            profilePicture: user.profilePicture,
+            userId: user._id
+        };
         
+         // Create the post element using the same function that renders fetched posts
+         const newBlogPost = createPostElement(postForRendering);
+        
+         // Prepend it to the blog posts container
+         const blogPosts = document.getElementById('blog-posts');
+         blogPosts.prepend(newBlogPost);
+
         // Get username and avatar from the user data
         const avatarUrl = user.profilePicture || 'avatars/Avatar_Default_Anonymous.webp';
         const displayName = blogPostUsername || user.name;
@@ -832,6 +847,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
             if (loadingModal) loadingModal.style.display = 'none';
         }
         
+        fetchAndDisplayPosts();
         // Clear the input fields
         blogPostInput.value = '';
         blogPostImageInput.value = '';
