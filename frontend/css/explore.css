@@ -269,3 +269,28 @@
     font-family: 'Markazi', serif;
     margin: 20px 0;
 }
+
+/* Comment loading and error states */
+.loading-comments {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 10px 0;
+}
+
+.error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+}
+
+.no-comments {
+    text-align: center;
+    color: #666;
+    padding: 10px 0;
+    font-style: italic;
+}
