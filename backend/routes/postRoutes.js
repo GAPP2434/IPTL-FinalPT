@@ -169,16 +169,7 @@ router.post('/repost/:postId', isAuthenticated, async (req, res) => {
         });
 
         await repost.save();
-
-        res.json({
-            message: "Post reposted successfully",
-            repostedPost: {
-                _id: repost._id,
-                content: repost.content,
-                media: repost.media,
-                repostedByName: req.user.name
-            }
-        });
+        res.json({ message: "Post reposted successfully", repost });
     } catch (error) {
         console.error("Error reposting post:", error);
         res.status(500).json({ message: 'Server error' });
