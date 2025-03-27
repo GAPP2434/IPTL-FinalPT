@@ -1,4 +1,29 @@
 /* Messages Page Styles */
+/* Fix to use the same background as explore page */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Markazi', serif;
+    overflow-x: hidden;
+}
+
+main {
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    min-height: calc(100vh - 120px); /* Account for header */
+    background:
+    radial-gradient(#645631 3px, transparent 4px),
+    radial-gradient(#645631 3px, transparent 4px),
+    linear-gradient(#32392a 4px, transparent 0),
+    linear-gradient(45deg, transparent 74px, transparent 75px, #645631 75px, #645631 76px, transparent 77px, transparent 109px),
+    linear-gradient(-45deg, transparent 75px, transparent 76px, #645631 76px, #645631 77px, transparent 78px, transparent 109px),
+    #32392a;
+    background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
+    background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
+}
+
 
 /* Main layout */
 .messages-main {
@@ -433,6 +458,16 @@
     padding: 10px 15px;
     display: inline-block;
     word-break: break-word;
+}
+
+.messages-container {
+    width: 95%;
+    margin: 0 auto;
+    border-radius: 10px; 
+    overflow: hidden;
+    display: flex;
+    height: calc(100vh - 180px); /* Account for header and padding */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .message.sent {

@@ -1,8 +1,23 @@
-/* Explore Page Styles */
+/* Fix for white space on edges */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+main {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+/* Explore Page Styles - updated to fill the page properly */
 .explore-container {
-    width: 100%; /* Increased from 80% to 95% */
-    max-width: none; /* Removed max-width limitation */
-    box-sizing: border-box; /* Include padding in width calculation */
+    width: 100%;
+    max-width: none;
+    margin: 0; /* Remove any margin */
+    box-sizing: border-box;
     background:
     radial-gradient(#645631 3px, transparent 4px),
     radial-gradient(#645631 3px, transparent 4px),
@@ -12,10 +27,10 @@
     #32392a;
     background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
     background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
-    padding: 20px 30px; /* Adjusted padding */
-    border-radius: 10px;
+    padding: 20px 30px;
+    border-radius: 0; /* Remove border radius on the container */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    min-height: calc(100vh - 150px); /* Makes it take up most of the page height */
+    min-height: calc(100vh - 150px);
 }
 
 .explore-container h1 {
@@ -125,10 +140,13 @@
     text-align: left;
 }
 
+/* Adjust blog-container to maintain centered posts */
 .blog-container {
     width: 100%;
-    max-width: 1000px;
-    margin: 0 auto; /* Center the posts in the wider container */
+    max-width: 900px; /* Control the max width of the post content area */
+    margin: 0 auto; /* Center the container */
+    padding: 0;
+    box-sizing: border-box;
 }
 
 /* Make sure the blog posts are properly sized */
@@ -293,4 +311,79 @@
     color: #666;
     padding: 10px 0;
     font-style: italic;
+}
+
+/* Post menu styles */
+.post-menu {
+    position: relative;
+    margin-left: auto;
+}
+
+.post-menu-icon {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    color: #686868;
+}
+
+.post-menu-icon:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.post-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 180px;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    display: none;
+    overflow: hidden;
+    font-family: 'Markazi', serif;
+}
+
+.post-menu.active .post-menu-dropdown {
+    display: block;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.post-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.post-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.post-menu-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.delete-post, .report-post {
+    color: #e74c3c;
+}
+
+.edit-post {
+    color: #3498db;
+}
+
+.block-post {
+    color: #f39c12;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

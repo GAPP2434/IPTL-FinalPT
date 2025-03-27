@@ -22,6 +22,72 @@ window.openUploadModal = openUploadModal;
 document.addEventListener('DOMContentLoaded', function() {
     fetchAndDisplayPosts();
     
+    // Get current user ID
+    window.currentUserId = null;
+    fetch('/api/auth/user', {
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(user => {
+        window.currentUserId = user._id;
+    })
+    .catch(error => {
+        console.error('Error fetching current user:', error);
+    });
+    
+    fetchAndDisplayPosts();
+    
+    // Add click event handler for post menus
+    document.addEventListener('click', function(event) {
+        // Handle menu icon click
+        if (event.target.classList.contains('post-menu-icon')) {
+            event.stopPropagation();
+            const menu = event.target.closest('.post-menu');
+            
+            // Close all other open menus first
+            document.querySelectorAll('.post-menu.active').forEach(openMenu => {
+                if (openMenu !== menu) {
+                    openMenu.classList.remove('active');
+                }
+            });
+            
+            // Toggle this menu
+            menu.classList.toggle('active');
+        }
+        // Handle menu item clicks
+        else if (event.target.closest('.post-menu-item')) {
+            const menuItem = event.target.closest('.post-menu-item');
+            const postId = menuItem.dataset.postId;
+            
+            if (menuItem.classList.contains('edit-post')) {
+                editPost(postId);
+            } else if (menuItem.classList.contains('delete-post')) {
+                deletePost(postId);
+            } else if (menuItem.classList.contains('block-post')) {
+                blockPost(postId);
+            } else if (menuItem.classList.contains('report-post')) {
+                reportPost(postId);
+            }
+            
+            // Close the menu
+            const menu = menuItem.closest('.post-menu');
+            menu.classList.remove('active');
+        }
+        // Close menus when clicking elsewhere
+        else if (!event.target.closest('.post-menu')) {
+            document.querySelectorAll('.post-menu.active').forEach(menu => {
+                menu.classList.remove('active');
+            });
+        }
+    });
+
+    // Functions for post menu actions
+    function editPost(postId) {
+        // This is a placeholder. Actual implementation would involve fetching post content,
+        // opening a modal, and submitting changes to the server
+        showMessage('Edit post functionality will be implemented soon.', 'info');
+    }
+
     // Get the blog container
     const blogContainer = document.querySelector('.blog-container');
     
@@ -841,7 +907,7 @@ function fetchAndDisplayPosts() {
     });
 }
 
-// Function to create a post element
+// Fix the createPostElement function to display post content
 function createPostElement(post) {
     if (!post || !post.id) {
         console.error('Invalid post object:', post);
@@ -872,15 +938,37 @@ function createPostElement(post) {
         
         // Create the HTML for the post with proper structure for avatar
         let postHTML = `
-            <div class="post-header">
-                <img src="${avatarSrc}" alt="${username}" class="post-avatar" onclick="window.location.href='profile.html?userId=${userId}'">
-                <div>
-                    <h5 class="post-username" onclick="window.location.href='profile.html?userId=${userId}'">${username}</h5>
-                    <span class="post-date">${postDate}</span>
+        <div class="post-header">
+            <img src="${avatarSrc}" alt="${username}" class="post-avatar" onclick="window.location.href='profile.html?userId=${userId}'">
+            <div>
+                <h5 class="post-username" onclick="window.location.href='profile.html?userId=${userId}'">${username}</h5>
+                <span class="post-date">${postDate}</span>
+            </div>
+            <div class="post-menu">
+                <i class="fas fa-ellipsis-v post-menu-icon"></i>
+                <div class="post-menu-dropdown">
+                    ${post.userId === window.currentUserId ? `
+                        <div class="post-menu-item edit-post" data-post-id="${post.id}">
+                            <i class="fas fa-edit"></i> Edit Post
+                        </div>
+                        <div class="post-menu-item delete-post" data-post-id="${post.id}">
+                            <i class="fas fa-trash"></i> Delete Post
+                        </div>
+                    ` : `
+                        <div class="post-menu-item block-post" data-post-id="${post.id}">
+                            <i class="fas fa-ban"></i> Hide this post
+                        </div>
+                        <div class="post-menu-item report-post" data-post-id="${post.id}">
+                            <i class="fas fa-flag"></i> Report Post
+                        </div>
+                    `}
                 </div>
             </div>
-            <div class="post-content">${content}</div>
-        `;
+        </div>
+        
+        <!-- Add post content here -->
+        <div class="post-content">${content}</div>
+    `;
         
         // Add image if available
         if (post.imageUrl) {
@@ -1222,6 +1310,79 @@ document.addEventListener('click', async (event) => {
     }
 });
 
+function deletePost(postId) {
+    if (confirm('Are you sure you want to delete this post?')) {
+        fetch(`/api/posts/${postId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to delete post');
+            }
+            return response.json();
+        })
+        .then(() => {
+            // Remove the post from the UI
+            const post = document.querySelector(`.blog-post[data-post-id="${postId}"]`);
+            if (post) {
+                post.remove();
+            }
+            showMessage('Post deleted successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error deleting post:', error);
+            showMessage('Failed to delete post. Please try again.', 'error');
+        });
+    }
+}
+
+function blockPost(postId) {
+    // Hide the post from the current user's view
+    const post = document.querySelector(`.blog-post[data-post-id="${postId}"]`);
+    if (post) {
+        post.style.display = 'none';
+        
+        // Store the blocked post ID in localStorage
+        let blockedPosts = JSON.parse(localStorage.getItem('blockedPosts') || '[]');
+        blockedPosts.push(postId);
+        localStorage.setItem('blockedPosts', JSON.stringify(blockedPosts));
+        
+        showMessage('Post hidden from your feed', 'success');
+    }
+}
+
+function reportPost(postId) {
+    // Show a modal to get the reason for reporting
+    const reason = prompt('Please provide a reason for reporting this post:');
+    
+    if (reason) {
+        fetch('/api/posts/report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                postId: postId,
+                reason: reason
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to report post');
+            }
+            return response.json();
+        })
+        .then(() => {
+            showMessage('Post reported successfully. An admin will review it.', 'success');
+        })
+        .catch(error => {
+            console.error('Error reporting post:', error);
+            showMessage('Failed to report post. Please try again.', 'error');
+        });
+    }
+}
 
 // Get the floating post button and modal elements
 const floatingPostButton = document.getElementById('floatingPostButton');

@@ -1,5 +1,15 @@
 /* Settings Page Styling */
-
+main{
+    background:
+    radial-gradient(#645631 3px, transparent 4px),
+    radial-gradient(#645631 3px, transparent 4px),
+    linear-gradient(#32392a 4px, transparent 0),
+    linear-gradient(45deg, transparent 74px, transparent 75px, #645631 75px, #645631 76px, transparent 77px, transparent 109px),
+    linear-gradient(-45deg, transparent 75px, transparent 76px, #645631 76px, #645631 77px, transparent 78px, transparent 109px),
+    #32392a;
+    background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
+    background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
+}
 .settings-container {
     width: 1200px;
     margin: 40px auto;

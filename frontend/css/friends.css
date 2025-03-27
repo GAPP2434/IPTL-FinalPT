@@ -5,18 +5,29 @@
     padding: 20px;
     width: 100%;
     box-sizing: border-box;
+    background:
+    radial-gradient(#645631 3px, transparent 4px),
+    radial-gradient(#645631 3px, transparent 4px),
+    linear-gradient(#32392a 4px, transparent 0),
+    linear-gradient(45deg, transparent 74px, transparent 75px, #645631 75px, #645631 76px, transparent 77px, transparent 109px),
+    linear-gradient(-45deg, transparent 75px, transparent 76px, #645631 76px, #645631 77px, transparent 78px, transparent 109px),
+    #32392a;
+    background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
+    background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
+    min-height: calc(100vh - 120px); /* Account for header height */
+    overflow-x: hidden;
 }
 
 .friends-container {
     max-width: 1000px;
-    width: 100%;
+    width: 95%; /* Slightly less than 100% to add some margins */
     margin: 0 auto;
     background-color: #e4ddc9;
     background-image: url('../images/mhwi-paper.png');
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    min-height: calc(100vh - 220px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    min-height: calc(100vh - 180px);
     display: flex;
     flex-direction: column;
 }
