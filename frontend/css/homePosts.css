@@ -96,7 +96,7 @@
 
 .blog-post .post-username {
     font-family: 'MonsterHunter', sans-serif;
-    font-size: 1.2rem;
+    font-size: 1.8rem;
     color: #333;
     cursor: pointer;
     margin: 0;
@@ -104,7 +104,7 @@
 }
 
 .blog-post .post-date {
-    font-size: 0.8rem;
+    font-size: 1rem;
     color: #666;
     display: block;
     margin-top: 3px;
@@ -115,7 +115,7 @@
 .post-content {
     margin-bottom: 15px;
     font-family: 'Markazi', serif;
-    font-size: 1.1rem;
+    font-size: 1.6rem;
     line-height: 1.4;
     color: #333;
 }
