@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.classList.toggle('active');
             }
         }
-         // Handle menu item clicks
-         else if (event.target.closest('.post-menu-item')) {
+        // Handle menu item clicks
+        else if (event.target.closest('.post-menu-item')) {
             const menuItem = event.target.closest('.post-menu-item');
             const postId = menuItem.dataset.postId;
             
@@ -70,7 +70,14 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (menuItem.classList.contains('report-post')) {
                 reportPost(postId);
             }
-            // Handle comment menu icon click
+            
+            // Close the menu
+            const menu = menuItem.closest('.post-menu');
+            if (menu) {
+                menu.classList.remove('active');
+            }
+        }
+        // Handle comment menu icon click
         else if (event.target.classList.contains('comment-menu-icon')) {
             event.stopPropagation();
             const menu = event.target.closest('.comment-menu');
@@ -98,23 +105,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Close the menu
-            const menu = menuItem.closest('.post-menu');
+            const menu = menuItem.closest('.comment-menu');
             if (menu) {
                 menu.classList.remove('active');
             }
         }
         // Close menus when clicking elsewhere
-        else if (!event.target.closest('.post-menu')) {
-            document.querySelectorAll('.post-menu.active').forEach(menu => {
+        else if (!event.target.closest('.post-menu') && !event.target.closest('.comment-menu')) {
+            document.querySelectorAll('.post-menu.active, .comment-menu.active').forEach(menu => {
                 menu.classList.remove('active');
             });
         }
-    // Close menus when clicking elsewhere
-    else if (!event.target.closest('.post-menu') && !event.target.closest('.comment-menu')) {
-        document.querySelectorAll('.post-menu.active, .comment-menu.active').forEach(menu => {
-            menu.classList.remove('active');
-        });
-    }
+    });
 
     // Get the blog container
     const blogContainer = document.querySelector('.blog-container');
@@ -140,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add event listener for the upload button
     document.getElementById('addButton').addEventListener('click', openUploadModal);
-});
 });
 
 document.getElementById('closeUploadModal').addEventListener('click', () => {
@@ -1443,119 +1444,51 @@ function showMessage(message, type) {
 window.sharePost = function(postId) {
     const postUrl = `${window.location.origin}/post/${postId}`;
     
-    navigator.clipboard.writeText(postUrl)
-        .then(() => {
-            showFloatingNotification('Post link copied to clipboard!', 'success');
-        })
-        .catch(err => {
-            console.error('Failed to copy link:', err);
-            showFloatingNotification('Failed to copy link. Please try again.', 'error');
+    if (navigator.share) {
+        navigator.share({
+            title: 'Check out this post on Gathering Hub',
+            url: postUrl
+        }).catch(err => {
+            console.error('Error sharing:', err);
+            // Fallback to clipboard copy
+            copyToClipboard(postUrl);
         });
-};
-
-// Function to show a floating notification
-function showFloatingNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `floating-notification ${type}`;
-    notification.textContent = message;
-
-    // Add styles for the floating notification
-    Object.assign(notification.style, {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        backgroundColor: type === 'success' ? '#4caf50' : '#f44336',
-        color: '#fff',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
-        zIndex: '1000',
-        opacity: '0',
-        transition: 'opacity 0.3s ease-in-out',
-        textAlign: 'center',
-    });
-
-    document.body.appendChild(notification);
-
-    // Fade in the notification
-    setTimeout(() => {
-        notification.style.opacity = '1';
-    }, 10);
-
-    // Remove the notification after 3 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, 3000);
-}
-
-window.repostPost = async function(postId) {
-    try {
-        // First, fetch the original post
-        const originalPostResponse = await fetch(`/api/posts/${postId}`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        if (!originalPostResponse.ok) {
-            throw new Error('Failed to fetch original post');
-        }
-
-        const originalPost = await originalPostResponse.json();
-
-        // Now send the repost request
-        const repostResponse = await fetch(`/api/posts/repost/${postId}`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                content: originalPost.content,
-                media: originalPost.media,
-                originalPostId: originalPost._id
-            })
-        });
-
-        if (!repostResponse.ok) {
-            throw new Error('Failed to repost');
-        }
-
-        const result = await repostResponse.json();
-        
-        // Add the reposted post to the UI
-        const blogPosts = document.getElementById('blog-posts');
-        const repostDiv = document.createElement('div');
-        repostDiv.className = 'blog-post repost';
-
-        const repostContentHTML = `
-            <div class="post-header">
-                <img src="${originalPost.profilePicture || 'avatars/Avatar_Default_Anonymous.webp'}" alt="${originalPost.username}" class="post-avatar">
-                <div class="post-info">
-                    <span class="post-username">${originalPost.username}</span>
-                    <span class="post-date">${new Date(originalPost.createdAt).toLocaleDateString()}</span>
-                </div>
-            </div>
-            <div class="post-content">${originalPost.content}</div>
-            ${originalPost.media ? `<div class="post-image-container"><img src="${originalPost.media}" alt="Post image" class="post-image"></div>` : ''}
-            <div class="repost-info">Reposted by ${result.repostedByName || 'you'}</div>
-        `;
-
-        repostDiv.innerHTML = repostContentHTML;
-        blogPosts.prepend(repostDiv);
-
-        showMessage('Post reposted successfully!', 'success');
-        
-        // Optionally refresh the posts
-        fetchAndDisplayPosts();
-    } catch (error) {
-        console.error('Error reposting:', error);
-        showMessage('Failed to repost. Please try again.', 'error');
+    } else {
+        // Fallback for browsers that don't support navigator.share
+        copyToClipboard(postUrl);
     }
 };
+
+window.repostPost = function(postId) {
+    fetch(`/api/posts/repost/${postId}`, {
+        method: 'POST',
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to repost');
+        }
+        return response.json();
+    })
+    .then(data => {
+        showMessage('Post reposted successfully!', 'success');
+        // Refresh posts to show the repost
+        fetchAndDisplayPosts();
+    })
+    .catch(error => {
+        console.error('Error reposting:', error);
+        showMessage('Failed to repost. Please try again.', 'error');
+    });
+};
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showMessage('Link copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showMessage('Failed to copy link. Please try again.', 'error');
+    });
+}
 
 async function processMentions(text) {
     // Find all @mentions using regex
