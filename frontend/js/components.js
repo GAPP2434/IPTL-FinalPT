@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Load header - update path to point to root instead of components folder
+    setTimeout(checkAdminAccess, 300);
     fetch('header.html')
         .then(response => response.text())
         .then(data => {
@@ -292,10 +293,12 @@ function checkAdminAccess() {
     })
     .then(response => response.json())
     .then(user => {
-        if (user.isAdmin) {
+        // Change this line to check user.role instead of user.isAdmin
+        if (user && user.role === 'admin') {
             const adminPanelButton = document.getElementById('adminPanelButton');
             if (adminPanelButton) {
-                adminPanelButton.style.display = 'flex';
+                // Use inline-block to match other code
+                adminPanelButton.style.display = 'inline-block';
             }
         }
     })

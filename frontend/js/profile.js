@@ -245,189 +245,106 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Modify the beginning of fetchUserPosts function to use a different approach
+// Improve fetchUserPosts with better response handling
 function fetchUserPosts() {
     console.log('✅ fetchUserPosts started');
     
     const postsContainer = document.getElementById('userPosts');
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('userId');
-    console.log('🔍 userId from URL:', userId || 'own profile');
-    
-    // Cache key for storing posts locally
-    const storageKey = `user-posts-${userId || 'own'}`;
     
     // Show initial loading message
     postsContainer.innerHTML = '<div class="loading-message">Loading posts...</div>';
-    
-    // Try to load cached posts first
-    let cachedPosts = [];
-    try {
-        const cachedData = localStorage.getItem(storageKey);
-        if (cachedData) {
-            cachedPosts = JSON.parse(cachedData);
-            console.log('📦 Cached posts found:', cachedPosts.length);
-            
-            // Show cached posts immediately for better UX
-            if (cachedPosts.length > 0) {
-                displayPosts(cachedPosts);
-                
-                // Add notice that we're trying to refresh
-                const refreshNotice = document.createElement('div');
-                refreshNotice.className = 'cache-notice';
-                refreshNotice.textContent = 'Loading latest posts...';
-                postsContainer.insertBefore(refreshNotice, postsContainer.firstChild);
-                console.log('🔄 Showing cached posts while loading fresh data');
-            }
-        } else {
-            console.log('❌ No cached posts found');
-        }
-    } catch (e) {
-        console.error('❌ Error loading cached posts:', e);
-    }
-    
-    // CRITICAL FIX: Use a different approach to fetch posts - direct API call without auth check first
-    // This avoids the issue where the auth check passes but the subsequent posts request fails
     
     // Create the endpoint URL
     const apiUrl = userId ? 
         `/api/posts/user/${userId}` : 
         '/api/posts/user';
-    console.log('🔗 Using API endpoint:', apiUrl);
-    
-    // Always include a fresh session token in the request
-    document.cookie = "refreshed=true; path=/";
     
     // Make the request with proper headers
     fetch(apiUrl, {
         method: 'GET',
-        credentials: 'include', // Important: Always include credentials
+        credentials: 'include',
         headers: {
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-FETCH-TIME': new Date().getTime() // Prevent caching issues
+            'Cache-Control': 'no-cache'
         }
     })
     .then(response => {
-        console.log('📨 Posts fetch response status:', response.status);
-        console.log('📨 Content-Type:', response.headers.get('content-type'));
+        console.log('📝 Posts response status:', response.status);
         
-        // First try to get the raw text
+        // Check for auth errors first
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('auth-check-failed');
+        }
+        
+        // Try to get content type
+        const contentType = response.headers.get('content-type');
+        console.log('📝 Posts response content-type:', contentType);
+        
+        // If content type is JSON, parse as JSON
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        }
+        
+        // If not JSON, inspect the response text and try to convert if possible
         return response.text().then(text => {
-            console.log('📄 Response text preview (first 50 chars):', text.substring(0, 50));
+            console.log('📄 Posts response preview:', text.substring(0, 100));
             
-            // If it's HTML, we have a session issue
+            // Check if it's HTML (likely login page)
             if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
-                console.error('❌ Received HTML instead of JSON, session expired');
-                throw new Error('session-expired');
+                throw new Error('auth-check-failed');
             }
             
-            // Otherwise try to parse as JSON
+            // Try to parse as JSON anyway (sometimes Content-Type is wrong)
             try {
                 return JSON.parse(text);
-            } catch (e) {
-                console.error('❌ Failed to parse response as JSON');
-                throw new Error('Invalid response format');
+            } catch (err) {
+                console.error('❌ Failed to parse response as JSON:', err);
+                throw new Error('invalid-response-format');
             }
         });
     })
     .then(posts => {
-        console.log('📬 Posts data received:', posts ? (posts.length || 0) : 'null');
-        
-        // Process successful response
+        // Rest of your code to display posts...
         if (!Array.isArray(posts)) {
             console.warn('⚠️ Expected array but got:', typeof posts);
             posts = [];
         }
         
         if (posts.length === 0) {
-            console.log('ℹ️ No posts to display');
             postsContainer.innerHTML = '<div class="empty-posts-message">No posts yet</div>';
             return;
         }
         
-        // Store posts in localStorage for future use
-        console.log('💾 Caching posts to localStorage');
-        localStorage.setItem(storageKey, JSON.stringify(posts));
-        
-        // Remove any cache notice if it exists
-        const noticeEl = postsContainer.querySelector('.cache-notice');
-        if (noticeEl) {
-            console.log('🧹 Removing cache notice');
-            noticeEl.remove();
-        }
-        
         // Display the posts
-        console.log('🖼️ Displaying posts');
-        displayPosts(posts);
-    })
-    .catch(error => {
-        console.error('❌ Error in posts fetch chain:', error.message);
-        
-        // Handle errors while showing cached content if available
-        if (cachedPosts.length > 0) {
-            console.log('🔄 Using cached posts due to error');
-            
-            // Update the notice to show error state
-            const noticeEl = postsContainer.querySelector('.cache-notice');
-            
-            if (noticeEl) {
-                if (error.message === 'session-expired' || error.message === 'auth-check-failed') {
-                    console.log('🔄 Showing session expired message in notice');
-                    noticeEl.innerHTML = 'Your session has expired. <button class="refresh-button" onclick="window.location.reload()">Refresh</button>';
-                } else {
-                    console.log('🔄 Showing generic error message in notice');
-                    noticeEl.innerHTML = 'Could not update posts. <button class="refresh-button" onclick="fetchUserPosts()">Try Again</button>';
-                }
-                noticeEl.classList.add('error-notice');
-            } else {
-                console.log('🔄 Adding new error notice');
-                // If cached posts are shown but no notice exists
-                const errorNotice = document.createElement('div');
-                errorNotice.className = 'cache-notice error-notice';
-                errorNotice.innerHTML = 'Showing saved posts. <button class="refresh-button" onclick="fetchUserPosts()">Refresh</button>';
-                postsContainer.insertBefore(errorNotice, postsContainer.firstChild);
-            }
-        } else {
-            console.log('⚠️ No cached posts available, showing error message');
-            
-            // No cached posts available, show appropriate error message
-            if (error.message === 'session-expired' || error.message === 'auth-check-failed') {
-                console.log('🔑 Showing session expired message');
-                postsContainer.innerHTML = `
-                    <div class="session-expired-error">
-                        <p>Your session has expired. Please sign in to view posts.</p>
-                        <button class="refresh-button" onclick="window.location.href='login.html'">Sign In</button>
-                    </div>
-                `;
-            } else {
-                console.log('⚠️ Showing generic error message');
-                postsContainer.innerHTML = `
-                    <div class="error-message">
-                        Could not load posts. <button class="refresh-button" onclick="fetchUserPosts()">Try Again</button>
-                    </div>
-                `;
-            }
-        }
-    });
-    
-    // Function to display posts in the container
-    function displayPosts(posts) {
-        console.log('🖼️ displayPosts called with', posts.length, 'posts');
         postsContainer.innerHTML = '';
-        
-        posts.forEach((post, index) => {
-            console.log(`🖼️ Creating element for post ${index + 1}/${posts.length}`);
+        posts.forEach(post => {
             const postElement = createPostElement(post);
             if (postElement) {
                 postsContainer.appendChild(postElement);
-            } else {
-                console.error(`❌ Failed to create element for post ${index + 1}`);
             }
         });
-        console.log('✅ All posts rendered');
-    }
+    })
+    .catch(error => {
+        console.error('❌ Error in posts fetch:', error.message);
+        
+        // Only show session expired for genuine auth errors
+        if (error.message === 'auth-check-failed') {
+            postsContainer.innerHTML = `
+                <div class="error-message">
+                    <p>Please sign in to view posts.</p>
+                    <button class="refresh-button" onclick="window.location.href='login.html'">Sign In</button>
+                </div>
+            `;
+        } else {
+            postsContainer.innerHTML = `
+                <div class="error-message">
+                    Could not load posts. <button class="refresh-button" onclick="fetchUserPosts()">Try Again</button>
+                </div>
+            `;
+        }
+    });
 }
 
 // Function to fetch user posts with improved error handling and fallbacks

@@ -360,4 +360,87 @@ router.get('/explore', isAuthenticated, async (req, res) => {
     }
 });
 
+// Get posts by a specific user (for profile pages)
+router.get('/user/:userId?', isAuthenticated, async (req, res) => {
+    try {
+        const currentUserId = req.user._id;
+        // Use the userId from the URL parameter if provided, otherwise use the current user's ID
+        const targetUserId = req.params.userId || currentUserId;
+        
+        console.log(`[DEBUG] /user - Request from user ID: ${currentUserId}, viewing posts of user: ${targetUserId}`);
+        
+        // Get the target user to check if their profile is private
+        const targetUser = await User.findById(targetUserId);
+        
+        if (!targetUser) {
+            console.log(`[DEBUG] /user - Target user ${targetUserId} not found in database`);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if profile is private and not the current user or not followed by current user
+        if (targetUser.isPrivateProfile && 
+            targetUserId.toString() !== currentUserId.toString()) {
+            
+            // Check if current user follows this user
+            const isFollowing = await User.findOne({
+                _id: currentUserId,
+                following: targetUserId
+            });
+            
+            if (!isFollowing) {
+                console.log(`[DEBUG] /user - Unauthorized access to private profile posts`);
+                return res.json([]); // Return empty array for private profiles not followed
+            }
+        }
+        
+        // Get posts from this user
+        const posts = await Post.find({ userId: targetUserId })
+            .sort({ timestamp: -1 })
+            .populate('userId', 'name profilePicture')
+            .limit(50);
+        
+        console.log(`[DEBUG] /user - Found ${posts.length} posts from user ${targetUserId}`);
+        
+        // Format posts with same structure as other routes
+        const formattedPosts = [];
+        
+        for (const post of posts) {
+            // Skip any null/undefined posts
+            if (!post) {
+                console.log(`[DEBUG] /user - Encountered null post, skipping`);
+                continue;
+            }
+            
+            try {
+                formattedPosts.push({
+                    id: post._id,
+                    content: post.content || '',
+                    imageUrl: post.media || null,
+                    createdAt: post.timestamp || new Date(),
+                    likes: post.reactions && post.reactions.likedBy ? post.reactions.likedBy.length : 0,
+                    comments: post.comments ? post.comments.length : 0,
+                    userLiked: post.reactions && post.reactions.likedBy ? 
+                        post.reactions.likedBy.some(id => id.toString() === currentUserId.toString()) : false,
+                    username: post.userId ? post.userId.name : (post.displayName || 'Anonymous'),
+                    profilePicture: post.userId && post.userId.profilePicture ? 
+                        post.userId.profilePicture : 'avatars/Avatar_Default_Anonymous.webp',
+                    userId: post.userId ? post.userId._id : null,
+                    isRepost: post.isRepost || false,
+                    originalPostId: post.originalPostId || null
+                });
+            } catch (formatError) {
+                console.error(`[DEBUG] /user - Error formatting post ${post._id}:`, formatError);
+                // Skip problematic posts instead of returning undefined entries
+            }
+        }
+        
+        console.log(`[DEBUG] /user - Successfully formatted ${formattedPosts.length} posts`);
+        res.json(formattedPosts);
+        
+    } catch (error) {
+        console.error('[DEBUG] /user - Error fetching user posts:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

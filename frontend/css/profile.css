@@ -1,10 +1,8 @@
 /* Profile Page Styles */
 .profile-main {
     width: 100%;
-    margin: 0;
-    padding: 20px;
+    max-width: none;
     box-sizing: border-box;
-    min-height: calc(100vh - 120px); /* Account for header */
     background:
     radial-gradient(#645631 3px, transparent 4px),
     radial-gradient(#645631 3px, transparent 4px),
@@ -14,6 +12,8 @@
     #32392a;
     background-size: 109px 109px, 109px 109px,100% 6px, 109px 109px, 109px 109px;
     background-position: 54px 55px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
+    padding: 20px 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Profile container */
@@ -23,6 +23,7 @@
     margin: 0 auto;
     padding: 0;
     box-sizing: border-box;
+    flex: 1; /* Take up available space */
 }
 
 /* Cover photo section */
@@ -196,27 +197,120 @@
 /* Posts section */
 .posts-section {
     margin-top: 20px;
-    background-color: #e4ddc9;
-    background-image: url('../images/mhwi-paper.png');
+    margin-bottom: 60px;
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    /* Remove these background properties */
+    background-color: transparent; 
+    background-image: none;
+    box-shadow: none;
 }
 
 .posts-section h3 {
     font-family: 'MonsterHunter', sans-serif;
-    font-size: 1.8rem;
-    margin-bottom: 20px;
-    text-align: center;
+    font-size: 2.3rem;
     color: #333;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-    padding-bottom: 10px;
+    text-align: center;
+    margin: 25px auto 30px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 900px;
+    background-color: #e4ddc9;
+    background-image: url('../images/mhwi-paper.png');
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border-bottom: none;
+}
+
+.posts-section h3::before,
+.posts-section h3::after {
+    content: "";
+    flex: 1;
+    height: 3px;
+    background-image: url('../images/section_line.png');
+    background-repeat: repeat-x;
+    margin: 0 15px;
 }
 
 .user-posts {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 25px;
+    margin-bottom: 50px;
+}
+
+/* Ensure posts take full width of container */
+.user-posts .blog-post {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 25px;
+    background-color: #e4ddc9;
+    background-image: url('../images/mhwi-paper.png');
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.user-posts .post-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.user-posts .post-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.user-posts .post-username {
+    font-family: 'MonsterHunter', sans-serif;
+    font-size: 1.8rem;
+    color: #333;
+    cursor: pointer;
+    margin: 0;
+    text-align: left;
+}
+
+.user-posts .post-date {
+    font-size: 1rem;
+    color: #666;
+    display: block;
+    margin-top: 3px;
+    text-align: left;
+}
+
+.user-posts .post-content {
+    margin-bottom: 15px;
+    font-family: 'Markazi', serif;
+    font-size: 1.6rem;
+    line-height: 1.4;
+    color: #333;
+    white-space: pre-wrap;
+}
+
+/* Match home page post actions */
+.user-posts .post-actions {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .no-posts-message {
@@ -370,7 +464,7 @@
 }
 
 .bio-input {
-    width: 100%;
+    width: 95%;
     min-height: 100px;
     padding: 10px;
     font-family: 'Markazi', serif;
@@ -378,7 +472,7 @@
     border: 1px solid #ccc;
     border-radius: 5px;
     background-color: #e4ddc9;
-    resize: vertical;
+    resize: none;
 }
 
 /* Post styling similar to home posts for consistency */
@@ -663,4 +757,62 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+/* Post menu styles */
+.post-menu {
+    position: relative;
+    margin-left: auto;
+}
+
+.post-menu-icon {
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    color: #686868;
+}
+
+.post-menu-icon:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.post-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 180px;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    display: none;
+    overflow: hidden;
+    font-family: 'Markazi', serif;
+}
+
+.post-menu.active .post-menu-dropdown {
+    display: block;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.post-menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.post-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.post-menu-item i {
+    width: 20px;
+    text-align: center;
 }
