@@ -37,25 +37,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     fetchAndDisplayPosts();
     
-    // Add click event handler for post menus
+    // Add click event handler for post and comment menus
     document.addEventListener('click', function(event) {
-        // Handle menu icon click
+        // Handle post menu icon click
         if (event.target.classList.contains('post-menu-icon')) {
             event.stopPropagation();
             const menu = event.target.closest('.post-menu');
             
-            // Close all other open menus first
-            document.querySelectorAll('.post-menu.active').forEach(openMenu => {
-                if (openMenu !== menu) {
-                    openMenu.classList.remove('active');
-                }
-            });
-            
-            // Toggle this menu
-            menu.classList.toggle('active');
+            if (menu) {
+                // Close all other open menus first
+                document.querySelectorAll('.post-menu.active, .comment-menu.active').forEach(openMenu => {
+                    if (openMenu !== menu) {
+                        openMenu.classList.remove('active');
+                    }
+                });
+                
+                // Toggle this menu
+                menu.classList.toggle('active');
+            }
         }
-        // Handle menu item clicks
-        else if (event.target.closest('.post-menu-item')) {
+         // Handle menu item clicks
+         else if (event.target.closest('.post-menu-item')) {
             const menuItem = event.target.closest('.post-menu-item');
             const postId = menuItem.dataset.postId;
             
@@ -68,10 +70,38 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (menuItem.classList.contains('report-post')) {
                 reportPost(postId);
             }
+            // Handle comment menu icon click
+        else if (event.target.classList.contains('comment-menu-icon')) {
+            event.stopPropagation();
+            const menu = event.target.closest('.comment-menu');
             
+            if (menu) { // Add this null check
+                // Close all other open menus first
+                document.querySelectorAll('.comment-menu.active, .post-menu.active').forEach(openMenu => {
+                    if (openMenu !== menu) {
+                        openMenu.classList.remove('active');
+                    }
+                });
+                
+                // Toggle this menu
+                menu.classList.toggle('active');
+            }
+        }
+        // Handle comment menu item clicks
+        else if (event.target.closest('.comment-menu-item')) {
+            const menuItem = event.target.closest('.comment-menu-item');
+            
+            if (menuItem.classList.contains('report-comment')) {
+                const commentId = menuItem.dataset.commentId;
+                const postId = menuItem.dataset.postId;
+                reportComment(commentId, postId);
+            }
+
             // Close the menu
             const menu = menuItem.closest('.post-menu');
-            menu.classList.remove('active');
+            if (menu) {
+                menu.classList.remove('active');
+            }
         }
         // Close menus when clicking elsewhere
         else if (!event.target.closest('.post-menu')) {
@@ -79,9 +109,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.classList.remove('active');
             });
         }
-    });
+    // Close menus when clicking elsewhere
+    else if (!event.target.closest('.post-menu') && !event.target.closest('.comment-menu')) {
+        document.querySelectorAll('.post-menu.active, .comment-menu.active').forEach(menu => {
+            menu.classList.remove('active');
+        });
+    }
 
-    
     // Get the blog container
     const blogContainer = document.querySelector('.blog-container');
     
@@ -106,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add event listener for the upload button
     document.getElementById('addButton').addEventListener('click', openUploadModal);
+});
 });
 
 document.getElementById('closeUploadModal').addEventListener('click', () => {
@@ -1271,7 +1306,17 @@ window.toggleComments = function(postId) {
                     const commentDiv = document.createElement('div');
                     commentDiv.className = 'comment';
                     commentDiv.innerHTML = `
-                        <div class="comment-user">${comment.username}</div>
+                        <div class="comment-header">
+                            <div class="comment-user">${comment.username}</div>
+                            <div class="comment-menu">
+                                <i class="fas fa-ellipsis-v comment-menu-icon"></i>
+                                <div class="comment-menu-dropdown">
+                                    <div class="comment-menu-item report-comment" data-comment-id="${comment._id}" data-post-id="${postId}">
+                                        <i class="fas fa-flag"></i> Report Comment
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="comment-text">${comment.comment}</div>
                     `;
                     commentsContainer.appendChild(commentDiv);
@@ -1286,6 +1331,41 @@ window.toggleComments = function(postId) {
         commentsDiv.style.display = 'none';
     }
 };
+
+function reportComment(commentId, postId) {
+    // Show a modal to get the reason for reporting
+    const reason = prompt('Please provide a reason for reporting this comment:');
+    
+    if (reason) {
+        fetch('/api/posts/comment/report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                postId: postId,
+                commentId: commentId,
+                reason: reason
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to report comment');
+            }
+            return response.json();
+        })
+        .then(() => {
+            showMessage('Comment reported successfully. An admin will review it.', 'success');
+        })
+        .catch(error => {
+            console.error('Error reporting comment:', error);
+            showMessage('Failed to report comment. Please try again.', 'error');
+        });
+    }
+}
+
+window.reportComment = reportComment;
 
 // Update the post comment function to store comments locally as well
 window.postComment = function(postId) {
