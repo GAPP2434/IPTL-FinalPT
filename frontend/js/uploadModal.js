@@ -911,7 +911,7 @@ function createPostElement(post) {
                 <div class="comments-container" id="comments-container-${post.id}"></div>
                 <div class="comment-form">
                     <input type="text" placeholder="Write a comment..." id="comment-input-${post.id}" class="comment-input-field">
-                    <button class="send-comment-button" onclick="postComment('${post.id}')">Post</button>
+                    <button class="send-comment-button" onclick="postComment('${post.id}')">Comment</button>
                 </div>
             </div>
         `;
@@ -953,41 +953,65 @@ window.toggleComments = function(postId) {
     const commentsDiv = document.getElementById(`comments-${postId}`);
     const commentsContainer = document.getElementById(`comments-container-${postId}`);
     
+    if (!commentsDiv) {
+        console.error(`Comments div not found for post ${postId}`);
+        return;
+    }
+    
     if (commentsDiv.style.display === 'none') {
         commentsDiv.style.display = 'block';
         
-        // Fetch comments if not loaded yet
-        if (commentsContainer.innerHTML === '') {
-            fetch(`/api/posts/${postId}/comments`, {
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(comments => {
-                if (comments.length === 0) {
-                    commentsContainer.innerHTML = '<div class="no-comments">No comments yet</div>';
-                } else {
-                    commentsContainer.innerHTML = '';
-                    comments.forEach(comment => {
-                        const commentDiv = document.createElement('div');
-                        commentDiv.className = 'comment';
-                        commentDiv.innerHTML = `
-                            <div class="comment-user">${comment.username}</div>
-                            <div class="comment-text">${comment.comment}</div>
-                        `;
-                        commentsContainer.appendChild(commentDiv);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching comments:', error);
-                commentsContainer.innerHTML = '<div class="error">Failed to load comments</div>';
-            });
-        }
+        // Display a loading indicator
+        commentsContainer.innerHTML = '<div class="loading-comments">Loading comments...</div>';
+        
+        // Attempt to fetch comments using the fetch API
+        fetch(`/api/posts/${postId}/comments`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            // If we get a non-successful response, use a mock empty array
+            if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+                console.warn('Received non-JSON or error response, using local comments');
+                
+                // Use local storage to check if there are comments we've added but not yet retrieved
+                const localComments = JSON.parse(localStorage.getItem(`post-${postId}-comments`) || '[]');
+                return localComments;
+            }
+            return response.json();
+        })
+        .then(comments => {
+            // Ensure we have an array
+            const commentArray = Array.isArray(comments) ? comments : [];
+            
+            if (commentArray.length === 0) {
+                commentsContainer.innerHTML = '<div class="no-comments">No comments yet</div>';
+            } else {
+                commentsContainer.innerHTML = '';
+                commentArray.forEach(comment => {
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment';
+                    commentDiv.innerHTML = `
+                        <div class="comment-user">${comment.username}</div>
+                        <div class="comment-text">${comment.comment}</div>
+                    `;
+                    commentsContainer.appendChild(commentDiv);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching comments:', error);
+            commentsContainer.innerHTML = '<div class="no-comments">No comments yet</div>';
+        });
     } else {
         commentsDiv.style.display = 'none';
     }
 };
 
+// Update the post comment function to store comments locally as well
 window.postComment = function(postId) {
     const commentInput = document.getElementById(`comment-input-${postId}`);
     const comment = commentInput.value.trim();
@@ -1013,6 +1037,7 @@ window.postComment = function(postId) {
             commentsContainer.removeChild(noComments);
         }
         
+        // Create comment element
         const commentDiv = document.createElement('div');
         commentDiv.className = 'comment';
         commentDiv.innerHTML = `
@@ -1020,6 +1045,14 @@ window.postComment = function(postId) {
             <div class="comment-text">${data.comment}</div>
         `;
         commentsContainer.appendChild(commentDiv);
+        
+        // Store locally for fallback
+        const localComments = JSON.parse(localStorage.getItem(`post-${postId}-comments`) || '[]');
+        localComments.push({
+            username: data.username,
+            comment: data.comment
+        });
+        localStorage.setItem(`post-${postId}-comments`, JSON.stringify(localComments));
         
         // Clear input
         commentInput.value = '';
@@ -1100,49 +1133,6 @@ function copyToClipboard(text) {
     });
 }
 
-// Listen for comment submissions
-// document.addEventListener('click', async (event) => {
-//     if (event.target.classList.contains('send-comment-button')) {
-//         const postId = event.target.dataset.postId;
-//         const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
-//         const commentText = commentInput.value.trim();
-
-//         if (!commentText) {
-//             alert('Please enter a comment.');
-//             return;
-//         }
-
-//         try {
-//             const response = await fetch(`/api/posts/${postId}/comments`, {
-//                 method: 'POST',
-//                 credentials: 'include',
-//                 headers: {
-//                     'Content-Type': 'application/json'
-//                 },
-//                 body: JSON.stringify({ comment: commentText })
-//             });
-
-//             if (!response.ok) {
-//                 const errorData = await response.json();
-//                 throw new Error(errorData.message || 'Failed to add comment');
-//             }
-
-//             const newComment = await response.json();
-//             const commentList = document.getElementById(`commentList-${postId}`);
-//             const commentElement = document.createElement('div');
-//             commentElement.classList.add('comment');
-//             commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${newComment.comment}`;
-//             commentList.appendChild(commentElement);
-
-//             // Clear the input field
-//             commentInput.value = '';
-//         } catch (error) {
-//             console.error('Error adding comment:', error);
-//             alert(`Failed to add comment: ${error.message}`);
-//         }
-//     }
-// });
-
 async function processMentions(text) {
     // Find all @mentions using regex
     const mentions = text.match(/@(\w+)/g);
@@ -1173,55 +1163,6 @@ async function processMentions(text) {
   
     return processedText[0];
   }
-
-  document.addEventListener('click', async (event) => {
-    if (event.target.classList.contains('send-comment-button')) {
-        event.stopPropagation();
-        const postId = event.target.dataset.postId;
-        const commentInput = document.querySelector(`.comment-input-field[data-post-id="${postId}"]`);
-        const commentText = commentInput.value.trim();
-
-        if (!commentText) {
-            alert('Please enter a comment.');
-            return;
-        }
-
-        try {
-            // Process mentions before sending
-            const processedComment = await processMentions(commentText);
-
-            const response = await fetch(`/api/posts/${postId}/comments`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    comment: processedComment,
-                    originalText: commentText // Store original text for editing
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add comment');
-            }
-
-            const newComment = await response.json();
-            const commentList = document.getElementById(`commentList-${postId}`);
-            const commentElement = document.createElement('div');
-            commentElement.classList.add('comment');
-            commentElement.innerHTML = `<span class="username">${newComment.username}:</span> ${processedComment}`;
-            commentList.appendChild(commentElement);
-
-            // Clear the input field
-            commentInput.value = '';
-        } catch (error) {
-            console.error('Error adding comment:', error);
-            alert(`Failed to add comment: ${error.message}`);
-        }
-    }
-});
 
 document.addEventListener('click', (event) => {
     if (event.target.classList.contains('user-mention')) {
