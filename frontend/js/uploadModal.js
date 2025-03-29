@@ -947,6 +947,7 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
     }
     
     try {
+        const startTime = performance.now();
         // Get the current user info using the working endpoint
         const response = await fetch('/api/auth/user', {
             credentials: 'include'
@@ -975,6 +976,10 @@ document.getElementById('send-blog-post-button').addEventListener('click', async
             body: formData
         });
         
+        const endTime = performance.now();
+        const responseTime = endTime - startTime;
+        console.log(`📊 Post creation response time: ${responseTime.toFixed(2)} ms`);
+
         if (!saveResponse.ok) {
             throw new Error('Failed to save post to the database');
         }
