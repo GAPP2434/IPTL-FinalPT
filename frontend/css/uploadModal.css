@@ -179,11 +179,16 @@
   cursor: pointer;
   width: 60px; /* Set the width of the button */
   height: 60px; /* Set the height of the button */
+  display: flex;          /* Add this - enable flexbox */
+  justify-content: center; /* Add this - center horizontally */
+  align-items: center; 
 }
 
 .floating-button i {
   font-size: 36px; /* Increase the font size of the icon */
-  color: #a7c957;
+  color: #000;
+  line-height: 1;        /* Add this to remove extra space */
+  display: block;
 }
 
 /* Post submission modal */

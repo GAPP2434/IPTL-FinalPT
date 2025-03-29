@@ -142,11 +142,34 @@
 
 /* Admin panel button styling */
 #adminPanelButton {
-    background-color: rgba(255, 0, 0, 0.3);
+    display: inline-flex !important;  /* Force inline-flex display */
+    align-items: center !important;   /* Center items vertically */
+    justify-content: center !important; /* Center items horizontally */
+    text-align: center !important;    /* Center any text content */
+    padding: 0 !important;           /* Remove padding that might affect centering */
+    width: 40px !important;          /* Fixed width */
+    height: 40px !important;         /* Fixed height for perfect circle */
+    background-color: rgba(255, 0, 0, 0.6);
 }
 
+#adminPanelButton i {
+    display: inline-block !important; /* Ensure icon displays as block */
+    margin: 0 !important;            /* Remove any margins */
+    padding: 0 !important;           /* Remove any padding */
+    font-size: 18px !important;      /* Set fixed size */
+    line-height: 1 !important;       /* Set line height to 1 */
+    position: static !important;     /* Prevent positioning issues */
+}
 #adminPanelButton:hover {
     background-color: rgba(255, 0, 0, 0.6);
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+}
+
+#adminPanelButton.active {
+    background-color: rgba(255, 0, 0, 0.8);
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
 /* 3. User controls (profile button, dropdown, logout button) */
